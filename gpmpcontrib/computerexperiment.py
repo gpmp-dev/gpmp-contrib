@@ -6,7 +6,7 @@ Copyright (c) 2022-2023, CentraleSupelec
 License: GPLv3 (see LICENSE)
 
 """
-import numpy as np
+import gpmp.numpy as np
 
 
 class ComputerExperiment:

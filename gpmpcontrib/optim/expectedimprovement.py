@@ -3,7 +3,7 @@
 # Copyright (c) 2023, CentraleSupelec
 # License: GPLv3 (see LICENSE)
 # --------------------------------------------------------------
-import numpy as np
+import gpmp.numpy as gnp
 import gpmp as gp
 import gpmpcontrib.sequentialprediction as spred
 import gpmpcontrib.samplingcriteria as sampcrit
@@ -41,23 +41,28 @@ class ExpectedImprovement(spred.SequentialPrediction):
 
     def log_prob_excursion(self, x):
         min_threshold = 1e-6
-        log_prob_excur = np.full((x.shape[0], ), -np.inf)
         b = sampcrit.isinbox(self.computer_experiments_problem.input_box, x)
 
-        zpm, zpv = self.predict(x[b])
+        zpm, zpv = self.predict(x)
 
-        log_prob_excur[b] = np.log(
-            np.maximum(
-                min_threshold,
-                sampcrit.probability_excursion(
-                    -np.min(self.zi),
-                    -zpm,
-                    zpv
+        minimum = -gnp.numpy_min(self.zi)
+
+        log_prob_excur = gnp.where(
+            gnp.ensure_type(b),
+            gnp.log(
+                gnp.maximum(
+                    min_threshold,
+                    sampcrit.probability_excursion(
+                        minimum,
+                        -zpm,
+                        zpv
+                    )
                 )
-            )
-        ).flatten()
+            ).flatten(),
+            -gnp.inf
+        )
 
-        return log_prob_excur
+        return gnp.to_np(log_prob_excur)
 
     def update_search_space(self):
         self.smc.step(self.log_prob_excursion)
@@ -70,7 +75,7 @@ class ExpectedImprovement(spred.SequentialPrediction):
         else:
             super().set_data(xi, zi)
 
-        self.minimum = np.min(self.zi)
+        self.minimum = gnp.numpy_min(self.zi)
 
         if update_search_space:
             self.update_search_space()
@@ -83,7 +88,7 @@ class ExpectedImprovement(spred.SequentialPrediction):
         else:
             self.set_new_eval(xnew, znew)
 
-        self.minimum = np.min(self.zi)
+        self.minimum = gnp.numpy_min(self.zi)
 
         if update_search_space:
             self.update_search_space()
@@ -92,7 +97,7 @@ class ExpectedImprovement(spred.SequentialPrediction):
         # evaluate ei on the search space
         zpm, zpv = self.predict(self.smc.x)
         self.ei = sampcrit.expected_improvement(-self.minimum, -zpm, zpv)
-
+    
         # make new evaluation
-        x_new = self.smc.x[np.argmax(self.ei)]
+        x_new = self.smc.x[gnp.argmax(gnp.ensure_type(self.ei))]
         self.make_new_eval(x_new)

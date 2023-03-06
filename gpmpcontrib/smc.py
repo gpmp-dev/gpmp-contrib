@@ -85,6 +85,10 @@ class SMC:
             if np.random.rand(1) < rho[i]:
                 self.x[i, :] = y[i, :]
                 self.logpx[i] = logpy[i]
+        debug = False
+        if debug:
+            import matplotlib.pyplot as plt
+            plt.plot(self.x, self.logpx, '.'); plt.show()
 
     def step(self, logpdf):
         self.set_logpdf(logpdf)

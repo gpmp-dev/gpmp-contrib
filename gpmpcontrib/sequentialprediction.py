@@ -7,6 +7,7 @@ License: GPLv3 (see LICENSE)
 """
 import time
 import numpy as np
+import gpmp.numpy as gnp
 import gpmp as gp
 
 
@@ -58,27 +59,27 @@ class SequentialPrediction:
                     "name": "",
                     "model": None,
                     "parameters_initial_guess_procedure": None,
-                    "make_selection_criterion": None,
+                    "selection_criterion": None,
                     "info": None,
                 }
                 for i in range(self.output_dim)
             ]
 
             for i in range(self.output_dim):
-                self.models[i]["model"] = gp.core.Model(
+                self.models[i]['model'] = gp.core.Model(
                     self.constant_mean, self.default_covariance, None, None
                 )
                 self.models[i][
                     "parameters_initial_guess_procedure"
                 ] = gp.kernel.anisotropic_parameters_initial_guess
                 self.models[i][
-                    "make_selection_criterion"
-                ] = gp.kernel.make_reml_criterion
+                    "selection_criterion"
+                ] = self.models[i]['model'].negative_log_restricted_likelihood
         else:
             self.models = models
 
     def constant_mean(self, x, param):
-        return np.ones((x.shape[0], 1))
+        return gnp.ones((x.shape[0], 1))
 
     def default_covariance(self, x, y, covparam, pairwise=False):
         p = 2
@@ -108,40 +109,43 @@ class SequentialPrediction:
 
             tic = time.time()
 
-            if self.models[i]["model"].covparam is None or self.force_param_initial_guess:
-                covparam0 = self.models[i]["parameters_initial_guess_procedure"](
-                    self.models[i]["model"], self.xi, self.zi[:, i]
+            if self.models[i]['model'].covparam is None or self.force_param_initial_guess:
+                covparam0 = self.models[i]['parameters_initial_guess_procedure'](
+                    self.models[i]['model'], self.xi, self.zi[:, i]
                 )
 
             else:
-                covparam0 = self.models[i]["model"].covparam
+                covparam0 = self.models[i]['model'].covparam
 
-            crit, dcrit = self.models[i]["make_selection_criterion"](
-                self.models[i]["model"], self.xi, self.zi[:, i]
+            covparam0 = gnp.ensure_type(covparam0)
+            
+            crit, dcrit = gp.kernel.make_selection_criterion_with_gradient(
+                self.models[i]['selection_criterion'],
+                self.xi,
+                self.zi[:, i]
             )
-
+            
             covparam, info = gp.kernel.autoselect_parameters(
-                covparam0, crit, dcrit, silent=True, return_info=True
+                covparam0, crit, dcrit, silent=True, info=True
             )
 
-            self.models[i]["model"].covparam = covparam
+            self.models[i]['model'].covparam = gnp.ensure_type(covparam)
 
-            self.models[i]["info"] = info
+            self.models[i]['info'] = info
 
-            self.models[i]["info"]["covparam0"] = covparam0
-            self.models[i]["info"]["covparam"] = covparam
-            self.models[i]["info"]["selection_criterion"] = crit
-            self.models[i]["info"]["time"] = time.time() - tic
+            self.models[i]['info']['covparam0'] = covparam0
+            self.models[i]['info']['covparam'] = covparam
+            self.models[i]['info']['selection_criterion'] = crit
+            self.models[i]['info']['time'] = time.time() - tic
 
     def predict(self, xt):
         """Prediction"""
         zpm = np.empty((xt.shape[0], self.output_dim))
         zpv = np.empty((xt.shape[0], self.output_dim))
-        for i in range(self.output_dim):
-            zpm[:, i], zpv[:, i] = self.models[i]["model"].predict(
+        for i in range(self.output_dim):              
+            zpm[:, i], zpv[:, i] = self.models[i]['model'].predict(
                 self.xi, self.zi[:, i], xt
             )
-        zpv = np.maximum(zpv, 0)
         return zpm, zpv
 
     def compute_conditional_simulations(
@@ -189,27 +193,32 @@ class SequentialPrediction:
             self.zsim = np.empty((n, n_samplepaths, self.output_dim))
 
             for i in range(self.output_dim):
-                self.zsim[:, :, i] = self.models[i]["model"].sample_paths(
-                    self.xtsim, self.n_samplepaths, method='svd'
+                self.zsim[:, :, i] = gnp.to_np(
+                    self.models[i]['model'].sample_paths(
+                        self.xtsim, self.n_samplepaths, method='svd'
+                    )
                 )
 
         # conditional sample paths
-        zpm = np.empty((nt, self.output_dim))
-        zpv = np.empty((nt, self.output_dim))
-        lambda_t = np.empty((ni, nt, self.output_dim))
         self.zpsim = np.empty((nt, n_samplepaths, self.output_dim))
 
         for i in range(self.output_dim):
-            zpm[:, i], zpv[:, i], lambda_t[:, :, i] = self.models[i]["model"].predict(
-                self.xi, self.zi[:, i], self.xtsim[self.xtsim_xt_ind], return_lambdas=True
-            )
-            self.zpsim[:, :, i] = self.models[i]["model"].conditional_sample_paths(
-                self.zsim[:, :, i],
-                self.xtsim_xi_ind,
+            zpm, zpv, lambda_t = self.models[i]['model'].predict(
+                self.xi,
                 self.zi[:, i],
-                self.xtsim_xt_ind,
-                lambda_t[:, :, i],
+                self.xtsim[self.xtsim_xt_ind],
+                return_lambdas=True
             )
+            self.zpsim[:, :, i] = gnp.to_np(
+                self.models[i]['model'].conditional_sample_paths(
+                    self.zsim[:, :, i],
+                    self.xtsim_xi_ind,
+                    self.zi[:, i],
+                    self.xtsim_xt_ind,
+                    lambda_t,
+                )
+            )
+            
 
         if self.output_dim == 1:
             # drop last dimension
