@@ -45,7 +45,7 @@ class ExpectedImprovement(spred.SequentialPrediction):
 
         zpm, zpv = self.predict(x)
 
-        minimum = -gnp.numpy_min(self.zi)
+        minimum = -gnp.numpy.min(self.zi)
 
         log_prob_excur = gnp.where(
             gnp.ensure_type(b),
@@ -75,7 +75,7 @@ class ExpectedImprovement(spred.SequentialPrediction):
         else:
             super().set_data(xi, zi)
 
-        self.minimum = gnp.numpy_min(self.zi)
+        self.minimum = gnp.numpy.min(self.zi)
 
         if update_search_space:
             self.update_search_space()
@@ -88,7 +88,7 @@ class ExpectedImprovement(spred.SequentialPrediction):
         else:
             self.set_new_eval(xnew, znew)
 
-        self.minimum = gnp.numpy_min(self.zi)
+        self.minimum = gnp.numpy.min(self.zi)
 
         if update_search_space:
             self.update_search_space()
