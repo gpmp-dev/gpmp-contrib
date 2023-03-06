@@ -7,7 +7,6 @@ License: GPLv3 (see LICENSE)
 
 """
 import jax
-import numpy as np
 import gpmp.numpy as gnp
 import gpmp as gp
 from math import log
@@ -154,8 +153,8 @@ def build_models(output_dim):
     # same hyper prior for all outputs
 
     # TODO : set mean prior for sigma^2 adaptively
-    mean_prior = np.array([0, -np.log(1 / 3), -np.log(1 / 3)])
-    invcov_prior = np.diag([0, 1 / np.log(10/3)**2, 1 / np.log(10/3)**2])
+    mean_prior = gnp.array([0, -log(1 / 3), -log(1 / 3)])
+    invcov_prior = gnp.diag(gnp.array([0, 1 / log(10/3)**2, 1 / log(10/3)**2]))
 
     for i in range(output_dim):
         covariance = build_kernel(i)
