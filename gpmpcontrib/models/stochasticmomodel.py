@@ -6,7 +6,6 @@ Copyright (c) 2022-2023, CentraleSupelec
 License: GPLv3 (see LICENSE)
 
 """
-import jax
 import gpmp.numpy as gnp
 import gpmp as gp
 from math import log
