@@ -118,9 +118,9 @@ def negative_log_restricted_penalized_likelihood(model,
                                                  zi):
 
     delta = covparam - mean_prior
-    penalization = 0.5 * delta.T @ (invcov_prior @ delta)
+    penalization = 0.5 * gnp.einsum("i,ij,j", delta, invcov_prior, delta)
     nlrel = model.negative_log_restricted_likelihood(covparam, xi, zi)
-
+    # print(f'{delta}, p = {penalization}, nlrel={nlrel}')
     return nlrel + penalization
 
 
@@ -146,14 +146,14 @@ def build_models(output_dim):
         "name": "",
         "model": None,
         "parameters_initial_guess_procedure": None,
-        "make_selection_criterion": None,
+        "selection_criterion": None,
     } for i in range(output_dim)]
 
     # same hyper prior for all outputs
 
     # TODO : set mean prior for sigma^2 adaptively
     mean_prior = gnp.array([0, -log(1 / 3), -log(1 / 3)])
-    invcov_prior = gnp.diag(gnp.array([0, 1 / log(10/3)**2, 1 / log(10/3)**2]))
+    invcov_prior = gnp.diag(gnp.array([0, 1 / log(5/3)**2, 1 / log(5/3)**2]))
 
     for i in range(output_dim):
         covariance = build_kernel(i)
