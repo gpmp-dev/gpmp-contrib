@@ -3,7 +3,7 @@
 # Copyright (c) 2023, CentraleSupelec
 # License: GPLv3 (see LICENSE)
 # --------------------------------------------------------------
-import gpmp.numpy as gnp
+import gpmp.num as gnp
 import gpmp as gp
 import gpmpcontrib.sequentialprediction as spred
 import gpmpcontrib.samplingcriteria as sampcrit

@@ -7,7 +7,7 @@ License: GPLv3 (see LICENSE)
 """
 import time
 import numpy as np
-import gpmp.numpy as gnp
+import gpmp.num as gnp
 import gpmp as gp
 
 
