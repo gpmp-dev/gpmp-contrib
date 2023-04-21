@@ -92,7 +92,7 @@ def build_anisotropic_parameters_initial_guess(output_dim):
         xi_ = gnp.ensure_type(xi)
         zi_ = gnp.ensure_type(zi)
 
-        rho = gnp.std(xi_, axis=0)[:output_dim]
+        rho = gnp.std(xi_[:, :-output_dim], axis=0)
 
         covparam = gnp.concatenate((gnp.array([log(1.0)]), -gnp.log(rho)))
 
