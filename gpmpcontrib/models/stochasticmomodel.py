@@ -27,8 +27,8 @@ def kernel_ii_or_tt(x, param, output_idx, pairwise=False):
     p = 2
     param_dim = param.shape[0]
     sigma2 = gnp.exp(param[0])
-    invrho = gnp.exp(param[1:])
-    d = invrho.shape[0]
+    loginvrho = param[1:]
+    d = loginvrho.shape[0]
     noise_idx = d + output_idx
     nugget = 10 * gnp.finfo(gnp.float64).eps
 
@@ -38,8 +38,7 @@ def kernel_ii_or_tt(x, param, output_idx, pairwise=False):
             x[:, noise_idx] + nugget  # nx x 0
     else:
         # return a covariance matrix between observations
-        xs = gp.kernel.scale(x[:, :d], invrho)
-        K = gp.kernel.distance(xs, xs)  # nx x nx
+        K = gnp.scaled_distance(loginvrho, x[:, :d], x[:, :d])  # nx x nx
         K = sigma2 * \
             gp.kernel.maternp_kernel(p, K) + gnp.diag(x[:, noise_idx] + nugget)
 
@@ -52,17 +51,15 @@ def kernel_it(x, y, param, pairwise=False):
     p = 2
     param_dim = param.shape[0]
     sigma2 = gnp.exp(param[0])
-    invrho = gnp.exp(param[1:])
+    loginvrho = param[1:]
     d = invrho.shape[0]
 
-    xs = gp.kernel.scale(x[:, :d], invrho)
-    ys = gp.kernel.scale(y[:, :d], invrho)
     if pairwise:
         # return a vector of covariances
-        K = gp.kernel.distance_pairwise(xs, ys)  # nx x 0
+        K = gnp.scaled_distance_elementwise(loginvrho, x[:, :d], y[:, :d])  # nx x 0
     else:
         # return a covariance matrix
-        K = gp.kernel.distance(xs, ys)  # nx x ny
+        K = gnp.scaled_distance(loginvrho, x[:, :d], y[:, :d])  # nx x ny
 
     K = sigma2 * gp.kernel.maternp_kernel(p, K)
     return K
@@ -93,8 +90,8 @@ def build_anisotropic_parameters_initial_guess(output_dim):
         zi_ = gnp.ensure_type(zi)
 
         rho = gnp.std(xi_[:, :-output_dim], axis=0)
-
-        covparam = gnp.concatenate((gnp.array([log(1.0)]), -gnp.log(rho)))
+        loginvrho = -gnp.log(rho)
+        covparam = gnp.concatenate((gnp.array([log(1.0)]), loginvrho))
 
         # n = xi.shape[0]
         # sigma2_GLS = 1 / n * model.norm_k_sqrd(
@@ -102,6 +99,7 @@ def build_anisotropic_parameters_initial_guess(output_dim):
         #     zi.reshape((-1, )),
         #     covparam
         # )
+        # FIXME
         sigma2 = gnp.std(zi_)
 
         return gnp.concatenate(
