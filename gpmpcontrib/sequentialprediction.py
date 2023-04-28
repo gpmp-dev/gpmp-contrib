@@ -117,7 +117,7 @@ class SequentialPrediction:
             else:
                 covparam0 = self.models[i]['model'].covparam
 
-            covparam0 = gnp.ensure_type(covparam0)
+            covparam0 = gnp.asarray(covparam0)
             
             crit, dcrit = gp.kernel.make_selection_criterion_with_gradient(
                 self.models[i]['selection_criterion'],
@@ -129,7 +129,7 @@ class SequentialPrediction:
                 covparam0, crit, dcrit, silent=True, info=True
             )
 
-            self.models[i]['model'].covparam = gnp.ensure_type(covparam)
+            self.models[i]['model'].covparam = gnp.asarray(covparam)
 
             self.models[i]['info'] = info
 

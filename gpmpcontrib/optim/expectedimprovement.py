@@ -48,7 +48,7 @@ class ExpectedImprovement(spred.SequentialPrediction):
         minimum = -gnp.numpy.min(self.zi)
 
         log_prob_excur = gnp.where(
-            gnp.ensure_type(b),
+            gnp.asarray(b),
             gnp.log(
                 gnp.maximum(
                     min_threshold,
@@ -99,5 +99,5 @@ class ExpectedImprovement(spred.SequentialPrediction):
         self.ei = sampcrit.expected_improvement(-self.minimum, -zpm, zpv)
     
         # make new evaluation
-        x_new = self.smc.x[gnp.argmax(gnp.ensure_type(self.ei))]
+        x_new = self.smc.x[gnp.argmax(gnp.asarray(self.ei))]
         self.make_new_eval(x_new)

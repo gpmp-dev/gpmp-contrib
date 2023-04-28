@@ -86,8 +86,8 @@ def build_anisotropic_parameters_initial_guess(output_dim):
     
     def anisotropic_parameters_initial_guess(model, xi, zi):
 
-        xi_ = gnp.ensure_type(xi)
-        zi_ = gnp.ensure_type(zi)
+        xi_ = gnp.asarray(xi)
+        zi_ = gnp.asarray(zi)
 
         rho = gnp.std(xi_[:, :-output_dim], axis=0)
         loginvrho = -gnp.log(rho)
