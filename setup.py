@@ -23,7 +23,7 @@ setup(name='gpmp-contrib',
              "numpy",
              "scipy>=1.8.0",
              "matplotlib",
-             "gpmp"
+             "gpmp>=0.9.10"
          ],
       python_requires=">=3.6",
       )
