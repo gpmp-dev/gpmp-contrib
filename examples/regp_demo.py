@@ -118,7 +118,10 @@ for g in range(G):
     zi_relaxed, (zpm, zpv), model, info_ret = regp.predict(model, xi, zi, xt, Rg)
     zloom, zloov, eloo = model.loo(xi, zi_relaxed)
     tCRPS = gp.misc.scoringrules.tcrps_gaussian(zloom, gnp.sqrt(zloov), zi_relaxed, a=-gnp.inf, b=u)
-    J[g] = gnp.sum(tCRPS)
+    if gnp._gpmp_backend_ == 'jax':
+        J = J.at[g].set(gnp.sum(tCRPS))
+    else:
+        J[g] = gnp.sum(tCRPS)
 
 gopt = gnp.argmin(J)
 Rgopt = gnp.numpy.array([[t[gopt], gnp.numpy.inf]])

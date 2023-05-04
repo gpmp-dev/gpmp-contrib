@@ -196,8 +196,12 @@ def remodel(model, xi, zi, R, covparam0=None, info=False, verbosity=0):
     z1_relaxed = popt[covparam_dim:]
 
     zi_relaxed = gnp.zeros(zi.shape)
-    zi_relaxed[ind0] = gnp.asarray(z0)
-    zi_relaxed[ind1] = gnp.asarray(z1_relaxed)
+    if gnp._gpmp_backend_ == 'jax':
+        zi_relaxed = zi_relaxed.at[ind0].set(gnp.asarray(z0))
+        zi_relaxed = zi_relaxed.at[ind1].set(gnp.asarray(z1_relaxed))
+    else:
+        zi_relaxed[ind0] = gnp.asarray(z0)
+        zi_relaxed[ind1] = gnp.asarray(z1_relaxed)
     
     # Return results
     if info:
