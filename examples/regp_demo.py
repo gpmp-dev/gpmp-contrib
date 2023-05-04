@@ -91,10 +91,13 @@ zpm, zpv = model.predict(xi, zi, xt)
 fig = visualize_results(xt, zt, xi, zi, zpm, zpv)
 
 # reGP prediction
+print('\n===== reGP =====\n')
 u = 2.0
 R = gnp.numpy.array([[u, gnp.numpy.inf]])
 
 zi_relaxed, (zpm, zpv), model, info_ret = regp.predict(model, xi, zi, xt, R)
+
+gp.misc.modeldiagnosis.diag(model, info, xi, zi_relaxed)
 
 x_limits = fig.axes[0].get_xlim()
 plt.hlines(y=u, xmin=x_limits[0], xmax=x_limits[1], colors='b')
