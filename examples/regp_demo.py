@@ -21,15 +21,16 @@ def generate_data():
         (xt, zt): target data
         (xi, zi): input dataset
     """
+    s = 3.
+    ni = 15
     dim = 1
     nt = 200
     box = [[-1], [1]]
     xt = gp.misc.designs.regulargrid(dim, nt, box)
-    zt = gnp.exp(3.2 * gp.misc.testfunctions.twobumps(xt))
+    zt = gnp.exp(s * gp.misc.testfunctions.twobumps(xt))
 
-    ni = 10
     xi = gp.misc.designs.ldrandunif(dim, ni, box)
-    zi = gnp.exp(3.2 * gp.misc.testfunctions.twobumps(xi))
+    zi = gnp.exp(s * gp.misc.testfunctions.twobumps(xi))
    
     return xt, zt, xi, zi
 
@@ -90,19 +91,19 @@ zpm, zpv = model.predict(xi, zi, xt)
 fig = visualize_results(xt, zt, xi, zi, zpm, zpv)
 
 # reGP prediction
-u = 2.
+u = 2.0
 R = gnp.numpy.array([[u, gnp.numpy.inf]])
 
-(xi_relaxed, zi_relaxed), (zpm, zpv), model, info_ret = regp.predict(model, xi, zi, xt, R)
+zi_relaxed, (zpm, zpv), model, info_ret = regp.predict(model, xi, zi, xt, R)
 
 x_limits = fig.axes[0].get_xlim()
 plt.hlines(y=u, xmin=x_limits[0], xmax=x_limits[1], colors='b')
-visualize_results(xt, zt, xi_relaxed, zi_relaxed, zpm, zpv, fig, rgb_hue=[128, 128, 255])
+visualize_results(xt, zt, xi, zi_relaxed, zpm, zpv, fig, rgb_hue=[128, 128, 255])
 
 plt.show()
 
 # LOO
-zloom, zloov, eloo = model.loo(xi_relaxed, zi_relaxed)
+zloom, zloov, eloo = model.loo(xi, zi_relaxed)
 gp.misc.plotutils.plot_loo(zi_relaxed, zloom, zloov)
 
 # Threshold selection
@@ -114,16 +115,16 @@ t = t[:-1]
 J = gnp.zeros(G)
 for g in range(G):
     Rg = gnp.numpy.array([[t[g], gnp.numpy.inf]])
-    (xi_relaxed, zi_relaxed), (zpm, zpv), model, info_ret = regp.predict(model, xi, zi, xt, Rg)
-    zloom, zloov, eloo = model.loo(xi_relaxed, zi_relaxed)
+    zi_relaxed, (zpm, zpv), model, info_ret = regp.predict(model, xi, zi, xt, Rg)
+    zloom, zloov, eloo = model.loo(xi, zi_relaxed)
     tCRPS = gp.misc.scoringrules.tcrps_gaussian(zloom, gnp.sqrt(zloov), zi_relaxed, a=-gnp.inf, b=u)
     J[g] = gnp.sum(tCRPS)
 
 gopt = gnp.argmin(J)
 Rgopt = gnp.numpy.array([[t[gopt], gnp.numpy.inf]])
-(xi_relaxed, zi_relaxed), (zpm, zpv), model, info_ret = regp.predict(model, xi, zi, xt, Rgopt)
+zi_relaxed, (zpm, zpv), model, info_ret = regp.predict(model, xi, zi, xt, Rgopt)
 fig.axes[0].hlines(y=t[gopt], xmin=x_limits[0], xmax=x_limits[1], colors='g')
-visualize_results(xt, zt, xi_relaxed, zi_relaxed, zpm, zpv, fig, rgb_hue=[128, 255, 128])
+visualize_results(xt, zt, xi, zi_relaxed, zpm, zpv, fig, rgb_hue=[128, 255, 128])
 
 # if __name__ == '__main__':
 #     main()

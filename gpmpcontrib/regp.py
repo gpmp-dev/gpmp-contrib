@@ -34,8 +34,7 @@ def get_membership_indices(zi, R):
 
 
 def split_data(xi, zi, ei, R):
-    """
-    Split the data based on the membership indices.
+    """Split the data based on the membership indices.
 
     Parameters
     ----------
@@ -50,13 +49,18 @@ def split_data(xi, zi, ei, R):
 
     Returns
     -------
-    (x0, z0) : tuple of ndarrays
-        A tuple of (n0, d) and (n0, 1) shaped arrays for xi and zi rows with ei = 0.
-    (x1, z1, bounds) : tuple of ndarrays
-        Rows of xi and zi with ei > 0, and the corresponding interval bounds.
+    (x0, z0, ind0) : tuple of ndarrays
+        A tuple of (n0, d), (n0, 1) shaped arrays for xi and zi rows
+        with ei = 0, and the corresponding indices.
+    (x1, z1, bounds, ind1) : tuple of ndarrays
+        Rows of xi and zi with ei > 0, and the corresponding interval
+        bounds and indices.
+
     """
 
     mask = ei.reshape(-1) == 0
+    ind0 = np.where(mask)[0]
+    ind1 = np.where(~mask)[0]
 
     x0, z0 = xi[mask], zi[mask]
 
@@ -65,7 +69,7 @@ def split_data(xi, zi, ei, R):
     interval_indices = e1 - 1
     bounds = [R[i] for i in interval_indices]
 
-    return (x0, z0), (x1, z1, bounds)
+    return (x0, z0, ind0), (x1, z1, bounds, ind1)
 
 
 def make_regp_criterion_with_gradient(model, x0, z0, x1):
@@ -141,9 +145,11 @@ def remodel(model, xi, zi, R, covparam0=None, info=False, verbosity=0):
     Returns
     -------
     model : GPmp model
-        updated GPmp Gaussian process model.
-    (xi_relaxed, zi_relaxed) : tuple of ndarrays
-        Relaxed input and output data. 
+        Updated GPmp Gaussian process model.
+    zi_relaxed : ndarray, shape (n,)
+        Relaxed output data.
+    ind_relaxed : ndarray
+        Indices of the relaxed data points in the input zi array.
     info_ret : dict, optional
         Additional information (if info=True).
     """
@@ -158,7 +164,7 @@ def remodel(model, xi, zi, R, covparam0=None, info=False, verbosity=0):
 
     # Membership indices and split data
     ei = get_membership_indices(gnp.to_np(zi), R)
-    (x0, z0), (x1, z1, z1_bounds) = split_data(xi, gnp.to_np(zi), ei, R)
+    (x0, z0, ind0), (x1, z1, z1_bounds, ind1) = split_data(xi, gnp.to_np(zi), ei, R)
     z1_size = z1.shape[0]
 
     # Initial parameter vector and bounds
@@ -189,22 +195,24 @@ def remodel(model, xi, zi, R, covparam0=None, info=False, verbosity=0):
 
     z1_relaxed = popt[covparam_dim:]
 
-    xi_relaxed = np.concatenate((x0, x1))
-    zi_relaxed = np.concatenate((z0, z1_relaxed))
-
+    zi_relaxed = gnp.zeros(zi.shape)
+    zi_relaxed[ind0] = gnp.asarray(z0)
+    zi_relaxed[ind1] = gnp.asarray(z1_relaxed)
+    
     # Return results
     if info:
         info_ret["covparam0"] = covparam0
         info_ret["covparam"] = model.covparam
         info_ret["selection_criterion"] = nlrl
         info_ret["time"] = time.time() - tic
-        return model, (xi_relaxed, zi_relaxed), info_ret
+        return model, zi_relaxed, ind1, info_ret
     else:
-        return model, (xi_relaxed, zi_relaxed)
+        return model, zi_relaxed, ind1
 
 
 def predict(model, xi, zi, xt, R, covparam0=None, info=False, verbosity=0):
-    """Perform reGP optimization (REML + relaxation)
+    """
+    Perform reGP optimization (REML + relaxation) and prediction
 
     Parameters
     ----------
@@ -227,25 +235,24 @@ def predict(model, xi, zi, xt, R, covparam0=None, info=False, verbosity=0):
 
     Returns
     -------
-    (xi_relaxed, zi_relaxed) : tuple of ndarrays
-        Relaxed input and output data.
+    zi_relaxed : ndarray, shape (n,)
+        Relaxed output data.
     (zpm, zpv) : tuple of ndarrays
         Relaxed posterior mean and variance.
     model : GPmp model
-        updated GPmp Gaussian process model.
+        Updated GPmp Gaussian process model.
     info_ret : dict, optional
         Additional information (if info=True).
-
     """
     if info is True:
-        model, (xi_relaxed, zi_relaxed), info_ret = remodel(
+        model, zi_relaxed, ind_relaxed, info_ret = remodel(
             model, xi, zi, R,
             covparam0=None,
             info=info,
             verbosity=verbosity
         )
     else:
-        model, (xi_relaxed, zi_relaxed) = remodel(
+        model, zi_relaxed, ind_relaxed = remodel(
             model, xi, zi, R,
             covparam0=None,
             info=info,
@@ -253,9 +260,9 @@ def predict(model, xi, zi, xt, R, covparam0=None, info=False, verbosity=0):
         )
         info_ret = None
 
-    zpm, zpv = model.predict(xi_relaxed, zi_relaxed, xt)
+    zpm, zpv = model.predict(xi, zi_relaxed, xt)
 
-    return (xi_relaxed, zi_relaxed), (zpm, zpv), model, info_ret
+    return zi_relaxed, (zpm, zpv), model, info_ret
 
 
 # ---------------------------------------
