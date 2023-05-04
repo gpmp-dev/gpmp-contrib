@@ -109,21 +109,18 @@ gp.misc.plotutils.plot_loo(zi_relaxed, zloom, zloov)
 # Threshold selection
 
 G = 20
-t = gnp.logspace(gnp.log10(u), gnp.log10(gnp.max(zi)), G + 1)
+t = gnp.logspace(gnp.log10(u - zi.min()), gnp.log10(gnp.max(zi) - zi.min()), G + 1) + zi.min()
 t = t[:-1]
 
-J = gnp.zeros(G)
+J = gnp.numpy.zeros(G)
 for g in range(G):
     Rg = gnp.numpy.array([[t[g], gnp.numpy.inf]])
     zi_relaxed, (zpm, zpv), model, info_ret = regp.predict(model, xi, zi, xt, Rg)
     zloom, zloov, eloo = model.loo(xi, zi_relaxed)
     tCRPS = gp.misc.scoringrules.tcrps_gaussian(zloom, gnp.sqrt(zloov), zi_relaxed, a=-gnp.inf, b=u)
-    if gnp._gpmp_backend_ == 'jax':
-        J = J.at[g].set(gnp.sum(tCRPS))
-    else:
-        J[g] = gnp.sum(tCRPS)
+    J[g] = gnp.sum(tCRPS)
 
-gopt = gnp.argmin(J)
+gopt = gnp.argmin(gnp.asarray(J))
 Rgopt = gnp.numpy.array([[t[gopt], gnp.numpy.inf]])
 zi_relaxed, (zpm, zpv), model, info_ret = regp.predict(model, xi, zi, xt, Rgopt)
 fig.axes[0].hlines(y=t[gopt], xmin=x_limits[0], xmax=x_limits[1], colors='g')
