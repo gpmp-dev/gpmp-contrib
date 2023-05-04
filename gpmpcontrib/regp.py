@@ -142,8 +142,8 @@ def remodel(model, xi, zi, R, covparam0=None, info=False, verbosity=0):
     -------
     model : GPmp model
         updated GPmp Gaussian process model.
-    (xi, zi_relaxed) : tuple of ndarrays
-        Relaxed input and output data.
+    (xi_relaxed, zi_relaxed) : tuple of ndarrays
+        Relaxed input and output data. 
     info_ret : dict, optional
         Additional information (if info=True).
     """
@@ -189,7 +189,7 @@ def remodel(model, xi, zi, R, covparam0=None, info=False, verbosity=0):
 
     z1_relaxed = popt[covparam_dim:]
 
-    xi = np.concatenate((x0, x1))
+    xi_relaxed = np.concatenate((x0, x1))
     zi_relaxed = np.concatenate((z0, z1_relaxed))
 
     # Return results
@@ -198,9 +198,9 @@ def remodel(model, xi, zi, R, covparam0=None, info=False, verbosity=0):
         info_ret["covparam"] = model.covparam
         info_ret["selection_criterion"] = nlrl
         info_ret["time"] = time.time() - tic
-        return model, (xi, zi_relaxed), info_ret
+        return model, (xi_relaxed, zi_relaxed), info_ret
     else:
-        return model, (xi, zi_relaxed)
+        return model, (xi_relaxed, zi_relaxed)
 
 
 def predict(model, xi, zi, xt, R, covparam0=None, info=False, verbosity=0):
@@ -227,7 +227,7 @@ def predict(model, xi, zi, xt, R, covparam0=None, info=False, verbosity=0):
 
     Returns
     -------
-    (xi, zi_relaxed) : tuple of ndarrays
+    (xi_relaxed, zi_relaxed) : tuple of ndarrays
         Relaxed input and output data.
     (zpm, zpv) : tuple of ndarrays
         Relaxed posterior mean and variance.
@@ -238,14 +238,14 @@ def predict(model, xi, zi, xt, R, covparam0=None, info=False, verbosity=0):
 
     """
     if info is True:
-        model, (xi, zi_relaxed), info_ret = remodel(
+        model, (xi_relaxed, zi_relaxed), info_ret = remodel(
             model, xi, zi, R,
             covparam0=None,
             info=info,
             verbosity=verbosity
         )
     else:
-        model, (xi, zi_relaxed) = remodel(
+        model, (xi_relaxed, zi_relaxed) = remodel(
             model, xi, zi, R,
             covparam0=None,
             info=info,
@@ -253,9 +253,9 @@ def predict(model, xi, zi, xt, R, covparam0=None, info=False, verbosity=0):
         )
         info_ret = None
 
-    zpm, zpv = model.predict(xi, zi_relaxed, xt)
+    zpm, zpv = model.predict(xi_relaxed, zi_relaxed, xt)
 
-    return (xi, zi_relaxed), (zpm, zpv), model, info_ret
+    return (xi_relaxed, zi_relaxed), (zpm, zpv), model, info_ret
 
 
 # ---------------------------------------
