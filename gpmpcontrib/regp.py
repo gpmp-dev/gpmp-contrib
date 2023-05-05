@@ -269,4 +269,47 @@ def predict(model, xi, zi, xt, R, covparam0=None, info=False, verbosity=0):
     return zi_relaxed, (zpm, zpv), model, info_ret
 
 
+def select_optimal_threshold_above_t0(model, xi, zi, t0, G=20):
+    """
+    Choose threshold for reGP with relaxation above t0
+
+    This function selects an optimal threshold for a reGP above t0 by
+    minimizing the truncated continuous ranked probability score
+    (tCRPS) over a range of possible thresholds.
+
+    Parameters
+    ----------
+    model : GPModel
+        Gaussian process model.
+    xi : ndarray, shape (n, d)
+        Locations of the observed data points.
+    zi : ndarray, shape (n,)
+        Observed values at the data points.
+    t0 : float
+        Lower limit of the threshold range.
+    G : int, optional, default: 20
+        Number of candidate thresholds to evaluate.
+
+    Returns
+    -------
+    Rgopt : ndarray, shape (1, 2)
+        Optimal relaxation interval, specified as [threshold, inf].
+    """
+    t = gnp.logspace(gnp.log10(t0 - zi.min()), gnp.log10(gnp.max(zi) - zi.min()), G + 1) + zi.min()
+    t = t[:-1]
+
+    J = gnp.numpy.zeros(G)
+    for g in range(G):
+        Rg = gnp.numpy.array([[t[g], gnp.numpy.inf]])
+        model, zi_relaxed, _ = remodel(model, xi, zi, Rg)
+        zloom, zloov, _ = model.loo(xi, zi_relaxed)
+        tCRPS = gp.misc.scoringrules.tcrps_gaussian(zloom, gnp.sqrt(zloov), zi_relaxed, a=-gnp.inf, b=t0)
+        J[g] = gnp.sum(tCRPS)
+
+    gopt = gnp.argmin(gnp.asarray(J))
+    Rgopt = gnp.numpy.array([[t[gopt], gnp.numpy.inf]])
+
+    return Rgopt
+
+
 # ---------------------------------------

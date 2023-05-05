@@ -90,7 +90,7 @@ gp.misc.modeldiagnosis.diag(model, info, xi, zi)
 zpm, zpv = model.predict(xi, zi, xt)
 fig = visualize_results(xt, zt, xi, zi, zpm, zpv)
 
-# reGP prediction
+# reGP prediction above u
 print('\n===== reGP =====\n')
 u = 2.0
 R = gnp.numpy.array([[u, gnp.numpy.inf]])
@@ -103,30 +103,16 @@ x_limits = fig.axes[0].get_xlim()
 plt.hlines(y=u, xmin=x_limits[0], xmax=x_limits[1], colors='b')
 visualize_results(xt, zt, xi, zi_relaxed, zpm, zpv, fig, rgb_hue=[128, 128, 255])
 
-plt.show()
-
 # LOO
 zloom, zloov, eloo = model.loo(xi, zi_relaxed)
 gp.misc.plotutils.plot_loo(zi_relaxed, zloom, zloov)
 
 # Threshold selection
+Rgopt = regp.select_optimal_threshold_above_t0(model, xi, zi, u)
 
-G = 20
-t = gnp.logspace(gnp.log10(u - zi.min()), gnp.log10(gnp.max(zi) - zi.min()), G + 1) + zi.min()
-t = t[:-1]
-
-J = gnp.numpy.zeros(G)
-for g in range(G):
-    Rg = gnp.numpy.array([[t[g], gnp.numpy.inf]])
-    zi_relaxed, (zpm, zpv), model, info_ret = regp.predict(model, xi, zi, xt, Rg)
-    zloom, zloov, eloo = model.loo(xi, zi_relaxed)
-    tCRPS = gp.misc.scoringrules.tcrps_gaussian(zloom, gnp.sqrt(zloov), zi_relaxed, a=-gnp.inf, b=u)
-    J[g] = gnp.sum(tCRPS)
-
-gopt = gnp.argmin(gnp.asarray(J))
-Rgopt = gnp.numpy.array([[t[gopt], gnp.numpy.inf]])
 zi_relaxed, (zpm, zpv), model, info_ret = regp.predict(model, xi, zi, xt, Rgopt)
-fig.axes[0].hlines(y=t[gopt], xmin=x_limits[0], xmax=x_limits[1], colors='g')
+
+fig.axes[0].hlines(y=Rgopt[0], xmin=x_limits[0], xmax=x_limits[1], colors='g')
 visualize_results(xt, zt, xi, zi_relaxed, zpm, zpv, fig, rgb_hue=[128, 255, 128])
 
 # if __name__ == '__main__':
