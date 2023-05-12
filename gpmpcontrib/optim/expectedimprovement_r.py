@@ -1,6 +1,6 @@
 import gpmp.num as gnp
 import gpmp as gp
-import gpmpcontrib.sequentialprediction as spred
+import gpmpcontrib.optim.expectedimprovement as ei
 import gpmpcontrib.samplingcriteria as sampcrit
 import gpmpcontrib.smc as gpsmc
 import gpmpcontrib.regp as regp
@@ -11,7 +11,7 @@ t_getters = {
     'Concentration': lambda l: (lambda xi, zi, n_init, l: np.quantile(zi, l))
 }
 
-class ExpectedImprovementR(spred.SequentialPrediction):
+class ExpectedImprovementR(ei.ExpectedImprovement):
 
     @staticmethod
     def build(problem, strategy, l):
