@@ -58,8 +58,9 @@ class ExpectedImprovementR(ei.ExpectedImprovement):
             covparam0 = self.models[i]['model'].covparam
             if covparam0 is None or self.force_param_initial_guess:
                 assert self.models[i]["parameters_initial_guess_procedure"] == gp.kernel.anisotropic_parameters_initial_guess
-
-            covparam0 = gnp.asarray(covparam0)
+                covparam0 = None
+            else:
+                covparam0 = gnp.asarray(covparam0)
 
             t = self.get_t(self.xi, self.zi[:, i], self.n_init)
 
