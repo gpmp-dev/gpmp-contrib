@@ -24,7 +24,7 @@ class ExpectedImprovementR(ei.ExpectedImprovement):
         assert 't_getter' in options.keys(), "Options must contain a t_getter. See expectedimprovement-r.t_getters"
         self.get_t = options.pop('t_getter')
 
-        default_options = {'n_smc': 1000}
+        default_options = {'n_smc': 1000, 'G': 10}
         default_options.update(options)
         return default_options
 
@@ -62,9 +62,11 @@ class ExpectedImprovementR(ei.ExpectedImprovement):
             else:
                 covparam0 = gnp.asarray(covparam0)
 
-            t = self.get_t(self.xi, self.zi[:, i], self.n_init)
+            t0 = self.get_t(self.xi, self.zi[:, i], self.n_init)
 
-            R = gnp.numpy.array([[t, gnp.numpy.inf]])
+            R = regp.select_optimal_threshold_above_t0(
+                self.models[i]['model'], self.xi, gnp.asarray(self.zi[:, i]), t0, G=self.options['G']
+            )
 
             self.models[i]['model'], self.zi_relaxed[:, i], _, info_ret = regp.remodel(
                 self.models[i]['model'], self.xi, gnp.asarray(self.zi[:, i]), R, covparam0, True
