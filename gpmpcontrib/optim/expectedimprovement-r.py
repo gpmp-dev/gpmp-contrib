@@ -3,41 +3,33 @@ import gpmp as gp
 import gpmpcontrib.sequentialprediction as spred
 import gpmpcontrib.samplingcriteria as sampcrit
 import gpmpcontrib.smc as gpsmc
-import numpy as np
 import gpmpcontrib.regp as regp
+import numpy as np
 
 t_getters = {
-    'Constant': lambda xi, zi, n_init, l: np.quantile(zi[:n_init], l),
-    'Concentration': lambda xi, zi, n_init, l: np.quantile(zi, l)
+    'Constant': lambda l: (lambda xi, zi, n_init, l: np.quantile(zi[:n_init], l)),
+    'Concentration': lambda l: (lambda xi, zi, n_init, l: np.quantile(zi, l))
 }
 
 class ExpectedImprovementR(spred.SequentialPrediction):
 
     def set_options(self, options):
+        assert 't_getter' in options.keys(), "Options must contain a t_getter. See expectedimprovement-r.t_getters"
+        self.get_t = options.pop('t_getter')
+
         default_options = {'n_smc': 1000}
         default_options.update(options)
         return default_options
 
     def predict(self, xt):
         """Prediction"""
-
         zpm = np.empty((xt.shape[0], self.output_dim))
         zpv = np.empty((xt.shape[0], self.output_dim))
         for i in range(self.output_dim):
-            t_i = self.get_t(self.xi, self.zi[:, i], self.n_init)
-
-            _, (zpm[:, i], zpv[:, i]), _, _ = regp.predict(
-                self.models[i]['model'],
-                self.xi,
-                self.zi[:, i],
-                xt,
-                gnp.numpy.array([[t_i, gnp.numpy.inf]])
+            zpm[:, i], zpv[:, i] = self.models[i]['model'].predict(
+                self.xi, self.zi_relaxed[:, i], xt
             )
-
         return zpm, zpv
-
-    def log_prob_excursion(self, x):
-        raise NotImplementedError
 
     def compute_conditional_simulations(
             self,
@@ -50,11 +42,28 @@ class ExpectedImprovementR(spred.SequentialPrediction):
         raise NotImplementedError
 
     def update_params(self):
-        raise NotImplementedError
+        """Parameter selection"""
 
-    def set_initial_design(self, xi, update_search_space=True):
+        self.zi_relaxed = self.zi.copy()
+
+        for i in range(self.output_dim):
+
+            covparam0 = self.models[i]['model'].covparam
+            if covparam0 is None or self.force_param_initial_guess:
+                assert self.models[i]["parameters_initial_guess_procedure"] == gp.kernel.anisotropic_parameters_initial_guess
+
+            covparam0 = gnp.asarray(covparam0)
+
+            t = self.get_t(self.xi, self.zi[:, i], self.n_init)
+
+            R = gnp.numpy.array([[t, gnp.numpy.inf]])
+
+            self.models[i]['model'], self.zi_relaxed[:, i], _, info_ret = regp.remodel(
+                self.models[i]['model'], self.xi, self.zi[:, i], R, covparam0, True
+            )
+
+            self.models[i]['info'] = info_ret
+
+    def set_initial_design(self, xi, **kwargs):
         self.n_init = xi.shape[0]
-        super().set_initial_design(xi, update_model=False, update_search_space=update_search_space)
-
-    def make_new_eval(self, xnew, update_search_space=True):
-        super().make_new_eval(xnew, update_model=False, update_search_space=update_search_space)
+        super().set_initial_design(xi=xi, **kwargs)
