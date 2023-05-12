@@ -7,8 +7,8 @@ import gpmpcontrib.regp as regp
 import numpy as np
 
 t_getters = {
-    'Constant': lambda l: (lambda xi, zi, n_init, l: np.quantile(zi[:n_init], l)),
-    'Concentration': lambda l: (lambda xi, zi, n_init, l: np.quantile(zi, l))
+    'Constant': lambda l: lambda xi, zi, n_init: np.quantile(zi[:n_init], l),
+    'Concentration': lambda l: lambda xi, zi, n_init: np.quantile(zi, l)
 }
 
 class ExpectedImprovementR(ei.ExpectedImprovement):
