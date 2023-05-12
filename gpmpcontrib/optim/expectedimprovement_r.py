@@ -67,7 +67,7 @@ class ExpectedImprovementR(ei.ExpectedImprovement):
             R = gnp.numpy.array([[t, gnp.numpy.inf]])
 
             self.models[i]['model'], self.zi_relaxed[:, i], _, info_ret = regp.remodel(
-                self.models[i]['model'], self.xi, self.zi[:, i], R, covparam0, True
+                self.models[i]['model'], self.xi, gnp.asarray(self.zi[:, i]), R, covparam0, True
             )
 
             self.models[i]['info'] = info_ret
