@@ -18,6 +18,9 @@ class ExpectedImprovementR(ei.ExpectedImprovement):
         return ExpectedImprovementR(problem=problem, options={'t_getter': t_getters[strategy](l)})
 
     def set_options(self, options):
+        if options is None:
+            options = {}
+
         assert 't_getter' in options.keys(), "Options must contain a t_getter. See expectedimprovement-r.t_getters"
         self.get_t = options.pop('t_getter')
 
