@@ -15,11 +15,12 @@ import gpmpcontrib.computerexperiment as cptexp
 ## -- definition of a mono-objective problem
 
 problem = cptexp.ComputerExperiment(
-    1,                              # dim of search space
-    [[-1], [1]],                    # search box
-    1,                              # dim output
-    gp.misc.testfunctions.twobumps  # test function
+    1,                                              # dim of search space
+    [[-1], [1]],                                    # search box
+    single_function=gp.misc.testfunctions.twobumps  # test function
 )
+
+# objectives=[{'function': tf.f1, 'goal': 'minimize'}
 
 ## -- create initial dataset
 
