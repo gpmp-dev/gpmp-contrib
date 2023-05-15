@@ -52,7 +52,7 @@ def kernel_it(x, y, param, pairwise=False):
     param_dim = param.shape[0]
     sigma2 = gnp.exp(param[0])
     loginvrho = param[1:]
-    d = invrho.shape[0]
+    d = loginvrho.shape[0]
 
     if pairwise:
         # return a vector of covariances
