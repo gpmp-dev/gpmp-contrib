@@ -108,8 +108,15 @@ def make_regp_criterion_with_gradient(model, x0, z0, x1):
 
     def crit_(param):
 
-        covparam = param[0:-n1]
-        z1 = param[-n1:]
+        if n1 > 0:
+            covparam = param[0:-n1]
+            z1 = param[-n1:]
+        elif n1 == 0:
+            covparam = param[0:]
+            z1 = param[:0]
+        else:
+            raise ValueError(n1)
+
         zi = gnp.concatenate((z0, z1))
         l = selection_criterion(covparam, xi, zi)
         return l
@@ -295,8 +302,7 @@ def select_optimal_threshold_above_t0(model, xi, zi, t0, G=20):
     Rgopt : ndarray, shape (1, 2)
         Optimal relaxation interval, specified as [threshold, inf].
     """
-    t = gnp.logspace(gnp.log10(t0 - zi.min()), gnp.log10(gnp.max(zi) - zi.min()), G + 1) + zi.min()
-    t = t[:-1]
+    t = gnp.logspace(gnp.log10(t0 - zi.min()), gnp.log10(gnp.max(zi) - zi.min()), G) + zi.min()
 
     J = gnp.numpy.zeros(G)
     for g in range(G):
