@@ -5,6 +5,8 @@ import gpmpcontrib.optim.expectedimprovement_r as ei_r
 
 from gpmpcontrib.optim.test_problems import goldsteinprice
 
+plot = True
+
 ## -- definition of a mono-objective problem
 
 problem = goldsteinprice
@@ -26,10 +28,22 @@ eialgo.set_initial_design(xi)
 
 # make n new evaluations
 n = 100
-for i in range(n):
+for _ in range(n):
+    if plot:
+        plt.figure()
+
+        plt.plot(eialgo.xi[:, 0], eialgo.xi[:, 1], 'go')
+
+        plt.plot(eialgo.smc.x[:, 0], eialgo.smc.x[:, 1], 'bo', markersize=3)
+
     eialgo.step()
 
-# Visualize
+    if plot:
+        plt.plot(eialgo.xi[-1, 0], eialgo.xi[-1, 1], 'ko')
+
+        plt.show()
+
+# Visualize results
 plt.figure()
 
 plt.plot(np.minimum.accumulate(eialgo.zi), label='best observation so far', color='blue')
