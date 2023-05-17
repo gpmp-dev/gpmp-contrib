@@ -1,5 +1,5 @@
 import numpy as np
-from computerexperiment import ComputerExperiment
+from gpmpcontrib.computerexperiment import ComputerExperiment
 
 _TEST = False
 
