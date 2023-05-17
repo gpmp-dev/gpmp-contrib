@@ -57,6 +57,7 @@ class ExpectedImprovementR(ei.ExpectedImprovement):
 
             covparam0 = self.models[i]['model'].covparam
             if covparam0 is None or self.force_param_initial_guess:
+                # This will be used by regp.remodel
                 assert self.models[i]["parameters_initial_guess_procedure"] == gp.kernel.anisotropic_parameters_initial_guess
                 covparam0 = None
             else:
