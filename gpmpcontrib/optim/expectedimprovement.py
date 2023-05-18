@@ -99,5 +99,6 @@ class ExpectedImprovement(spred.SequentialPrediction):
         self.ei = sampcrit.expected_improvement(-self.minimum, -zpm, zpv)
     
         # make new evaluation
-        x_new = self.smc.x[gnp.argmax(gnp.asarray(self.ei))]
+        x_new = self.smc.x[gnp.argmax(gnp.asarray(self.ei).reshape(-1))]
+
         self.make_new_eval(x_new)
