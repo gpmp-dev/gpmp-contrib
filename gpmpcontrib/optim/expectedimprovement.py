@@ -1,5 +1,6 @@
 # --------------------------------------------------------------
-# Author: Emmanuel Vazquez <emmanuel.vazquez@centralesupelec.fr>
+# Authors: Emmanuel Vazquez <emmanuel.vazquez@centralesupelec.fr>
+#          Sébastien Petit
 # Copyright (c) 2023, CentraleSupelec
 # License: GPLv3 (see LICENSE)
 # --------------------------------------------------------------
@@ -99,6 +100,6 @@ class ExpectedImprovement(spred.SequentialPrediction):
         self.ei = sampcrit.expected_improvement(-self.minimum, -zpm, zpv)
     
         # make new evaluation
-        x_new = self.smc.x[gnp.argmax(gnp.asarray(self.ei).reshape(-1))]
+        x_new = self.smc.x[gnp.argmax(gnp.asarray(self.ei))].reshape(1, -1)
 
         self.make_new_eval(x_new)
