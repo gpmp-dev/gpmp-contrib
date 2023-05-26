@@ -62,6 +62,9 @@ class ExpectedImprovementR(ei.ExpectedImprovement):
     def update_params(self):
         """Parameter selection"""
 
+        # See the comment in the __init__ method
+        assert self.force_param_initial_guess == True
+
         self.zi_relaxed = self.zi.copy()
 
         for i in range(self.output_dim):
