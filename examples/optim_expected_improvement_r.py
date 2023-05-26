@@ -2,57 +2,100 @@ import numpy as np
 import matplotlib.pyplot as plt
 import gpmp as gp
 import gpmpcontrib.optim.expectedimprovement_r as ei_r
+import lhsmdu
+import scipy.special
+import torch
 
 from gpmpcontrib.optim.test_problems import goldsteinprice
 
-plot = True
-
-## -- definition of a mono-objective problem
+## -- settings
 
 problem = goldsteinprice
 
+n_run = 70
+
+n_repeat = 30
+
+strategy = "Concentration"
+
+plot = False
+
+## init records
+
+history_records = []
+xi_records = []
+
 ## -- create initial dataset
 
-nt = 2000
-xt = gp.misc.designs.regulargrid(problem.input_dim, nt, problem.input_box)
-zt = goldsteinprice.eval(xt)
+for _ in range(n_repeat):
+    xi = -2 + 4 * np.array(lhsmdu.sample(2, 6).T)
 
-#TODO:() Use LHS
-xi = -2 + 4 * np.random.uniform(size=(6, 2))
+    ## -- initialize the ei algorithm
 
-## -- initialize the ei algorithm
+    eialgo = ei_r.ExpectedImprovementR(problem, options={'t_getter': ei_r.t_getters[strategy](0.25)})
 
-eialgo = ei_r.ExpectedImprovementR(problem, options={'t_getter': ei_r.t_getters['Concentration'](0.25)})
+    eialgo.set_initial_design(xi=xi)
 
-eialgo.set_initial_design(xi)
-
-# make n new evaluations
-n = 100
-for _ in range(n):
     if plot:
         plt.figure()
-
-        plt.plot(eialgo.xi[:, 0], eialgo.xi[:, 1], 'go')
-
-        plt.plot(eialgo.smc.x[:, 0], eialgo.smc.x[:, 1], 'bo', markersize=3)
-
-    eialgo.step()
-
-    if plot:
-        plt.plot(eialgo.xi[-1, 0], eialgo.xi[-1, 1], 'ko')
-
+        plt.plot(eialgo.zi, eialgo.zi_relaxed, 'o')
+        # plt.axhline(custom_records[0][i]['p0'][-1], color='r', label='init')
+        plt.axhline(np.quantile(eialgo.zi, 0.25), color='b', label='t0')
+        plt.semilogy()
+        plt.semilogx()
+        plt.xlabel("Truth")
+        plt.ylabel("Relaxed")
+        plt.legend()
         plt.show()
 
-# Visualize results
-plt.figure()
+    # make n new evaluations
+    for _ in range(n_run):
+        if plot:
+            plt.figure()
 
-plt.plot(np.minimum.accumulate(eialgo.zi), label='best observation so far', color='blue')
-plt.plot(eialgo.zi, label='observation', color='green')
+            plt.plot(eialgo.xi[:, 0], eialgo.xi[:, 1], 'go')
 
-plt.axhline(3, color='r', label='min')
-plt.legend()
-plt.xlabel("Iterations")
-plt.ylabel('GoldsteinPrice')
-plt.semilogy()
+            plt.plot(eialgo.smc.x[:, 0], eialgo.smc.x[:, 1], 'bo', markersize=3)
 
-plt.show()
+        try:
+            eialgo.step()
+
+        except TypeError:
+            break
+        except torch._C._LinAlgError:
+            break
+
+        if plot:
+            plt.plot(eialgo.xi[-1, 0], eialgo.xi[-1, 1], 'ko')
+
+            plt.show()
+
+            plt.figure()
+            plt.plot(eialgo.zi, eialgo.zi_relaxed, 'o')
+            # plt.axhline(custom_records[0][i]['p0'][-1], color='r', label='init')
+            plt.axhline(np.quantile(eialgo.zi, 0.25), color='b', label='t0')
+            plt.semilogy()
+            plt.semilogx()
+            plt.xlabel("Truth")
+            plt.ylabel("Relaxed")
+            plt.legend()
+            plt.show()
+
+    history_records.append(eialgo.zi)
+
+    xi_records.append(eialgo.xi)
+
+# Plot histories
+for i in range(len(history_records)):
+    plt.figure()
+
+    plt.plot(np.minimum.accumulate(history_records[i]), label='best observation so far', color='blue')
+    plt.plot(history_records[i], label='observation', color='green')
+
+    plt.axhline(3, color='r', label='min')
+    plt.legend()
+    plt.xlabel("Iterations")
+    plt.ylabel('GoldsteinPrice')
+    plt.semilogy()
+
+    plt.show()
