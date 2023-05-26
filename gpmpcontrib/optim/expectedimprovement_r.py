@@ -21,7 +21,13 @@ class ExpectedImprovementR(ei.ExpectedImprovement):
     @staticmethod
     def build(problem, strategy, l):
         return ExpectedImprovementR(problem=problem, options={'t_getter': t_getters[strategy](l)})
-    
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Mainly for "Concentration" heuristic. Having one "bad" model induces bad initializations afterwards.
+        self.force_param_initial_guess = True
+
     def set_options(self, options):
         if options is None:
             options = {}
