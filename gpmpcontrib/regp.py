@@ -1,3 +1,9 @@
+# --------------------------------------------------------------
+# Authors: Emmanuel Vazquez <emmanuel.vazquez@centralesupelec.fr>
+#          Sébastien Petit
+# Copyright (c) 2023, CentraleSupelec
+# License: GPLv3 (see LICENSE)
+# --------------------------------------------------------------
 from scipy.stats import norm
 import time
 import numpy as np
@@ -112,8 +118,8 @@ def make_regp_criterion_with_gradient(model, x0, z0, x1):
             covparam = param[0:-n1]
             z1 = param[-n1:]
         elif n1 == 0:
-            covparam = param[0:]
-            z1 = param[:0]
+            covparam = param
+            z1 = []
         else:
             raise ValueError(n1)
 
