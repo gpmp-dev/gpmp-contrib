@@ -61,9 +61,9 @@ for _ in range(n_repeat):
             eialgo.step()
 
         except TypeError:
-            break
+            raise
         except torch._C._LinAlgError:
-            break
+            raise
 
         if plot:
             plt.plot(eialgo.xi[-1, 0], eialgo.xi[-1, 1], 'ko')
