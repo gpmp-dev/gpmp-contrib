@@ -169,19 +169,23 @@ def remodel(model, xi, zi, R, covparam0=None, info=False, verbosity=0):
 
     tic = time.time()
 
-    # Initial guess for the covariance parameters if not provided
-    if covparam0 is None:
-        covparam0 = gp.kernel.anisotropic_parameters_initial_guess(model, xi, zi)
-    covparam_dim = covparam0.shape[0]
-    covparam_bounds = [gnp.array([-gnp.inf, gnp.inf])] * covparam0.shape[0]
-
     # Membership indices and split data
     ei = get_membership_indices(gnp.to_np(zi), R)
     (x0, z0, ind0), (x1, z1, z1_bounds, ind1) = split_data(xi, gnp.to_np(zi), ei, R)
     z1_size = z1.shape[0]
 
+    #z1_relaxed_init = (R[0][0] + 2 * (R[0][0] - z0.min() )) * np.ones(z1.shape)
+    z1_relaxed_init = z1
+
+    # Initial guess for the covariance parameters if not provided
+    if covparam0 is None:
+        covparam0 = gp.kernel.anisotropic_parameters_initial_guess(model, np.vstack((x0, x1)), np.concatenate((z0, z1_relaxed_init)))
+    covparam_dim = covparam0.shape[0]
+    covparam_bounds = [gnp.array([-gnp.inf, gnp.inf])] * covparam0.shape[0]
+
+
     # Initial parameter vector and bounds
-    p0 = np.concatenate((covparam0, z1.reshape(-1)))
+    p0 = np.concatenate((covparam0, z1_relaxed_init))
 
     bounds = covparam_bounds + z1_bounds
 
@@ -215,7 +219,7 @@ def remodel(model, xi, zi, R, covparam0=None, info=False, verbosity=0):
     else:
         zi_relaxed[ind0] = gnp.asarray(z0)
         zi_relaxed[ind1] = gnp.asarray(z1_relaxed)
-    
+
     # Return results
     if info:
         info_ret["covparam0"] = covparam0
