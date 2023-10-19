@@ -119,7 +119,7 @@ def make_regp_criterion_with_gradient(model, x0, z0, x1):
             z1 = param[-n1:]
         elif n1 == 0:
             covparam = param
-            z1 = []
+            z1 = gnp.array([])
         else:
             raise ValueError(n1)
 
