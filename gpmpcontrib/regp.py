@@ -217,8 +217,9 @@ def remodel(model, xi, zi, R, covparam0=None, info=False, verbosity=0):
         silent = False
 
     # Optimize parameters
+    # TODO:() Switch back to SLSQP?
     popt, info_ret = gp.kernel.autoselect_parameters(
-        p0, nlrl, dnlrl, bounds=bounds, silent=silent, info=True
+        p0, nlrl, dnlrl, bounds=bounds, silent=silent, info=True, method="L-BFGS-B"
     )
 
     if verbosity == 1:
