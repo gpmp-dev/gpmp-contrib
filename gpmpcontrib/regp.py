@@ -195,8 +195,17 @@ def remodel(model, xi, zi, R, covparam0=None, info=False, verbosity=0):
 
         meanparam0 = meanparam0.reshape(1)
 
+    delta = 10**(-10)
+
     covparam_dim = covparam0.shape[0]
-    covparam_bounds = [gnp.array([-gnp.inf, gnp.inf])] * covparam0.shape[0]
+    covparam_bounds = [gnp.array([-gnp.inf, gnp.inf])]
+
+    for i in range(xi.shape[1]):
+        min_dist = min([np.abs(xi[j, i] - xi[k, i]) for k in range(xi.shape[0]) for j in range(xi.shape[0]) if j != k])
+
+        upper_bound = -gnp.log(min_dist * delta)
+
+        covparam_bounds = covparam_bounds + [gnp.array([-gnp.inf, upper_bound])]
 
     meanparam_dim = meanparam0.shape[0]
     meanparam_bounds = [gnp.array([-gnp.inf, gnp.inf])] * meanparam0.shape[0]
