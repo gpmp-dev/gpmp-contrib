@@ -78,7 +78,7 @@ def split_data(xi, zi, ei, R):
     return (x0, z0, ind0), (x1, z1, bounds, ind1)
 
 
-def make_regp_criterion_with_gradient(model, x0, z0, x1):
+def make_regp_criterion_with_gradient(model, x0, z0, x1, meanparam_dim):
     """
     Make regp criterion function with gradient.
 
@@ -92,6 +92,8 @@ def make_regp_criterion_with_gradient(model, x0, z0, x1):
         Observed values at the data points not relaxed
     x1 : ndarray, shape (n1, d)
         Locations of the relaxed  data points
+    meanparam_dim : int,
+        Number of dimension of the mean parameter
 
     Returns
     -------
@@ -110,9 +112,12 @@ def make_regp_criterion_with_gradient(model, x0, z0, x1):
 
     # selection criterion
 
-    selection_criterion = model.negative_log_restricted_likelihood
+    selection_criterion = model.negative_log_likelihood
 
     def crit_(param):
+        meanparam = param[0:meanparam_dim]
+
+        param = param[meanparam_dim:]
 
         if n1 > 0:
             covparam = param[0:-n1]
@@ -124,7 +129,7 @@ def make_regp_criterion_with_gradient(model, x0, z0, x1):
             raise ValueError(n1)
 
         zi = gnp.concatenate((z0, z1))
-        l = selection_criterion(covparam, xi, zi)
+        l = selection_criterion(meanparam, covparam, xi, zi)
         return l
 
     crit_jit = gnp.jax.jit(crit_)
@@ -167,6 +172,9 @@ def remodel(model, xi, zi, R, covparam0=None, info=False, verbosity=0):
         Additional information (if info=True).
     """
 
+    # TODO:() As argument? See how it interacts with UK?
+    meanparam0 = None
+
     tic = time.time()
 
     # Membership indices and split data
@@ -178,19 +186,37 @@ def remodel(model, xi, zi, R, covparam0=None, info=False, verbosity=0):
     z1_relaxed_init = z1
 
     # Initial guess for the covariance parameters if not provided
-    if covparam0 is None:
-        covparam0 = gp.kernel.anisotropic_parameters_initial_guess(model, np.vstack((x0, x1)), np.concatenate((z0, z1_relaxed_init)))
-    covparam_dim = covparam0.shape[0]
-    covparam_bounds = [gnp.array([-gnp.inf, gnp.inf])] * covparam0.shape[0]
+    if covparam0 is None or meanparam0 is None:
+        meanparam0, covparam0 = gp.kernel.anisotropic_parameters_initial_guess_constant_mean(
+            model,
+            np.vstack((x0, x1)),
+            np.concatenate((z0, z1_relaxed_init))
+        )
 
+        meanparam0 = meanparam0.reshape(1)
+
+    delta = 10**(-10)
+
+    covparam_dim = covparam0.shape[0]
+    covparam_bounds = [gnp.array([-gnp.inf, gnp.inf])]
+
+    for i in range(xi.shape[1]):
+        min_dist = min([np.abs(xi[j, i] - xi[k, i]) for k in range(xi.shape[0]) for j in range(xi.shape[0]) if j != k])
+
+        upper_bound = -gnp.log(min_dist * delta)
+
+        covparam_bounds = covparam_bounds + [gnp.array([-gnp.inf, upper_bound])]
+
+    meanparam_dim = meanparam0.shape[0]
+    meanparam_bounds = [gnp.array([-gnp.inf, gnp.inf])] * meanparam0.shape[0]
 
     # Initial parameter vector and bounds
-    p0 = np.concatenate((covparam0, z1_relaxed_init))
+    p0 = np.concatenate((meanparam0.reshape(1), covparam0, z1_relaxed_init))
 
-    bounds = covparam_bounds + z1_bounds
+    bounds = meanparam_bounds + covparam_bounds + z1_bounds
 
     # reGP criterion
-    nlrl, dnlrl = make_regp_criterion_with_gradient(model, x0, z0, x1)
+    nlrl, dnlrl = make_regp_criterion_with_gradient(model, x0, z0, x1, meanparam_dim)
 
     # Verbosity level
     silent = True
@@ -200,17 +226,20 @@ def remodel(model, xi, zi, R, covparam0=None, info=False, verbosity=0):
         silent = False
 
     # Optimize parameters
+    # TODO:() Switch back to SLSQP?
     popt, info_ret = gp.kernel.autoselect_parameters(
-        p0, nlrl, dnlrl, bounds=bounds, silent=silent, info=True
+        p0, nlrl, dnlrl, bounds=bounds, silent=silent, info=True, method="L-BFGS-B"
     )
 
     if verbosity == 1:
         print("done.")
 
     # Update the model and relaxed data
-    model.covparam = gnp.asarray(popt[0:covparam_dim])
+    model.meanparam = gnp.asarray(popt[0:meanparam_dim])
 
-    z1_relaxed = popt[covparam_dim:]
+    model.covparam = gnp.asarray(popt[meanparam_dim:(covparam_dim + meanparam_dim)])
+
+    z1_relaxed = popt[(covparam_dim+meanparam_dim):]
 
     zi_relaxed = gnp.zeros(zi.shape)
     if gnp._gpmp_backend_ == 'jax':
@@ -224,6 +253,8 @@ def remodel(model, xi, zi, R, covparam0=None, info=False, verbosity=0):
     if info:
         info_ret["covparam0"] = covparam0
         info_ret["covparam"] = model.covparam
+        info_ret["meanparam0"] = meanparam0
+        info_ret["meanparam"] = model.meanparam
         info_ret["selection_criterion"] = nlrl
         info_ret["time"] = time.time() - tic
         return model, zi_relaxed, ind1, info_ret

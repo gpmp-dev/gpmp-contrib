@@ -69,20 +69,23 @@ class ExpectedImprovementR(ei.ExpectedImprovement):
 
         for i in range(self.output_dim):
 
+            # TODO:() This should also test meanparam0. Anyway, force_param_initial_guess is True and meanparam0 is not transferred to remodel
             covparam0 = self.models[i]['model'].covparam
             if covparam0 is None or self.force_param_initial_guess:
                 # This will be used by regp.remodel
-                assert self.models[i]["parameters_initial_guess_procedure"] == gp.kernel.anisotropic_parameters_initial_guess
+                assert self.models[i]["parameters_initial_guess_procedure"] == gp.kernel.anisotropic_parameters_initial_guess_constant_mean
                 covparam0 = None
             else:
                 covparam0 = gnp.asarray(covparam0)
 
             t0 = self.get_t(self.xi, self.zi[:, i], self.n_init)
 
+            # TODO:() R is chosen without using covparam0. This could cause troubles in the future.
             R = regp.select_optimal_threshold_above_t0(
                 self.models[i]['model'], self.xi, gnp.asarray(self.zi[:, i]), t0, G=self.options['G']
             )
 
+            # TODO:() meanparam0 should perhaps be used?
             self.models[i]['model'], self.zi_relaxed[:, i], _, info_ret = regp.remodel(
                 self.models[i]['model'], self.xi, gnp.asarray(self.zi[:, i]), R, covparam0, True
             )

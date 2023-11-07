@@ -40,6 +40,34 @@ class ExpectedImprovement(spred.SequentialPrediction):
     def init_smc(self, n_smc):
         return gpsmc.SMC(self.computer_experiments_problem.input_box, n_smc)
 
+    def build_models(self, models):
+        if models is None:
+            self.models = [
+                {
+                    "name": "",
+                    "model": None,
+                    "parameters_initial_guess_procedure": None,
+                    "selection_criterion": None,
+                    "info": None,
+                }
+                for i in range(self.output_dim)
+            ]
+
+            for i in range(self.output_dim):
+                # TODO:() The mean is estimated and then used by pluggin, is it a good idea to define it here?
+                self.models[i]['model'] = gp.core.Model(
+                    self.constant_mean, self.default_covariance, None, None, meantype="known"
+                )
+                self.models[i][
+                    "parameters_initial_guess_procedure"
+                ] = gp.kernel.anisotropic_parameters_initial_guess_constant_mean
+                self.models[i][
+                    "selection_criterion"
+                ] = self.models[i]['model'].negative_log_likelihood
+        else:
+            self.models = models
+
+
     def log_prob_excursion(self, x):
         min_threshold = 1e-6
         b = sampcrit.isinbox(self.computer_experiments_problem.input_box, x)

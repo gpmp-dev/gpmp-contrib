@@ -124,9 +124,10 @@ class SequentialPrediction:
                 self.xi,
                 self.zi[:, i]
             )
-            
+
+            # TODO:() Switch back to SLSQP?
             covparam, info = gp.kernel.autoselect_parameters(
-                covparam0, crit, dcrit, silent=True, info=True
+                covparam0, crit, dcrit, silent=True, info=True, method='L-BFGS-B'
             )
 
             self.models[i]['model'].covparam = gnp.asarray(covparam)
