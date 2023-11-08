@@ -67,6 +67,8 @@ class ExpectedImprovement(spred.SequentialPrediction):
         else:
             self.models = models
 
+    def constant_mean(self, x, param):
+        return param * gnp.ones((x.shape[0], 1))
 
     def log_prob_excursion(self, x):
         min_threshold = 1e-6
