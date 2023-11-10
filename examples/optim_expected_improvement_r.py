@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import gpmp as gp
 import gpmpcontrib.optim.expectedimprovement_r as ei_r
+from gpmpcontrib.optim.expectedimprovement import AbortException
 import lhsmdu
 import scipy.special
 import torch
@@ -59,11 +60,8 @@ for _ in range(n_repeat):
 
         try:
             eialgo.step()
-
-        except TypeError:
-            raise
-        except torch._C._LinAlgError:
-            raise
+        except AbortException:
+            break
 
         if plot:
             plt.plot(eialgo.xi[-1, 0], eialgo.xi[-1, 1], 'ko')
