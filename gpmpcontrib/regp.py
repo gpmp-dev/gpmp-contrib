@@ -208,7 +208,8 @@ def remodel(model, xi, zi, R, covparam0=None, info=False, verbosity=0):
     ]
 
     for i in range(xi.shape[1]):
-        min_dist = min([np.abs(xi[j, i] - xi[k, i]) for k in range(xi.shape[0]) for j in range(xi.shape[0]) if j != k])
+        dists = np.array([np.abs(xi[j, i] - xi[k, i]) for k in range(xi.shape[0]) for j in range(xi.shape[0])])
+        min_dist = dists[dists > 0].min()
 
         upper_bound = -gnp.log(min_dist * delta)
 
