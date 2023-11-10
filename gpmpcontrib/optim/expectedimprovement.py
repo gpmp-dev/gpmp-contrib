@@ -10,6 +10,11 @@ import gpmpcontrib.sequentialprediction as spred
 import gpmpcontrib.samplingcriteria as sampcrit
 import gpmpcontrib.smc as gpsmc
 
+class AbortException(Exception):
+    pass
+
+class AlreadyVisitedException(AbortException):
+    pass
 
 class ExpectedImprovement(spred.SequentialPrediction):
 
@@ -131,5 +136,8 @@ class ExpectedImprovement(spred.SequentialPrediction):
     
         # make new evaluation
         x_new = self.smc.x[gnp.argmax(gnp.asarray(self.ei))].reshape(1, -1)
+
+        if (x_new == self.xi).all(1).any():
+            raise AlreadyVisitedException()
 
         self.make_new_eval(x_new)
