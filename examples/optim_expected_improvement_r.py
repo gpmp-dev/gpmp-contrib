@@ -83,17 +83,18 @@ for _ in range(n_repeat):
 
     xi_records.append(eialgo.xi)
 
-# Plot histories
-for i in range(len(history_records)):
-    plt.figure()
+if plot:
+    # Plot histories
+    for i in range(len(history_records)):
+        plt.figure()
 
-    plt.plot(np.minimum.accumulate(history_records[i]), label='best observation so far', color='blue')
-    plt.plot(history_records[i], label='observation', color='green')
+        plt.plot(np.minimum.accumulate(history_records[i]), label='best observation so far', color='blue')
+        plt.plot(history_records[i], label='observation', color='green')
 
-    plt.axhline(3, color='r', label='min')
-    plt.legend()
-    plt.xlabel("Iterations")
-    plt.ylabel('GoldsteinPrice')
-    plt.semilogy()
+        plt.axhline(3, color='r', label='min')
+        plt.legend()
+        plt.xlabel("Iterations")
+        plt.ylabel('GoldsteinPrice')
+        plt.semilogy()
 
-    plt.show()
+        plt.show()
