@@ -6,8 +6,12 @@ from gpmpcontrib.optim.expectedimprovement import AbortException
 import lhsmdu
 import scipy.special
 import torch
+import sys
+import os
 
 from gpmpcontrib.optim.test_problems import goldsteinprice
+
+output_dir = sys.argv[1]
 
 ## -- settings
 
@@ -28,7 +32,7 @@ xi_records = []
 
 ## -- create initial dataset
 
-for _ in range(n_repeat):
+for i in range(n_repeat):
     xi = -2 + 4 * np.array(lhsmdu.sample(2, 6).T)
 
     ## -- initialize the ei algorithm
@@ -82,6 +86,13 @@ for _ in range(n_repeat):
     history_records.append(eialgo.zi)
 
     xi_records.append(eialgo.xi)
+
+    i_output_dir = os.path.join(output_dir, str(i))
+
+    if not os.path.exists(i_output_dir):
+        os.makedirs(i_output_dir)
+
+    np.save(os.path.join(i_output_dir, 'data.npy'), np.hstack((eialgo.xi , eialgo.zi)))
 
 if plot:
     # Plot histories
