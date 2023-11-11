@@ -17,7 +17,7 @@ output_dir = sys.argv[1]
 
 problem = goldsteinprice
 
-n_run = 70
+n_run = 100
 
 n_repeat = 30
 
