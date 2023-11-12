@@ -33,7 +33,7 @@ xi_records = []
 ## -- create initial dataset
 
 for i in range(n_repeat):
-    xi = -2 + 4 * np.array(lhsmdu.sample(2, 6).T)
+    xi = -2 + 4 * np.array(lhsmdu.sample(2, 6, randomSeed=None).T)
 
     ## -- initialize the ei algorithm
 
