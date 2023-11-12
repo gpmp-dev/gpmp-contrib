@@ -13,13 +13,17 @@ from gpmpcontrib.optim.test_problems import goldsteinprice
 
 output_dir = sys.argv[1]
 
+n_repeat = int(sys.argv[2])
+n_run = int(sys.argv[3])
+
+if len(sys.argv) > 4:
+    i_range = [int(sys.argv[4])]
+else:
+    i_range = list(range(n_repeat))
+
 ## -- settings
 
 problem = goldsteinprice
-
-n_run = 100
-
-n_repeat = 30
 
 strategy = "Concentration"
 
@@ -32,7 +36,7 @@ xi_records = []
 
 ## -- create initial dataset
 
-for i in range(n_repeat):
+for i in i_range:
     xi = -2 + 4 * np.array(lhsmdu.sample(2, 6, randomSeed=None).T)
 
     ## -- initialize the ei algorithm
