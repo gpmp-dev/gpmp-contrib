@@ -17,7 +17,7 @@ n_repeat = int(sys.argv[2])
 n_run = int(sys.argv[3])
 
 if len(sys.argv) > 4:
-    i_range = [int(sys.argv[4])]
+    i_range = [int(_tmp) for _tmp in sys.argv[4:]]
 else:
     i_range = list(range(n_repeat))
 
