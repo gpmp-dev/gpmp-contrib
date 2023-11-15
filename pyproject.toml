@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gpmp-contrib"
+version = "0.9.10"
+authors = [{name = "Emmanuel Vazquez", email = "emmanuel.vazquez@centralesupelec.fr"}]
+description = "GPmp contrib: the contrib GPmp package"
+readme = "README.md"
+license = {file = "LICENSE.txt"}
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "numpy",
+    "scipy>=1.8.0",
+    "matplotlib",
+    "gpmp>=0.9.10"
+]
+requires-python = ">=3.6"
+
+[project.urls]
+"Homepage" = "https://github.com/gpmp-dev/gpmp-contrib"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ['gpmpcontrib', 'gpmpcontrib/models', 'gpmpcontrib/optim',
+           'gpmpcontrib/misc', 'examples', 'test']

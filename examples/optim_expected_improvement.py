@@ -1,4 +1,4 @@
-'''Implement a sketch of the EI algorithm%
+'''Implement a sketch of the EI algorithm
 
 Author: Emmanuel Vazquez <emmanuel.vazquez@centralesupelec.fr>
 Copyright (c) 2022-2023, CentraleSupelec
