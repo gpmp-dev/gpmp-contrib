@@ -139,7 +139,9 @@ def make_regp_criterion_with_gradient(model, x0, z0, x1, meanparam_dim):
     return crit_jit, dcrit
 
 
-def remodel(model, xi, zi, R, covparam0=None, info=False, verbosity=0):
+def remodel(
+        model, xi, zi, R, covparam0=None, info=False, verbosity=0, optim_options={},
+):
     """
     Perform reGP optimization (REML + relaxation)
 
@@ -182,8 +184,14 @@ def remodel(model, xi, zi, R, covparam0=None, info=False, verbosity=0):
     (x0, z0, ind0), (x1, z1, z1_bounds, ind1) = split_data(xi, gnp.to_np(zi), ei, R)
     z1_size = z1.shape[0]
 
-    #z1_relaxed_init = (R[0][0] + 2 * (R[0][0] - z0.min() )) * np.ones(z1.shape)
-    z1_relaxed_init = z1
+    if optim_options['relaxed_init'] == 'flat':
+        z1_relaxed_init = (R[0][0] + 2 * (R[0][0] - z0.min() )) * np.ones(z1.shape)
+    elif optim_options['relaxed_init'] == 'f-values':
+        z1_relaxed_init = z1
+    else:
+        raise ValueError(
+            'Non-supported init option for relaxed observations: {}.'.format(optim_options['relaxed_init'])
+        )
 
     # Initial guess for the covariance parameters if not provided
     if covparam0 is None or meanparam0 is None:
@@ -234,9 +242,9 @@ def remodel(model, xi, zi, R, covparam0=None, info=False, verbosity=0):
         silent = False
 
     # Optimize parameters
-    # TODO:() Switch back to SLSQP?
+    _opts = {k: v for (k, v) in optim_options.items() if k not in ['method', 'relaxed_init']}
     popt, info_ret = gp.kernel.autoselect_parameters(
-        p0, nlrl, dnlrl, bounds=bounds, silent=silent, info=True, method="L-BFGS-B"
+        p0, nlrl, dnlrl, bounds=bounds, silent=silent, info=True, method=optim_options['method'], method_options=_opts
     )
 
     if verbosity == 1:
@@ -325,7 +333,7 @@ def predict(model, xi, zi, xt, R, covparam0=None, info=False, verbosity=0):
     return zi_relaxed, (zpm, zpv), model, info_ret
 
 
-def select_optimal_threshold_above_t0(model, xi, zi, t0, G=20):
+def select_optimal_threshold_above_t0(model, xi, zi, t0, optim_options, G=20):
     """
     Choose threshold for reGP with relaxation above t0
 
@@ -343,6 +351,8 @@ def select_optimal_threshold_above_t0(model, xi, zi, t0, G=20):
         Observed values at the data points.
     t0 : float
         Lower limit of the threshold range.
+    optim_options : dict
+        Options passed to remodel
     G : int, optional, default: 20
         Number of candidate thresholds to evaluate.
 
@@ -356,7 +366,7 @@ def select_optimal_threshold_above_t0(model, xi, zi, t0, G=20):
     J = gnp.numpy.zeros(G)
     for g in range(G):
         Rg = gnp.numpy.array([[t[g], gnp.numpy.inf]])
-        model, zi_relaxed, _ = remodel(model, xi, zi, Rg)
+        model, zi_relaxed, _ = remodel(model, xi, zi, Rg, optim_options=optim_options)
         zloom, zloov, _ = model.loo(xi, zi_relaxed)
         tCRPS = gp.misc.scoringrules.tcrps_gaussian(zloom, gnp.sqrt(zloov), zi_relaxed, a=-gnp.inf, b=t0)
         J[g] = gnp.sum(tCRPS)

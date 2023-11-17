@@ -35,8 +35,17 @@ class ExpectedImprovementR(ei.ExpectedImprovement):
         assert 't_getter' in options.keys(), "Options must contain a t_getter. See expectedimprovement-r.t_getters"
         self.get_t = options.pop('t_getter')
 
-        default_options = {'n_smc': 1000, 'G': 10}
+        default_crit_optim_options = {'method': 'L-BFGS-B', 'relaxed_init': 'f-values'}
+        if 'crit_optim_options' in options.keys():
+            default_crit_optim_options.update(options['crit_optim_options'])
+
+        default_options = {
+            'n_smc': 1000,
+            'G': 10,
+        }
         default_options.update(options)
+        default_options['crit_optim_options'] = default_crit_optim_options
+
         return default_options
 
     def predict(self, xt):
@@ -82,12 +91,23 @@ class ExpectedImprovementR(ei.ExpectedImprovement):
 
             # TODO:() R is chosen without using covparam0. This could cause troubles in the future.
             R = regp.select_optimal_threshold_above_t0(
-                self.models[i]['model'], self.xi, gnp.asarray(self.zi[:, i]), t0, G=self.options['G']
+                self.models[i]['model'],
+                self.xi,
+                gnp.asarray(self.zi[:, i]),
+                t0,
+                optim_options=self.options['crit_optim_options'],
+                G=self.options['G'],
             )
 
             # TODO:() meanparam0 should perhaps be used?
             self.models[i]['model'], self.zi_relaxed[:, i], _, info_ret = regp.remodel(
-                self.models[i]['model'], self.xi, gnp.asarray(self.zi[:, i]), R, covparam0, True
+                self.models[i]['model'],
+                self.xi,
+                gnp.asarray(self.zi[:, i]),
+                R,
+                covparam0,
+                True,
+                optim_options=self.options['crit_optim_options'],
             )
 
             self.models[i]['info'] = info_ret
