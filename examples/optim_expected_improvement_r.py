@@ -78,7 +78,7 @@ xi_records = []
 # -- Create initial dataset and run optimization
 for i in i_range:
     # Generate initial design points using Latin Hypercube Sampling
-    ni0 = 6
+    ni0 = 3 * problem.input_dim
     xi = gp.misc.designs.scale(np.array(lhsmdu.sample(problem.input_dim, ni0, randomSeed=None).T, problem.input_box))
 
     # Initialize the Expected Improvement algorithm
