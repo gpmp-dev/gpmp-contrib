@@ -39,7 +39,7 @@ else:
 
 # n_iterations
 if "N_ITERATIONS" in os.environ:
-    n_iterations = os.environ["N_ITERATIONS"]
+    n_iterations = int(os.environ["N_ITERATIONS"])
 else:
     raise RuntimeError('The environment variable "N_ITER" must be set.')
 
@@ -48,9 +48,9 @@ assert ("N_RUN" in os.environ) != ("IDX_RUN" in os.environ), 'One and only one o
                                                              'and "IDX_RUN" must be set.'
 
 if "N_RUNS" in os.environ:
-    idx_run_list = list(range(os.environ["N_RUNS"]))
+    idx_run_list = list(range(int(os.environ["N_RUNS"])))
 if "IDX_RUN" in os.environ:
-    idx_run_list = os.environ["IDX_RUN"]
+    idx_run_list = [int(os.environ["IDX_RUN"])]
 
 # Define the optimization problem
 if "PROBLEM" in os.environ:
@@ -80,19 +80,19 @@ if "RELAXED_INIT" in os.environ:
 
 # See gpmp.kernel
 if "FTOL" in os.environ:
-    crit_optim_options["ftol"] = os.environ["ftol"]
+    crit_optim_options["ftol"] = float(os.environ["ftol"])
 
 if "GTOL" in os.environ:
-    crit_optim_options["gtol"] = os.environ["gtol"]
+    crit_optim_options["gtol"] = float(os.environ["gtol"])
 
 if "EPS" in os.environ:
-    crit_optim_options["eps"] = os.environ["eps"]
+    crit_optim_options["eps"] = float(os.environ["eps"])
 
 if "MAXFUN" in os.environ:
-    crit_optim_options["maxfun"] = os.environ["maxfun"]
+    crit_optim_options["maxfun"] = int(os.environ["maxfun"])
 
 if "MAXITER" in os.environ:
-    crit_optim_options["maxiter"] = os.environ["maxiter"]
+    crit_optim_options["maxiter"] = int(os.environ["maxiter"])
 
 # Enable or disable plotting
 plot = False
