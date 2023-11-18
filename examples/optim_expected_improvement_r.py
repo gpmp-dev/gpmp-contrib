@@ -41,10 +41,10 @@ else:
 if "N_ITERATIONS" in os.environ:
     n_iterations = int(os.environ["N_ITERATIONS"])
 else:
-    raise RuntimeError('The environment variable "N_ITER" must be set.')
+    raise RuntimeError('The environment variable "N_ITERATIONS" must be set.')
 
 # runs
-assert ("N_RUN" in os.environ) != ("IDX_RUN" in os.environ), 'One and only one of the environment variables "N_RUN" ' \
+assert ("N_RUNS" in os.environ) != ("IDX_RUN" in os.environ), 'One and only one of the environment variables "N_RUNS" ' \
                                                              'and "IDX_RUN" must be set.'
 
 if "N_RUNS" in os.environ:
