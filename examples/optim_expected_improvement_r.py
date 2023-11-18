@@ -38,7 +38,35 @@ else:
 problem = goldsteinprice
 
 # Define the optimization strategy
-strategy = "Concentration"
+if "STRATEGY" in os.environ:
+    strategy = os.environ["STRATEGY"]
+else:
+    raise RuntimeError("Set the STRATEGY environment variable.")
+
+# Criterion optimization options
+crit_optim_options = {}
+
+if "CRIT_OPT_METHOD" in os.environ:
+    crit_optim_options['method'] = os.environ["CRIT_OPT_METHOD"]
+
+if "RELAXED_INIT" in os.environ:
+    crit_optim_options["relaxed_init"] = os.environ["RELAXED_INIT"]
+
+# See gpmp.kernel
+if "FTOL" in os.environ:
+    crit_optim_options["ftol"] = os.environ["ftol"]
+
+if "GTOL" in os.environ:
+    crit_optim_options["gtol"] = os.environ["gtol"]
+
+if "EPS" in os.environ:
+    crit_optim_options["eps"] = os.environ["eps"]
+
+if "MAXFUN" in os.environ:
+    crit_optim_options["maxfun"] = os.environ["maxfun"]
+
+if "MAXITER" in os.environ:
+    crit_optim_options["maxiter"] = os.environ["maxiter"]
 
 # Enable or disable plotting
 plot = False
@@ -54,7 +82,13 @@ for i in i_range:
     xi = gp.misc.designs.scale(np.array(lhsmdu.sample(problem.input_dim, ni0, randomSeed=None).T, problem.input_box))
 
     # Initialize the Expected Improvement algorithm
-    eialgo = ei_r.ExpectedImprovementR(problem, options={'t_getter': ei_r.t_getters[strategy](0.25)})
+    eialgo = ei_r.ExpectedImprovementR(
+        problem,
+        options={
+            't_getter': ei_r.t_getters[strategy](0.25),
+            'crit_optim_options': crit_optim_options,
+        }
+    )
     eialgo.set_initial_design(xi=xi)
 
     # Plot initial state if enabled
