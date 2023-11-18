@@ -43,6 +43,9 @@ if "STRATEGY" in os.environ:
 else:
     raise RuntimeError("Set the STRATEGY environment variable.")
 
+# Strategy quantile level
+q_strategy = 0.25
+
 # Criterion optimization options
 crit_optim_options = {}
 
@@ -85,7 +88,7 @@ for i in i_range:
     eialgo = ei_r.ExpectedImprovementR(
         problem,
         options={
-            't_getter': ei_r.t_getters[strategy](0.25),
+            't_getter': ei_r.t_getters[strategy](q_strategy),
             'crit_optim_options': crit_optim_options,
         }
     )
