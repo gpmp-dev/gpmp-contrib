@@ -47,8 +47,8 @@ else:
 assert ("N_RUN" in os.environ) != ("IDX_RUN" in os.environ), 'One and only one of the environment variables "N_RUN" ' \
                                                              'and "IDX_RUN" must be set.'
 
-if "N_RUN" in os.environ:
-    idx_run_list = list(range(os.environ["N_RUN"]))
+if "N_RUNS" in os.environ:
+    idx_run_list = list(range(os.environ["N_RUNS"]))
 if "IDX_RUN" in os.environ:
     idx_run_list = os.environ["IDX_RUN"]
 
