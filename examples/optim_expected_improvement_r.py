@@ -8,28 +8,49 @@ import sys
 import os
 import gpmpcontrib.optim.test_problems as test_problems
 
-# Detect if running in interactive mode
-if len(sys.argv) < 4:
-    # Interactive Mode: Prompt user for inputs
-    output_dir = "output"
-    n_repeat = 100
-    n_run = 20
-    i_range_input = "1,2"
-    if i_range_input:
-        i_range = [int(i) for i in i_range_input.split(',')]
-    else:
-        i_range = list(range(n_repeat))
-else:
-    # Command Line Mode: Use arguments from command line
-    output_dir = sys.argv[1]
-    n_repeat = int(sys.argv[2])
-    n_run = int(sys.argv[3])
-    if len(sys.argv) > 4:
-        i_range = [int(_tmp) for _tmp in sys.argv[4:]]
-    else:
-        i_range = list(range(n_repeat))
+# # Detect if running in interactive mode
+# if len(sys.argv) < 4:
+#     # Interactive Mode: Prompt user for inputs
+#     output_dir = "output"
+#     n_repeat = 100
+#     n_iter = 20
+#     i_range_input = "1,2"
+#     if i_range_input:
+#         i_range = [int(i) for i in i_range_input.split(',')]
+#     else:
+#         i_range = list(range(n_repeat))
+# else:
+#     # Command Line Mode: Use arguments from command line
+#     output_dir = sys.argv[1]
+#     n_repeat = int(sys.argv[2])
+#     n_iter = int(sys.argv[3])
+#     if len(sys.argv) > 4:
+#         i_range = [int(_tmp) for _tmp in sys.argv[4:]]
+#     else:
+#         i_range = list(range(n_repeat))
 
 # -- Settings
+
+# Output directory
+if "OUTPUT_DIR" in os.environ:
+    output_dir = os.environ["OUTPUT_DIR"]
+else:
+    raise RuntimeError('The environment variable "OUTPUT_DIR" must be set.')
+
+# n_iter
+if "N_ITER" in os.environ:
+    n_iter = os.environ["N_ITER"]
+else:
+    raise RuntimeError('The environment variable "N_ITER" must be set.')
+
+# runs
+assert ("N_RUN" in os.environ) != ("IDX_RUN" in os.environ), 'One and only one of the environment variables "N_RUN" ' \
+                                                             'and "IDX_RUN" must be set.'
+
+if "N_RUN" in os.environ:
+    i_range = list(range(os.environ["N_RUN"]))
+if "IDX_RUN" in os.environ:
+    i_range = os.environ["IDX_RUN"]
 
 # Define the optimization problem
 if "PROBLEM" in os.environ:
@@ -109,7 +130,7 @@ for i in i_range:
         plt.show()
 
     # Perform optimization steps
-    for _ in range(n_run):
+    for _ in range(n_iter):
         if plot:
             plt.figure()
             plt.plot(eialgo.xi[:, 0], eialgo.xi[:, 1], 'go')
