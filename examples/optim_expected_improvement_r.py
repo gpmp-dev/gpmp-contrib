@@ -12,22 +12,22 @@ import gpmpcontrib.optim.test_problems as test_problems
 # if len(sys.argv) < 4:
 #     # Interactive Mode: Prompt user for inputs
 #     output_dir = "output"
-#     n_repeat = 100
-#     n_iter = 20
+#     n_runs = 100
+#     n_iterations = 20
 #     i_range_input = "1,2"
 #     if i_range_input:
-#         i_range = [int(i) for i in i_range_input.split(',')]
+#         idx_run_list = [int(i) for i in i_range_input.split(',')]
 #     else:
-#         i_range = list(range(n_repeat))
+#         idx_run_list = list(range(n_repeat))
 # else:
 #     # Command Line Mode: Use arguments from command line
 #     output_dir = sys.argv[1]
-#     n_repeat = int(sys.argv[2])
-#     n_iter = int(sys.argv[3])
+#     n_runs = int(sys.argv[2])
+#     n_iterations = int(sys.argv[3])
 #     if len(sys.argv) > 4:
-#         i_range = [int(_tmp) for _tmp in sys.argv[4:]]
+#         idx_run_list = [int(_tmp) for _tmp in sys.argv[4:]]
 #     else:
-#         i_range = list(range(n_repeat))
+#         idx_run_list = list(range(n_repeat))
 
 # -- Settings
 
