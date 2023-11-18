@@ -4,12 +4,9 @@ import gpmp as gp
 import gpmpcontrib.optim.expectedimprovement_r as ei_r
 from gpmpcontrib.optim.expectedimprovement import AbortException
 import lhsmdu
-import scipy.special
 import sys
 import os
-
-# Test problem
-from gpmpcontrib.optim.test_problems import goldsteinprice
+import gpmpcontrib.optim.test_problems as test_problems
 
 # Detect if running in interactive mode
 if len(sys.argv) < 4:
@@ -35,7 +32,12 @@ else:
 # -- Settings
 
 # Define the optimization problem
-problem = goldsteinprice
+if "PROBLEM" in os.environ:
+    problem_name = os.environ["PROBLEM"]
+else:
+    raise RuntimeError('The environment variable "PROBLEM" must be set.')
+
+problem = getattr(test_problems, problem_name)
 
 # Define the optimization strategy
 if "STRATEGY" in os.environ:
