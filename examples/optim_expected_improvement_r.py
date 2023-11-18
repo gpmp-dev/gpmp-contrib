@@ -37,9 +37,9 @@ if "OUTPUT_DIR" in os.environ:
 else:
     raise RuntimeError('The environment variable "OUTPUT_DIR" must be set.')
 
-# n_iter
-if "N_ITER" in os.environ:
-    n_iter = os.environ["N_ITER"]
+# n_iterations
+if "N_ITERATIONS" in os.environ:
+    n_iterations = os.environ["N_ITERATIONS"]
 else:
     raise RuntimeError('The environment variable "N_ITER" must be set.')
 
@@ -130,7 +130,7 @@ for i in idx_run_list:
         plt.show()
 
     # Perform optimization steps
-    for _ in range(n_iter):
+    for _ in range(n_iterations):
         if plot:
             plt.figure()
             plt.plot(eialgo.xi[:, 0], eialgo.xi[:, 1], 'go')
