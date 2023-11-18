@@ -48,9 +48,9 @@ assert ("N_RUN" in os.environ) != ("IDX_RUN" in os.environ), 'One and only one o
                                                              'and "IDX_RUN" must be set.'
 
 if "N_RUN" in os.environ:
-    i_range = list(range(os.environ["N_RUN"]))
+    idx_run_list = list(range(os.environ["N_RUN"]))
 if "IDX_RUN" in os.environ:
-    i_range = os.environ["IDX_RUN"]
+    idx_run_list = os.environ["IDX_RUN"]
 
 # Define the optimization problem
 if "PROBLEM" in os.environ:
@@ -102,7 +102,7 @@ history_records = []
 xi_records = []
 
 # -- Create initial dataset and run optimization
-for i in i_range:
+for i in idx_run_list:
     # Generate initial design points using Latin Hypercube Sampling
     ni0 = 3 * problem.input_dim
     xi = gp.misc.designs.scale(np.array(lhsmdu.sample(problem.input_dim, ni0, randomSeed=None).T, problem.input_box))
