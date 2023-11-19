@@ -74,7 +74,7 @@ else:
 
 # Define the strategy quantile level
 if "Q_STRATEGY" in os.environ:
-    q_strategy = os.environ["Q_STRATEGY"]
+    q_strategy = float(os.environ["Q_STRATEGY"])
 else:
     q_strategy = 0.25
 
