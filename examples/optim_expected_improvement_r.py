@@ -60,14 +60,23 @@ else:
 
 problem = getattr(test_problems, problem_name)
 
+# Define n0/d where n0 is the size of the initial DOE.
+if "N0_OVER_D" in os.environ:
+    n0_over_d = int(os.environ["N0_OVER_D"])
+else:
+    n0_over_d = 3
+
 # Define the optimization strategy
 if "STRATEGY" in os.environ:
     strategy = os.environ["STRATEGY"]
 else:
     raise RuntimeError("Set the STRATEGY environment variable.")
 
-# Strategy quantile level
-q_strategy = 0.25
+# Define the strategy quantile level
+if "Q_STRATEGY" in os.environ:
+    q_strategy = os.environ["Q_STRATEGY"]
+else:
+    q_strategy = 0.25
 
 # Criterion optimization options
 crit_optim_options = {}
@@ -104,7 +113,7 @@ xi_records = []
 # -- Create initial dataset and run optimization
 for i in idx_run_list:
     # Generate initial design points using Latin Hypercube Sampling
-    ni0 = 3 * problem.input_dim
+    ni0 = n0_over_d * problem.input_dim
     xi = gp.misc.designs.scale(np.array(lhsmdu.sample(problem.input_dim, ni0, randomSeed=None).T), problem.input_box)
 
     # Initialize the Expected Improvement algorithm
