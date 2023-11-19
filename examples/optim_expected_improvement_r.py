@@ -105,7 +105,7 @@ xi_records = []
 for i in idx_run_list:
     # Generate initial design points using Latin Hypercube Sampling
     ni0 = 3 * problem.input_dim
-    xi = gp.misc.designs.scale(np.array(lhsmdu.sample(problem.input_dim, ni0, randomSeed=None).T, problem.input_box))
+    xi = gp.misc.designs.scale(np.array(lhsmdu.sample(problem.input_dim, ni0, randomSeed=None).T), problem.input_box)
 
     # Initialize the Expected Improvement algorithm
     eialgo = ei_r.ExpectedImprovementR(
