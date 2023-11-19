@@ -89,19 +89,19 @@ if "RELAXED_INIT" in os.environ:
 
 # See gpmp.kernel
 if "FTOL" in os.environ:
-    crit_optim_options["ftol"] = float(os.environ["ftol"])
+    crit_optim_options["ftol"] = float(os.environ["FTOL"])
 
 if "GTOL" in os.environ:
-    crit_optim_options["gtol"] = float(os.environ["gtol"])
+    crit_optim_options["gtol"] = float(os.environ["GTOL"])
 
 if "EPS" in os.environ:
-    crit_optim_options["eps"] = float(os.environ["eps"])
+    crit_optim_options["eps"] = float(os.environ["EPS"])
 
 if "MAXFUN" in os.environ:
-    crit_optim_options["maxfun"] = int(os.environ["maxfun"])
+    crit_optim_options["maxfun"] = int(os.environ["MAXFUN"])
 
 if "MAXITER" in os.environ:
-    crit_optim_options["maxiter"] = int(os.environ["maxiter"])
+    crit_optim_options["maxiter"] = int(os.environ["MAXITER"])
 
 # Enable or disable plotting
 plot = False
