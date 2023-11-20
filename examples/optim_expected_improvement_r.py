@@ -66,6 +66,9 @@ if "N0_OVER_D" in os.environ:
 else:
     n0_over_d = 3
 
+# Options dict
+options = {}
+
 # Define the optimization strategy
 if "STRATEGY" in os.environ:
     strategy = os.environ["STRATEGY"]
@@ -77,6 +80,9 @@ if "Q_STRATEGY" in os.environ:
     q_strategy = float(os.environ["Q_STRATEGY"])
 else:
     q_strategy = 0.25
+
+# Set t_getter
+options["t_getter"] = ei_r.t_getters[strategy](q_strategy)
 
 # Criterion optimization options
 crit_optim_options = {}
@@ -103,6 +109,13 @@ if "MAXFUN" in os.environ:
 if "MAXITER" in os.environ:
     crit_optim_options["maxiter"] = int(os.environ["MAXITER"])
 
+# Set crit_optim_options
+options["crit_optim_options"] = crit_optim_options
+
+# SMC options
+if "N_SMC" in os.environ:
+    options['n_smc'] = int(os.environ["N_SMC"])
+
 # Enable or disable plotting
 plot = False
 
@@ -119,10 +132,7 @@ for i in idx_run_list:
     # Initialize the Expected Improvement algorithm
     eialgo = ei_r.ExpectedImprovementR(
         problem,
-        options={
-            't_getter': ei_r.t_getters[strategy](q_strategy),
-            'crit_optim_options': crit_optim_options,
-        }
+        options=options
     )
     eialgo.set_initial_design(xi=xi)
 
