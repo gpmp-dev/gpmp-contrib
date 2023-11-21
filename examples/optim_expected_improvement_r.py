@@ -9,7 +9,7 @@ import os
 import gpmpcontrib.optim.test_problems as test_problems
 
 # -- Settings
-plot = True
+plot = False
 
 # Default values and types for different options
 env_options = {
