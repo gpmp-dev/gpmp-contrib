@@ -133,7 +133,7 @@ for i in idx_run_list:
     xi_records.append(eialgo.xi)
 
     # Prepare output directory
-    i_output_dir = os.path.join(output_dir, str(i))
+    i_output_dir = os.path.join(options["output_dir"], str(i))
     if not os.path.exists(i_output_dir):
         os.makedirs(i_output_dir)
 
