@@ -11,16 +11,19 @@ import gpmpcontrib.smc as gpsmc
 import gpmpcontrib.regp as regp
 import numpy as np
 
-t_getters = {
-    'Constant': lambda l: lambda xi, zi, n_init: np.quantile(zi[:n_init], l),
-    'Concentration': lambda l: lambda xi, zi, n_init: np.quantile(zi, l)
+threshold_strategy = {
+    "Constant": lambda l: lambda xi, zi, n_init: np.quantile(zi[:n_init], l),
+    "Concentration": lambda l: lambda xi, zi, n_init: np.quantile(zi, l),
 }
 
-class ExpectedImprovementR(ei.ExpectedImprovement):
 
+class ExpectedImprovementR(ei.ExpectedImprovement):
     @staticmethod
     def build(problem, strategy, l):
-        return ExpectedImprovementR(problem=problem, options={'t_getter': t_getters[strategy](l)})
+        return ExpectedImprovementR(
+            problem=problem,
+            options={"threshold_strategy": threshold_strategy[strategy](l)},
+        )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -32,19 +35,21 @@ class ExpectedImprovementR(ei.ExpectedImprovement):
         if options is None:
             options = {}
 
-        assert 't_getter' in options.keys(), "Options must contain a t_getter. See expectedimprovement-r.t_getters"
-        self.get_t = options.pop('t_getter')
+        assert (
+            "threshold_strategy" in options.keys()
+        ), "Options must contain a threshold_strategy. See expectedimprovement-r.threshold_strategy"
+        self.get_t = options.pop("threshold_strategy")
 
-        default_crit_optim_options = {'method': 'L-BFGS-B', 'relaxed_init': 'f-values'}
-        if 'crit_optim_options' in options.keys():
-            default_crit_optim_options.update(options['crit_optim_options'])
+        default_crit_optim_options = {"method": "L-BFGS-B", "relaxed_init": "f-values"}
+        if "crit_optim_options" in options.keys():
+            default_crit_optim_options.update(options["crit_optim_options"])
 
         default_options = {
-            'n_smc': 1000,
-            'G': 10,
+            "n_smc": 1000,
+            "G": 10,
         }
         default_options.update(options)
-        default_options['crit_optim_options'] = default_crit_optim_options
+        default_options["crit_optim_options"] = default_crit_optim_options
 
         return default_options
 
@@ -53,18 +58,18 @@ class ExpectedImprovementR(ei.ExpectedImprovement):
         zpm = np.empty((xt.shape[0], self.output_dim))
         zpv = np.empty((xt.shape[0], self.output_dim))
         for i in range(self.output_dim):
-            zpm[:, i], zpv[:, i] = self.models[i]['model'].predict(
+            zpm[:, i], zpv[:, i] = self.models[i]["model"].predict(
                 self.xi, self.zi_relaxed[:, i], xt
             )
         return zpm, zpv
 
     def compute_conditional_simulations(
-            self,
-            compute_zsim=True,
-            n_samplepaths=0,
-            xt='None',
-            type='intersection',
-            method='chol'
+        self,
+        compute_zsim=True,
+        n_samplepaths=0,
+        xt="None",
+        type="intersection",
+        method="chol",
     ):
         raise NotImplementedError
 
@@ -77,12 +82,14 @@ class ExpectedImprovementR(ei.ExpectedImprovement):
         self.zi_relaxed = self.zi.copy()
 
         for i in range(self.output_dim):
-
             # TODO:() This should also test meanparam0. Anyway, force_param_initial_guess is True and meanparam0 is not transferred to remodel
-            covparam0 = self.models[i]['model'].covparam
+            covparam0 = self.models[i]["model"].covparam
             if covparam0 is None or self.force_param_initial_guess:
                 # This will be used by regp.remodel
-                assert self.models[i]["parameters_initial_guess_procedure"] == gp.kernel.anisotropic_parameters_initial_guess_constant_mean
+                assert (
+                    self.models[i]["parameters_initial_guess_procedure"]
+                    == gp.kernel.anisotropic_parameters_initial_guess_constant_mean
+                )
                 covparam0 = None
             else:
                 covparam0 = gnp.asarray(covparam0)
@@ -91,26 +98,26 @@ class ExpectedImprovementR(ei.ExpectedImprovement):
 
             # TODO:() R is chosen without using covparam0. This could cause troubles in the future.
             R = regp.select_optimal_threshold_above_t0(
-                self.models[i]['model'],
+                self.models[i]["model"],
                 self.xi,
                 gnp.asarray(self.zi[:, i]),
                 t0,
-                optim_options=self.options['crit_optim_options'],
-                G=self.options['G'],
+                optim_options=self.options["crit_optim_options"],
+                G=self.options["G"],
             )
 
             # TODO:() meanparam0 should perhaps be used?
-            self.models[i]['model'], self.zi_relaxed[:, i], _, info_ret = regp.remodel(
-                self.models[i]['model'],
+            self.models[i]["model"], self.zi_relaxed[:, i], _, info_ret = regp.remodel(
+                self.models[i]["model"],
                 self.xi,
                 gnp.asarray(self.zi[:, i]),
                 R,
                 covparam0,
                 True,
-                optim_options=self.options['crit_optim_options'],
+                optim_options=self.options["crit_optim_options"],
             )
 
-            self.models[i]['info'] = info_ret
+            self.models[i]["info"] = info_ret
 
     def set_initial_design(self, xi, **kwargs):
         self.n_init = xi.shape[0]

@@ -8,116 +8,69 @@ import sys
 import os
 import gpmpcontrib.optim.test_problems as test_problems
 
-# # Detect if running in interactive mode
-# if len(sys.argv) < 4:
-#     # Interactive Mode: Prompt user for inputs
-#     output_dir = "output"
-#     n_runs = 100
-#     n_iterations = 20
-#     i_range_input = "1,2"
-#     if i_range_input:
-#         idx_run_list = [int(i) for i in i_range_input.split(',')]
-#     else:
-#         idx_run_list = list(range(n_repeat))
-# else:
-#     # Command Line Mode: Use arguments from command line
-#     output_dir = sys.argv[1]
-#     n_runs = int(sys.argv[2])
-#     n_iterations = int(sys.argv[3])
-#     if len(sys.argv) > 4:
-#         idx_run_list = [int(_tmp) for _tmp in sys.argv[4:]]
-#     else:
-#         idx_run_list = list(range(n_repeat))
-
 # -- Settings
+plot = True
 
-# Output directory
-if "OUTPUT_DIR" in os.environ:
-    output_dir = os.environ["OUTPUT_DIR"]
-else:
-    raise RuntimeError('The environment variable "OUTPUT_DIR" must be set.')
+# Default values and types for different options
+env_options = {
+    "OUTPUT_DIR": ("output", str),
+    "N_ITERATIONS": (100, int),
+    "IDX_RUN": (None, int),
+    "N_RUNS": (1, int),
+    "PROBLEM": ("goldsteinprice", str),
+    "N0_OVER_D": (3, int),
+    "STRATEGY": ("Constant", str),
+    "Q_STRATEGY": (0.25, float),
+    "CRIT_OPT_METHOD": (None, str),
+    "RELAXED_INIT": (None, str),
+    "FTOL": (None, float),
+    "GTOL": (None, float),
+    "EPS": (None, float),
+    "MAXFUN": (None, int),
+    "MAXITER": (None, int),
+    "N_SMC": (None, int),
+}
 
-# n_iterations
-if "N_ITERATIONS" in os.environ:
-    n_iterations = int(os.environ["N_ITERATIONS"])
-else:
-    raise RuntimeError('The environment variable "N_ITERATIONS" must be set.')
-
-# runs
-assert ("N_RUNS" in os.environ) != ("IDX_RUN" in os.environ), 'One and only one of the environment variables "N_RUNS" ' \
-                                                             'and "IDX_RUN" must be set.'
-
-if "N_RUNS" in os.environ:
-    idx_run_list = list(range(int(os.environ["N_RUNS"])))
-if "IDX_RUN" in os.environ:
-    idx_run_list = [int(os.environ["IDX_RUN"])]
-
-# Define the optimization problem
-if "PROBLEM" in os.environ:
-    problem_name = os.environ["PROBLEM"]
-else:
-    raise RuntimeError('The environment variable "PROBLEM" must be set.')
-
-problem = getattr(test_problems, problem_name)
-
-# Define n0/d where n0 is the size of the initial DOE.
-if "N0_OVER_D" in os.environ:
-    n0_over_d = int(os.environ["N0_OVER_D"])
-else:
-    n0_over_d = 3
-
-# Options dict
+# Initialize options and crit_optim_options
 options = {}
-
-# Define the optimization strategy
-if "STRATEGY" in os.environ:
-    strategy = os.environ["STRATEGY"]
-else:
-    raise RuntimeError("Set the STRATEGY environment variable.")
-
-# Define the strategy quantile level
-if "Q_STRATEGY" in os.environ:
-    q_strategy = float(os.environ["Q_STRATEGY"])
-else:
-    q_strategy = 0.25
-
-# Set t_getter
-options["t_getter"] = ei_r.t_getters[strategy](q_strategy)
-
-# Criterion optimization options
 crit_optim_options = {}
 
-if "CRIT_OPT_METHOD" in os.environ:
-    crit_optim_options['method'] = os.environ["CRIT_OPT_METHOD"]
+# Loop through the environment options
+for key, (default, value_type) in env_options.items():
+    value = os.getenv(key, default)
+    if value is not None:
+        if key in [
+            "CRIT_OPT_METHOD",
+            "RELAXED_INIT",
+            "FTOL",
+            "GTOL",
+            "EPS",
+            "MAXFUN",
+            "MAXITER",
+        ]:
+            # Add to crit_optim_options
+            crit_optim_options[key.lower()] = value_type(value)
+        elif key == "IDX_RUN" and value is not None:
+            idx_run_list = [value_type(value)]
+        elif key == "N_RUNS" and "IDX_RUN" not in os.environ:
+            idx_run_list = list(range(value_type(value)))
+        elif key == "PROBLEM":
+            problem = getattr(test_problems, value)
+        if key == "STRATEGY":
+            # Check if Q_STRATEGY is set, use its value if available, otherwise use default
+            q_strategy_value = float(
+                os.getenv("Q_STRATEGY", env_options["Q_STRATEGY"][0])
+            )
+            options["threshold_strategy"] = ei_r.threshold_strategy[value](q_strategy_value)
+        elif key == "Q_STRATEGY":
+            continue  # Handled with STRATEGY
+        else:
+            # Add to options directly
+            options[key.lower()] = value_type(value)
 
-if "RELAXED_INIT" in os.environ:
-    crit_optim_options["relaxed_init"] = os.environ["RELAXED_INIT"]
-
-# See gpmp.kernel
-if "FTOL" in os.environ:
-    crit_optim_options["ftol"] = float(os.environ["FTOL"])
-
-if "GTOL" in os.environ:
-    crit_optim_options["gtol"] = float(os.environ["GTOL"])
-
-if "EPS" in os.environ:
-    crit_optim_options["eps"] = float(os.environ["EPS"])
-
-if "MAXFUN" in os.environ:
-    crit_optim_options["maxfun"] = int(os.environ["MAXFUN"])
-
-if "MAXITER" in os.environ:
-    crit_optim_options["maxiter"] = int(os.environ["MAXITER"])
-
-# Set crit_optim_options
-options["crit_optim_options"] = crit_optim_options
-
-# SMC options
-if "N_SMC" in os.environ:
-    options['n_smc'] = int(os.environ["N_SMC"])
-
-# Enable or disable plotting
-plot = False
+# Set crit_optim_options in options
+if crit_optim_options:
+    options["crit_optim_options"] = crit_optim_options
 
 # -- Initialize records for storing results
 history_records = []
@@ -126,21 +79,21 @@ xi_records = []
 # -- Create initial dataset and run optimization
 for i in idx_run_list:
     # Generate initial design points using Latin Hypercube Sampling
-    ni0 = n0_over_d * problem.input_dim
-    xi = gp.misc.designs.scale(np.array(lhsmdu.sample(problem.input_dim, ni0, randomSeed=None).T), problem.input_box)
+    ni0 = options["n0_over_d"] * problem.input_dim
+    xi = gp.misc.designs.scale(
+        np.array(lhsmdu.sample(problem.input_dim, ni0, randomSeed=None).T),
+        problem.input_box,
+    )
 
     # Initialize the Expected Improvement algorithm
-    eialgo = ei_r.ExpectedImprovementR(
-        problem,
-        options=options
-    )
+    eialgo = ei_r.ExpectedImprovementR(problem, options=options)
     eialgo.set_initial_design(xi=xi)
 
     # Plot initial state if enabled
     if plot:
         plt.figure()
-        plt.plot(eialgo.zi, eialgo.zi_relaxed, 'o')
-        plt.axhline(np.quantile(eialgo.zi, 0.25), color='b', label='t0')
+        plt.plot(eialgo.zi, eialgo.zi_relaxed, "o")
+        plt.axhline(np.quantile(eialgo.zi, 0.25), color="b", label="t0")
         plt.semilogy()
         plt.semilogx()
         plt.xlabel("Truth")
@@ -149,11 +102,11 @@ for i in idx_run_list:
         plt.show()
 
     # Perform optimization steps
-    for _ in range(n_iterations):
+    for _ in range(options["n_iterations"]):
         if plot:
             plt.figure()
-            plt.plot(eialgo.xi[:, 0], eialgo.xi[:, 1], 'go')
-            plt.plot(eialgo.smc.x[:, 0], eialgo.smc.x[:, 1], 'bo', markersize=3)
+            plt.plot(eialgo.xi[:, 0], eialgo.xi[:, 1], "go")
+            plt.plot(eialgo.smc.x[:, 0], eialgo.smc.x[:, 1], "bo", markersize=3)
 
         # Run a step of the algorithm
         try:
@@ -163,11 +116,11 @@ for i in idx_run_list:
 
         # Plot current state if enabled
         if plot:
-            plt.plot(eialgo.xi[-1, 0], eialgo.xi[-1, 1], 'ko')
+            plt.plot(eialgo.xi[-1, 0], eialgo.xi[-1, 1], "ko")
             plt.show()
             plt.figure()
-            plt.plot(eialgo.zi, eialgo.zi_relaxed, 'o')
-            plt.axhline(np.quantile(eialgo.zi, 0.25), color='b', label='t0')
+            plt.plot(eialgo.zi, eialgo.zi_relaxed, "o")
+            plt.axhline(np.quantile(eialgo.zi, 0.25), color="b", label="t0")
             plt.semilogy()
             plt.semilogx()
             plt.xlabel("Truth")
@@ -185,17 +138,21 @@ for i in idx_run_list:
         os.makedirs(i_output_dir)
 
     # Save data
-    np.save(os.path.join(i_output_dir, 'data.npy'), np.hstack((eialgo.xi, eialgo.zi)))
+    np.save(os.path.join(i_output_dir, "data.npy"), np.hstack((eialgo.xi, eialgo.zi)))
 
 # Plot final results if enabled
 if plot:
     for i in range(len(history_records)):
         plt.figure()
-        plt.plot(np.minimum.accumulate(history_records[i]), label='best observation so far', color='blue')
-        plt.plot(history_records[i], label='observation', color='green')
-        plt.axhline(3, color='r', label='min')
+        plt.plot(
+            np.minimum.accumulate(history_records[i]),
+            label="best observation so far",
+            color="blue",
+        )
+        plt.plot(history_records[i], label="observation", color="green")
+        plt.axhline(3, color="r", label="min")
         plt.legend()
         plt.xlabel("Iterations")
-        plt.ylabel('GoldsteinPrice')
+        plt.ylabel("GoldsteinPrice")
         plt.semilogy()
         plt.show()
