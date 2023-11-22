@@ -14,21 +14,21 @@ plot = False
 # Default values and types for different options
 env_options = {
     "OUTPUT_DIR": ("output", str),
-    "N_ITERATIONS": (100, int),
+    "N_ITERATIONS": (300, int),
     "IDX_RUN": (None, int),
     "N_RUNS": (1, int),
     "PROBLEM": ("goldsteinprice", str),
     "N0_OVER_D": (3, int),
     "STRATEGY": ("Constant", str),
     "Q_STRATEGY": (0.25, float),
-    "CRIT_OPT_METHOD": (None, str),
-    "RELAXED_INIT": (None, str),
-    "FTOL": (None, float),
-    "GTOL": (None, float),
+    "CRIT_OPT_METHOD": ("L-BFGS-B", str),
+    "RELAXED_INIT": ("flat", str),
+    "FTOL": (1e-14, float),
+    "GTOL": (1e-15, float),
     "EPS": (None, float),
-    "MAXFUN": (None, int),
-    "MAXITER": (None, int),
-    "N_SMC": (None, int),
+    "MAXFUN": (1000, int),
+    "MAXITER": (1000, int),
+    "N_SMC": (1000, int),
 }
 
 # Initialize options and crit_optim_options
