@@ -15,7 +15,7 @@ plot = False
 env_options = {
     "OUTPUT_DIR": ("output", str),
     "N_ITERATIONS": (300, int),
-    "IDX_RUN": (None, int),
+    "SLURM_ARRAY_TASK_ID": (None, int),
     "N_RUNS": (1, int),
     "PROBLEM": ("goldsteinprice", str),
     "N0_OVER_D": (3, int),
@@ -50,9 +50,9 @@ for key, (default, value_type) in env_options.items():
         ]:
             # Add to crit_optim_options
             crit_optim_options[key.lower()] = value_type(value)
-        elif key == "IDX_RUN" and value is not None:
+        elif key == "SLURM_ARRAY_TASK_ID" and value is not None:
             idx_run_list = [value_type(value)]
-        elif key == "N_RUNS" and "IDX_RUN" not in os.environ:
+        elif key == "N_RUNS" and "SLURM_ARRAY_TASK_ID" not in os.environ:
             idx_run_list = list(range(value_type(value)))
         elif key == "PROBLEM":
             problem = getattr(test_problems, value)
