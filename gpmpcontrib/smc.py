@@ -69,6 +69,8 @@ class SMC:
         self.w = np.full((self.n, ), 1 / self.n)
 
     def pertubate(self):
+        assert np.unique(self.x, axis=0).shape[0] > 1, "Degenerated SMC cloud."
+
         C = self.param_s * np.cov(self.x.reshape(self.x.shape[0], -1),
                                   rowvar=False)
         eps = stats.multivariate_normal.rvs(cov=C, size=self.n)
