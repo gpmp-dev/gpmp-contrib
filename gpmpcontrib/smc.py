@@ -25,7 +25,7 @@ class SMC:
 
     def particles_init(self, box, n):
         dim = len(box[0])
-        x = gp.misc.designs.maximinlhs(dim, n, box)
+        x = gp.misc.designs.randunif(dim, n, box)
         logpx = np.zeros((n,))
         w = np.full((n, ), 1 / n)
 
