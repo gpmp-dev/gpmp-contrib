@@ -39,8 +39,10 @@ crit_optim_options = {}
 for key, (default, value_type) in env_options.items():
     value = os.getenv(key, default)
     if value is not None:
-        if key in [
-            "CRIT_OPT_METHOD",
+        if key == "CRIT_OPT_METHOD":
+            # Add to crit_optim_options
+            crit_optim_options["method"] = value_type(value)
+        elif key in [
             "RELAXED_INIT",
             "FTOL",
             "GTOL",
