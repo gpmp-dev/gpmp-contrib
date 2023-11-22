@@ -58,7 +58,7 @@ for key, (default, value_type) in env_options.items():
             idx_run_list = list(range(value_type(value)))
         elif key == "PROBLEM":
             problem = getattr(test_problems, value)
-        if key == "STRATEGY":
+        elif key == "STRATEGY":
             # Check if Q_STRATEGY is set, use its value if available, otherwise use default
             q_strategy_value = float(
                 os.getenv("Q_STRATEGY", env_options["Q_STRATEGY"][0])
