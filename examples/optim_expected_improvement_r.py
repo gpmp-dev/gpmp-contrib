@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib import interactive
 import gpmp as gp
 import gpmpcontrib.optim.expectedimprovement_r as ei_r
 from gpmpcontrib.optim.expectedimprovement import AbortException
@@ -8,10 +9,7 @@ import sys
 import os
 import gpmpcontrib.optim.test_problems as test_problems
 
-# -- Settings
-plot = False
-
-# Default values and types for different options
+# Settings default values and types for different options
 env_options = {
     "OUTPUT_DIR": ("output", str),
     "N_ITERATIONS": (300, int),
@@ -21,7 +19,7 @@ env_options = {
     "N0_OVER_D": (3, int),
     "STRATEGY": ("Constant", str),
     "Q_STRATEGY": (0.25, float),
-    "CRIT_OPT_METHOD": ("L-BFGS-B", str),
+    "CRIT_OPT_METHOD": ("SLSQP", str),
     "RELAXED_INIT": ("flat", str),
     "FTOL": (1e-14, float),
     "GTOL": (1e-15, float),
@@ -31,85 +29,117 @@ env_options = {
     "N_SMC": (1000, int),
 }
 
-# Initialize options and crit_optim_options
-options = {}
-crit_optim_options = {}
+# Visualization
+plot = True
+if plot:
+    interactive(True)
 
-# Loop through the environment options
-for key, (default, value_type) in env_options.items():
-    value = os.getenv(key, default)
-    if value is not None:
-        if key == "CRIT_OPT_METHOD":
-            # Add to crit_optim_options
-            crit_optim_options["method"] = value_type(value)
-        elif key in [
-            "RELAXED_INIT",
-            "FTOL",
-            "GTOL",
-            "EPS",
-            "MAXFUN",
-            "MAXITER",
-        ]:
-            # Add to crit_optim_options
-            crit_optim_options[key.lower()] = value_type(value)
-        elif key == "SLURM_ARRAY_TASK_ID" and value is not None:
-            idx_run_list = [value_type(value)]
-        elif key == "N_RUNS" and "SLURM_ARRAY_TASK_ID" not in os.environ:
-            idx_run_list = list(range(value_type(value)))
-        elif key == "PROBLEM":
-            problem = getattr(test_problems, value)
-        elif key == "STRATEGY":
-            # Check if Q_STRATEGY is set, use its value if available, otherwise use default
-            q_strategy_value = float(
-                os.getenv("Q_STRATEGY", env_options["Q_STRATEGY"][0])
-            )
-            options["threshold_strategy"] = ei_r.threshold_strategy[value](q_strategy_value)
-        elif key == "Q_STRATEGY":
-            continue  # Handled with STRATEGY
-        else:
-            # Add to options directly
-            options[key.lower()] = value_type(value)
+global fig1, ax1, fig2, ax2
 
-# Set crit_optim_options in options
-if crit_optim_options:
-    options["crit_optim_options"] = crit_optim_options
 
-# -- Initialize records for storing results
-history_records = []
-xi_records = []
+# Visualization Functions
+def plot_initial_state(eialgo):
+    global fig1, ax1
+    ax1.plot(eialgo.zi, eialgo.zi_relaxed, "o")
+    ax1.axhline(np.quantile(eialgo.zi, 0.25), color="b", label="t0")
+    ax1.set_xscale("log")
+    ax1.set_yscale("log")
+    ax1.set_xlabel("Truth")
+    ax1.set_ylabel("Relaxed")
+    ax1.legend()
+    plt.show()
 
-# -- Create initial dataset and run optimization
+
+def plot_optimization_step(eialgo, step_ind):
+    global fig1, ax1, fig2, ax2
+    ax1.clear()  # Clear previous plots
+    ax1.plot(eialgo.xi[:, 0], eialgo.xi[:, 1], "go")
+    ax1.plot(eialgo.smc.x[:, 0], eialgo.smc.x[:, 1], "bo", markersize=3)
+    plt.pause(0.1)  # Allows the plot to update
+
+    ax2.clear()  # Clear previous plots
+    ax2.plot(eialgo.xi[-1, 0], eialgo.xi[-1, 1], "ko")
+    ax2.plot(eialgo.zi, eialgo.zi_relaxed, "o")
+    ax2.axhline(np.quantile(eialgo.zi, 0.25), color="b", label="t0")
+    ax2.set_xscale('log')
+    ax2.set_yscale('log')
+    ax2.set_xlabel("Truth")
+    ax2.set_ylabel("Relaxed")
+    ax2.legend()
+    plt.pause(0.1)  # Allows the plot to update
+
+
+# Initialization Function
+def initialize_optimization(env_options):
+    options = {}
+    crit_optim_options = {}
+    # Loop through the environment options
+    for key, (default, value_type) in env_options.items():
+        value = os.getenv(key, default)
+        if value is not None:
+            if key == "CRIT_OPT_METHOD":
+                # Add to crit_optim_options
+                crit_optim_options["method"] = value_type(value)
+            elif key in [
+                "RELAXED_INIT",
+                "FTOL",
+                "GTOL",
+                "EPS",
+                "MAXFUN",
+                "MAXITER",
+            ]:
+                # Add to crit_optim_options
+                crit_optim_options[key.lower()] = value_type(value)
+            elif key == "SLURM_ARRAY_TASK_ID" and value is not None:
+                idx_run_list = [value_type(value)]
+            elif key == "N_RUNS" and "SLURM_ARRAY_TASK_ID" not in os.environ:
+                idx_run_list = list(range(value_type(value)))
+            elif key == "STRATEGY":
+                # Check if Q_STRATEGY is set, use its value if available, otherwise use default
+                q_strategy_value = float(
+                    os.getenv("Q_STRATEGY", env_options["Q_STRATEGY"][0])
+                )
+                options["threshold_strategy"] = ei_r.threshold_strategy[value](
+                    q_strategy_value
+                )
+            elif key == "Q_STRATEGY":
+                continue  # Handled with STRATEGY
+            else:
+                # Add to options directly
+                options[key.lower()] = value_type(value)
+
+    # Set crit_optim_options in options
+    if crit_optim_options:
+        options["crit_optim_options"] = crit_optim_options
+    problem = getattr(test_problems, options["problem"])
+
+    return problem, options, idx_run_list
+
+
+# --------------------------------------------------------------------------------------
+problem, options, idx_run_list = initialize_optimization(env_options)
+
+# Repetition Loop
 for i in idx_run_list:
-    # Generate initial design points using Latin Hypercube Sampling
     ni0 = options["n0_over_d"] * problem.input_dim
     xi = gp.misc.designs.scale(
         np.array(lhsmdu.sample(problem.input_dim, ni0, randomSeed=None).T),
         problem.input_box,
     )
 
-    # Initialize the Expected Improvement algorithm
     eialgo = ei_r.ExpectedImprovementR(problem, options=options)
     eialgo.set_initial_design(xi=xi)
 
-    # Plot initial state if enabled
     if plot:
-        plt.figure()
-        plt.plot(eialgo.zi, eialgo.zi_relaxed, "o")
-        plt.axhline(np.quantile(eialgo.zi, 0.25), color="b", label="t0")
-        plt.semilogy()
-        plt.semilogx()
-        plt.xlabel("Truth")
-        plt.ylabel("Relaxed")
-        plt.legend()
-        plt.show()
+        fig1, ax1 = plt.subplots()
+        fig2, ax2 = plt.subplots()
 
-    # Perform optimization steps
+    # Optimization loop
     for step_ind in range(options["n_iterations"]):
         print(f"iter {step_ind}")
+
         if plot:
-            plt.figure()
-            plt.plot(eialgo.xi[:, 0], eialgo.xi[:, 1], "go")
-            plt.plot(eialgo.smc.x[:, 0], eialgo.smc.x[:, 1], "bo", markersize=3)
+            plot_optimization_step(eialgo, step_ind)
 
         # Run a step of the algorithm
         try:
@@ -118,19 +148,9 @@ for i in idx_run_list:
             print("Aborting: {}".format(e))
             break
 
-        # Plot current state if enabled
         if plot:
-            plt.plot(eialgo.xi[-1, 0], eialgo.xi[-1, 1], "ko")
-            plt.show()
-            plt.figure()
-            plt.plot(eialgo.zi, eialgo.zi_relaxed, "o")
-            plt.axhline(np.quantile(eialgo.zi, 0.25), color="b", label="t0")
-            plt.semilogy()
-            plt.semilogx()
-            plt.xlabel("Truth")
-            plt.ylabel("Relaxed")
-            plt.legend()
-            plt.show()
+            plot_optimization_step(eialgo, step_ind)
+    # endfor
 
     # Store the history of observations
     history_records.append(eialgo.zi)
