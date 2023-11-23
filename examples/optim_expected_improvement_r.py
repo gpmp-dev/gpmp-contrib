@@ -113,7 +113,8 @@ for i in idx_run_list:
         # Run a step of the algorithm
         try:
             eialgo.step()
-        except AbortException:
+        except AbortException as e:
+            print("Aborting: {}".format(e))
             break
 
         # Plot current state if enabled
