@@ -104,7 +104,8 @@ for i in idx_run_list:
         plt.show()
 
     # Perform optimization steps
-    for _ in range(options["n_iterations"]):
+    for step_ind in range(options["n_iterations"]):
+        print(f"iter {step_ind}")
         if plot:
             plt.figure()
             plt.plot(eialgo.xi[:, 0], eialgo.xi[:, 1], "go")
