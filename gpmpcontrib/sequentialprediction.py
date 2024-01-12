@@ -32,7 +32,7 @@ class SequentialPrediction:
         self.model = model
         self.xi = None
         self.zi = None
-        self.force_param_initial_guess = False
+        self.force_param_initial_guess = True
         self.n_samplepaths = None
         self.xtsim = None
         self.xtsim_xi_ind = None
