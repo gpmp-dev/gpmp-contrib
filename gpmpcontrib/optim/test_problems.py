@@ -672,7 +672,7 @@ goldsteinprice = ComputerExperiment(
 
 def _goldstein_price_log_objective(x):
     # Placeholder function for GoldsteinPrice
-    obj_gp = goldsteinprice_objective(x).reshape(-1, 1)
+    obj_gp = _goldsteinprice_objective(x).reshape(-1, 1)
     return np.log(obj_gp)
 
 _goldstein_price_log_dict = {
@@ -1229,6 +1229,8 @@ def create_ackley_problem(d):
 
     return ackley_experiment
 
+ackley4 = create_ackley_problem(4)
+ackley6 = create_ackley_problem(6)
 ackley10 = create_ackley_problem(10)
 
 
@@ -1276,6 +1278,8 @@ def create_rosenbrock_problem(d):
 
     return rosenbrock_experiment
 
+rosenbrock4 = create_rosenbrock_problem(4)
+rosenbrock6 = create_rosenbrock_problem(6)
 rosenbrock10 = create_rosenbrock_problem(10)
 
 
@@ -1322,7 +1326,8 @@ threehumpcamelback = ComputerExperiment(
 # ===== CamelBack =====
 def _camel_back_objectives(x):
     x1, x2 = x.T
-    return - (4 - 2.1 * x1 ** 2 + (x1 ** 4)/3) * x1 ** 2 - x1 * x2 - (- 4 + 4 * x2 ** 2) * x2 ** 2
+    y = - (4 - 2.1 * x1 ** 2 + (x1 ** 4)/3) * x1 ** 2 - x1 * x2 - (- 4 + 4 * x2 ** 2) * x2 ** 2
+    return - y
 
 _camel_back_dict = {
     "input_dim": 2,
@@ -1380,6 +1385,8 @@ def create_dixon_price_problem(d):
 
     return dixon_price_experiment
 
+dixon_price4 = create_dixon_price_problem(4)
+dixon_price6 = create_dixon_price_problem(6)
 dixon_price10 = create_dixon_price_problem(10)
 
 # =====
@@ -1425,7 +1432,7 @@ def create_perm_problem(d):
 
     _perm_dict = {
         "input_dim": d,
-        "input_box": [[-10]*d, [10]*d],
+        "input_box": [[-d]*d, [d]*d],
         "single_objective": lambda x: _perm_objective(x, beta=1.0)
     }
 
@@ -1437,8 +1444,13 @@ def create_perm_problem(d):
 
     return perm_experiment
 
+perm4 = create_perm_problem(4)
+perm6 = create_perm_problem(6)
+perm10 = create_perm_problem(10)
 
-def create_michalewic_problem(d):
+# ==== Michalewicz
+
+def create_michalewicz_problem(d):
     
     def _michalewicz_objective(x, m=10):
         i_table = np.tile(np.arange(0, x.shape[1]) + 1, reps=[x.shape[0], 1])
@@ -1461,6 +1473,12 @@ def create_michalewic_problem(d):
 
     return michalewicz_experiment
 
+michalewicz4 = create_michalewicz_problem(4)
+michalewicz6 = create_michalewicz_problem(6)
+michalewicz10 = create_michalewicz_problem(10)
+
+# ==== Zakharov
+
 def create_zakharov_problem(d):
 
     def _zakharov_objective(x):
@@ -1482,6 +1500,9 @@ def create_zakharov_problem(d):
 
     return zakharov
 
+zakharov4 = create_zakharov_problem(4)
+zakharov6 = create_zakharov_problem(6)
+zakharov10 = create_zakharov_problem(10)
 
 # ==== Easom
 def _easom_objective(x):
@@ -1603,7 +1624,7 @@ def _branin_objective(x):
     r = 6
     s = 10
     t = 1 / (8 * np.pi)
-    return a * (x[:, 1] - b * x[:, 0] ** 2 + c * x[:, 0] - r) ** 2 + s * (1 - t) * np.vectorize(math.cos)(x[:, 0]) + s
+    return a * (x[:, 1] - b * x[:, 0] ** 2 + c * x[:, 0] - r) ** 2 + s * (1 - t) * np.cos(x[:, 0]) + s
 
 _branin_dict = {
     "input_dim": 2,
