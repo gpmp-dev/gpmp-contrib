@@ -1,12 +1,14 @@
 # --------------------------------------------------------------
-# Author: Emmanuel Vazquez <emmanuel.vazquez@centralesupelec.fr>
-# Copyright (c) 2023, CentraleSupelec
+# Authors:
+#   Emmanuel Vazquez <emmanuel.vazquez@centralesupelec.fr>
+#   Julien Bect <julien.bect@centralesupelec.fr>
+# Copyright (c) 2023, 2024 CentraleSupelec
 # License: GPLv3 (see LICENSE)
 # --------------------------------------------------------------
 import time
+from numpy.random import default_rng
 import scipy.stats as stats
 import gpmp.num as gnp
-import gpmp as gp
 
 
 class ParticlesSet:
@@ -21,6 +23,8 @@ class ParticlesSet:
     ----------
     box : array_like
         The domain box in which the particles are initialized.
+    rng : numpy.random.Generator
+        Random number generator.
     n : int, optional
         Number of particles (default is 1000).
 
@@ -38,10 +42,12 @@ class ParticlesSet:
         Function to compute the log-probability density.
     param_s : float
         Scaling parameter for the perturbation step.
+    rng : numpy.random.Generator
+        Random number generator.
 
     Methods
     -------
-    particles_init(box, n, method='randunif')
+    particles_init(box, n)
         Initialize particles within the given box.
     set_logpdf(logpdf_function)
         Set the log-probability density function.
@@ -58,13 +64,14 @@ class ParticlesSet:
 
     """
 
-    def __init__(self, box, n=1000):
+    def __init__(self, box, rng=default_rng(), n=1000):
         """
         Initialize the ParticlesSet instance.
         """
         self.n = n  # Number of particles
-
+        self.dim = len(box[0])
         self.logpdf_function = None
+        self.rng = rng
 
         # Initialize the particles.  Returns a tuple containing the
         # positions, log-probabilities, and weights of the particles
@@ -76,7 +83,8 @@ class ParticlesSet:
         # Metropolis-Hastings ingredients
         self.param_s = 0.05  # Default scaling parameter for perturbation
 
-    def particles_init(self, box, n, method="randunif"):
+
+    def particles_init(self, box, n):
         """Initialize particles within the given box.
 
         Parameters
@@ -85,9 +93,6 @@ class ParticlesSet:
             The domain box in which the particles are to be initialized.
         n : int
             Number of particles.
-        method : str, optional
-            Method for initializing particles. Options are 'randunif' (uniform random)
-            or 'maximinlhs' (maximin Latin hypercube sampling).
 
         Returns
         -------
@@ -95,13 +100,9 @@ class ParticlesSet:
             A tuple containing the positions, log-probabilities, and
             weights of the initialized particles.
         """
-        dim = len(box[0])
-
-        if method == "randunif":
-            self.x = gnp.asarray(gp.misc.designs.randunif(dim, n, box))
-        elif method == "maximinlhs":
-            self.x = gnp.asarray(gp.misc.designs.maximinlhs(dim, n, box))
-
+        assert(self.dim == len(box[0]))
+        self.n = n
+        self.x = gnp.asarray(self.randunif(box))
         self.logpx = gnp.zeros((n,))
         self.w = gnp.full((n,), 1 / n)
 
@@ -130,7 +131,7 @@ class ParticlesSet:
         logpx_resampled = gnp.empty(self.logpx.shape)
         p = self.w / gnp.sum(self.w)
         try:
-            counts = stats.multinomial.rvs(self.n, p)
+            counts = self.multinomial_rvs(p)
         except:
             extype, value, tb = __import__("sys").exc_info()
             __import__("traceback").print_exc()
@@ -152,7 +153,7 @@ class ParticlesSet:
 
     def perturb(self):
         C = self.param_s * gnp.cov(self.x.reshape(self.x.shape[0], -1).T)
-        eps = gnp.multivariate_normal.rvs(cov=C, n=self.n)
+        eps = gnp.asarray(self.multivariate_normal_rvs(C))
 
         return self.x + eps.reshape(self.n, -1)
 
@@ -177,7 +178,7 @@ class ParticlesSet:
 
         accepted_moves = 0  # Counter for accepted moves
         for i in range(self.n):
-            if gnp.rand(1) < rho[i]:
+            if gnp.asarray(self.rng.uniform())[0] < rho[i]:
                 # Update the particle position and log probability if the move is accepted
                 self.x = gnp.set_row2(self.x, i, y[i, :])
                 self.logpx = gnp.set_elem1(self.logpx, i, logpy[i])
@@ -188,6 +189,17 @@ class ParticlesSet:
 
         return acceptation_rate
 
+    def multinomial_rvs(self, p):
+        return stats.multinomial.rvs(
+            n=self.n, p=p, random_state=self.rng)
+
+    def multivariate_normal_rvs(self, C):
+        return stats.multivariate_normal.rvs(
+            cov=C, size=self.n, random_state=self.rng)
+
+    def randunif(self, box):
+        return stats.qmc.scale(
+            self.rng.uniform(size=(self.n, self.dim)), box[0], box[1])
 
 class SMC:
     """Sequential Monte Carlo (SMC) sampler class.
@@ -204,6 +216,8 @@ class SMC:
         The domain box for particle initialization.
     n : int, optional
         Number of particles (default is 1000).
+    rng : numpy.random.Generator
+        Random number generator.
 
     Attributes
     ----------
@@ -223,13 +237,13 @@ class SMC:
 
     """
 
-    def __init__(self, box, n=1000):
+    def __init__(self, box, n=1000, rng=default_rng()):
         """
         Initialize the SMC sampler.
         """
         self.box = box
         self.n = n
-        self.particles = ParticlesSet(box, n)
+        self.particles = ParticlesSet(box, rng, n)
 
         # Dictionary to hold MH algorithm parameters
         self.mh_params = {
