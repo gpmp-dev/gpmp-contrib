@@ -11,6 +11,15 @@ import scipy.stats as stats
 import gpmp.num as gnp
 
 
+class ParticlesSetScalingParameterError(BaseException):
+    def __init__(self, param_s, lower, upper):
+        message = (
+            "ParticlesSet: scaling parameter param_s in MH step out of range "
+            "(value: {}, lower bound: {}, upper bound: {}).".format(param_s, lower, upper)
+        )
+        super().__init__(message)
+
+
 class ParticlesSet:
     """
     A class representing a set of particles for Sequential Monte
@@ -73,15 +82,20 @@ class ParticlesSet:
         self.logpdf_function = None
         self.rng = rng
 
+        # Dictionary to hold parameters for the particle set
+        self.particles_set_params = {
+            "param_s_initial_value": 0.05,  # Initial scaling parameter for MH perturbation
+            "param_s_upper_bound": 10**4,
+            "param_s_lower_bound": 10**(-8),
+        }
+        self.param_s = self.particles_set_params["param_s_initial_value"]
+        
         # Initialize the particles.  Returns a tuple containing the
         # positions, log-probabilities, and weights of the particles
         self.x = None
         self.logpx = None
         self.w = None
         self.particles_init(box, n)
-
-        # Metropolis-Hastings ingredients
-        self.param_s = 0.05  # Default scaling parameter for perturbation
 
     def particles_init(self, box, n, method="randunif"):
         """Initialize particles within the given box.
@@ -104,7 +118,7 @@ class ParticlesSet:
             weights of the initialized particles.
 
         """
-        assert (
+        assert(
             self.dim == len(box[0]),
             "Box dimension do not match particle dimension.",
         )
@@ -168,6 +182,14 @@ class ParticlesSet:
         self.w = gnp.full((self.n,), 1 / self.n)
 
     def perturb(self):
+        """Perturb the particles by adding Gaussian noise."""
+        param_s_lower = self.particles_set_params["param_s_lower_bound"]
+        param_s_upper = self.particles_set_params["param_s_upper_bound"]
+
+        # Check if param_s is within bounds
+        if self.param_s > param_s_upper or self.param_s < param_s_lower:
+            raise ParticlesSetScalingParameterError(param_s, param_s_lower, param_s_upper)
+
         C = self.param_s * gnp.cov(self.x.reshape(self.x.shape[0], -1).T)
         eps = ParticlesSet.multivariate_normal_rvs(C, self.n, self.rng)
 
