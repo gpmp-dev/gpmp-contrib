@@ -11,11 +11,13 @@ import scipy.stats as stats
 import gpmp.num as gnp
 
 
-class ParticlesSetScalingParameterError(BaseException):
+class ParticlesSetError(BaseException):
     def __init__(self, param_s, lower, upper):
         message = (
             "ParticlesSet: scaling parameter param_s in MH step out of range "
-            "(value: {}, lower bound: {}, upper bound: {}).".format(param_s, lower, upper)
+            "(value: {}, lower bound: {}, upper bound: {}).".format(
+                param_s, lower, upper
+            )
         )
         super().__init__(message)
 
@@ -86,10 +88,13 @@ class ParticlesSet:
         self.particles_set_params = {
             "param_s_initial_value": 0.05,  # Initial scaling parameter for MH perturbation
             "param_s_upper_bound": 10**4,
-            "param_s_lower_bound": 10**(-8),
+            "param_s_lower_bound": 10 ** (-8),
+            # Jitter added to pertubation covariance matrix when it's not PSD
+            "jitter_initial_value": 1e-16,
+            "jitter_max_iterations": 10,
         }
         self.param_s = self.particles_set_params["param_s_initial_value"]
-        
+
         # Initialize the particles.  Returns a tuple containing the
         # positions, log-probabilities, and weights of the particles
         self.x = None
@@ -118,10 +123,9 @@ class ParticlesSet:
             weights of the initialized particles.
 
         """
-        assert(
-            self.dim == len(box[0]),
-            "Box dimension do not match particle dimension.",
-        )
+        assert self.dim == len(
+            box[0]
+        ), "Box dimension does not match particle dimension"
         self.n = n
 
         # Initialize positions
@@ -172,7 +176,8 @@ class ParticlesSet:
         while j < self.n:
             while counts[j] > 0:
                 x_resampled = gnp.set_row2(x_resampled, i, self.x[j, :])
-                logpx_resampled = gnp.set_elem1(logpx_resampled, i, self.logpx[j])
+                logpx_resampled = gnp.set_elem1(
+                    logpx_resampled, i, self.logpx[j])
                 counts[j] -= 1
                 i += 1
             j += 1
@@ -182,16 +187,57 @@ class ParticlesSet:
         self.w = gnp.full((self.n,), 1 / self.n)
 
     def perturb(self):
-        """Perturb the particles by adding Gaussian noise."""
+        """Perturb the particles by adding Gaussian noise.
+
+        This method perturbs the current positions of the particles by
+        applying a Gaussian random perturbation. The covariance matrix
+        is computed from the particles' current positions and is
+        scaled by the perturbation parameter `param_s`. This
+        covariance matrix defines the spread of the Gaussian noise
+        used to move the particles.
+
+        """
+
         param_s_lower = self.particles_set_params["param_s_lower_bound"]
         param_s_upper = self.particles_set_params["param_s_upper_bound"]
 
         # Check if param_s is within bounds
         if self.param_s > param_s_upper or self.param_s < param_s_lower:
-            raise ParticlesSetScalingParameterError(param_s, param_s_lower, param_s_upper)
+            raise ParticlesSetError(self.param_s, param_s_lower, param_s_upper)
 
+        # Covariance matrix of the pertubation noise
         C = self.param_s * gnp.cov(self.x.reshape(self.x.shape[0], -1).T)
-        eps = ParticlesSet.multivariate_normal_rvs(C, self.n, self.rng)
+
+        # Call ParticlesSet.multivariate_normal_rvs(C, self.n, self.rng)
+        # with control on the possible degeneracy of C
+        try:
+            eps = ParticlesSet.multivariate_normal_rvs(C, self.n, self.rng)
+            success = True
+        except ValueError as e:
+            # If the covariance matrix is not PSD, apply jittering to fix it
+            print(f"Non-PSD covariance matrix encountered: {e}")
+            success = False
+            for i in range(
+                self.particles_set_params["jitter_max_iterations"]
+            ):  # Try iterations of jittering
+                jitter = self.particles_set_params["jitter_initial_value"] * (
+                    10**i)
+                C_jittered = C + jitter * np.eye(C.shape[0])  # Add jitter
+                try:
+                    eps = ParticlesSet.multivariate_normal_rvs(
+                        C_jittered, self.n, self.rng
+                    )
+                    success = True
+                    break
+                except ValueError as inner_e:
+                    print(f"Jittering attempt {i} failed: {inner_e}")
+
+        if not success:
+            raise RuntimeError(
+                "Failed to generate samples after "
+                + f"{self.particles_set_params['jitter_max_iterations']} jittering attempts. "
+                + "Covariance matrix might still be non-PSD."
+            )
 
         return self.x + eps.reshape(self.n, -1)
 
@@ -309,6 +355,54 @@ class SMC:
         self.logging_logpdf_param_sequence = []  # Sequence of logpdf_params in restart
         self.logging_acceptation_rate_sequence = []
 
+    def _log_data(
+        self,
+        logpdf_param=None,
+        ess=None,
+        acceptation_rate=None,
+        log_current_state_and_reinitialize=False,
+    ):
+        """
+        Helper function to log data during the SMC process. It logs both incremental data
+        like logpdf_param, ESS, and acceptation rate, as well as the full state at the end of a stage.
+
+        Parameters
+        ----------
+        logpdf_param : float, optional
+            The current logpdf parameter value being used in the SMC step.
+        ess : float, optional
+            Effective sample size (ESS) of the current particle set.
+        acceptation_rate : float, optional
+            Acceptation rate of the particle move step.
+        log_current_state_and_reinitialize : bool, optional
+            If True, logs the full current state of the SMC process.
+        """
+        # Incremental data logging
+        if logpdf_param is not None:
+            self.logging_current_logpdf_param = logpdf_param
+        if ess is not None:
+            self.logging_current_ess = ess
+        if acceptation_rate is not None:
+            self.logging_acceptation_rate_sequence.append(acceptation_rate)
+
+        # If log_current_state_and_reinitialize is True, log the full state
+        if log_current_state_and_reinitialize:
+            state = {
+                "timestamp": time.time(),
+                "stage": self.stage,
+                "num_particles": self.n,
+                "current_scaling_param": self.particles.param_s,
+                "target_logpdf_param": self.logging_target_logpdf_param,
+                "current_logpdf_param": self.logging_current_logpdf_param,
+                "ess": self.logging_current_ess,
+                "restart_iteration": self.logging_restart_iteration,
+                "logpdf_param_sequence": self.logging_logpdf_param_sequence.copy(),
+                "acceptation_rate_sequence": self.logging_acceptation_rate_sequence.copy(),
+            }
+            self.log.append(state)
+            # Reinitialize acceptation_rate_sequence for the next stage
+            self.logging_acceptation_rate_sequence = []
+
     def step(self, logpdf_parameterized_function, logpdf_param):
         """
         Perform a single step of the SMC process.
@@ -323,12 +417,14 @@ class SMC:
 
         """
         # Set target density
-        logpdf = lambda x: logpdf_parameterized_function(x, logpdf_param)
+        def logpdf(x): return logpdf_parameterized_function(x, logpdf_param)
         self.particles.set_logpdf(logpdf)
 
         # Reweight
         self.particles.reweight()
-        self.logging_current_ess = self.particles.ess()
+
+        # Log current logpdf_param and ESS
+        self._log_data(logpdf_param=logpdf_param, ess=self.particles.ess())
 
         # Resample / move
         self.particles.resample()
@@ -336,11 +432,10 @@ class SMC:
         for _ in range(self.mh_params["mh_steps"] - 1):
             # Additional moves if required
             acceptation_rate = self.particles.move()
-            self.logging_acceptation_rate_sequence.append(acceptation_rate)
+            self._log_data(acceptation_rate=acceptation_rate)
 
-        # Logging
-        self.logging_current_logpdf_param = logpdf_param
-        self.log_state()
+        # Log state at the end of the step
+        self._log_data(log_current_state_and_reinitialize=True)
 
         # Debug plot, if needed
         debug = False
@@ -394,7 +489,8 @@ class SMC:
         self.logging_target_logpdf_param = target_logpdf_param
 
         # Set target density
-        logpdf = lambda x: logpdf_parameterized_function(x, target_logpdf_param)
+        def logpdf(x): return logpdf_parameterized_function(
+            x, target_logpdf_param)
         self.particles.set_logpdf(logpdf)
 
         # reweight
@@ -419,7 +515,7 @@ class SMC:
                 acceptation_rate = self.particles.move()
                 self.logging_acceptation_rate_sequence.append(acceptation_rate)
             # Logging
-            self.log_state()
+            self._log_data(log_current_state_and_reinitialize=True)
 
     def restart(
         self,
@@ -448,7 +544,7 @@ class SMC:
         if debug:
             print("---- Restarting SMC ----")
 
-        self.log_state()  # Log current and target logpdf_params, ess
+        self._log_data(log_current_state_and_reinitialize=True)
 
         self.particles.particles_init(self.box, self.n)
         current_logpdf_param = logpdf_initial_param
@@ -611,26 +707,6 @@ class SMC:
 
         return mid
 
-    def log_state(self):
-        """
-        Log the current state of the SMC process.
-        """
-        state = {
-            "timestamp": time.time(),
-            "stage": self.stage,
-            "num_particles": self.n,
-            "current_scaling_param": self.particles.param_s,
-            "target_logpdf_param": self.logging_target_logpdf_param,
-            "current_logpdf_param": self.logging_current_logpdf_param,
-            "ess": self.logging_current_ess,
-            "restart_iteration": self.logging_restart_iteration,
-            "logpdf_param_sequence": self.logging_logpdf_param_sequence.copy(),
-            "acceptation_rate_sequence": self.logging_acceptation_rate_sequence.copy(),
-        }
-        self.log.append(state)
-        # reinitialize acceptation_rate_sequence
-        self.logging_acceptation_rate_sequence = []
-
     def plot_state(self):
         """Plot the state of the SMC process over different stages.
 
@@ -666,8 +742,10 @@ class SMC:
                 ar_length = 1
 
             stages.extend([entry["stage"]] * ar_length)
-            target_logpdf_params.extend([entry["target_logpdf_param"]] * ar_length)
-            current_logpdf_params.extend([entry["current_logpdf_param"]] * ar_length)
+            target_logpdf_params.extend(
+                [entry["target_logpdf_param"]] * ar_length)
+            current_logpdf_params.extend(
+                [entry["current_logpdf_param"]] * ar_length)
             ess_values.extend([entry["ess"]] * ar_length)
             acceptation_rates.extend(entry["acceptation_rate_sequence"])
 
