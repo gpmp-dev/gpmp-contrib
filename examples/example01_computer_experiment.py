@@ -19,6 +19,7 @@ Copyright (c) 2022-2023, CentraleSupelec
 License: GPLv3 (see LICENSE)
 
 """
+
 import numpy as np
 import gpmp as gp
 import gpmpcontrib as gpc
@@ -112,8 +113,9 @@ pb = gpc.ComputerExperiment(
 )
 
 # Display the initialized ComputerExperiment object with the combined function.
-# This configuration is an alternative approach where a single function handles both objectives and constraints.
-print(' '*2 + str(pb).replace('\n', '\n  '))
+# This configuration is an alternative approach where a single
+# function handles both objectives and constraints.
+print(" " * 2 + str(pb).replace("\n", "\n  "))
 
 # Test the evaluation of the combined function
 results = pb(x)

@@ -6,6 +6,7 @@ Copyright (c) 2022-2024, CentraleSupelec
 License: GPLv3 (see LICENSE)
 
 """
+
 import gpmp.num as gnp
 import numpy as np
 
@@ -19,11 +20,11 @@ import numpy as np
 class ComputerExperiment:
     """A class representing a multi-output computer experiment, to evaluate
     multiple objectives and constraints simultaneously. This class allows the user to
-    specify a set of functions (or a single function) to be evaluated as part of 
+    specify a set of functions (or a single function) to be evaluated as part of
     a computational experiment.
 
     The user can provide the functions in a variety of ways, including as individual
-    objective or constraint functions, or a combined function that outputs both 
+    objective or constraint functions, or a combined function that outputs both
     objectives and constraints.
 
     Parameters
@@ -31,38 +32,38 @@ class ComputerExperiment:
     input_dim : int
         Dimension of the input space.
     input_box : list of tuples
-        Input domain specified as a list of tuples. Each tuple represents the range 
+        Input domain specified as a list of tuples. Each tuple represents the range
         for a specific input dimension as (min_value, max_value).
     single_function : callable or dict, optional
-        A single function that evaluates both objectives and constraints. 
+        A single function that evaluates both objectives and constraints.
         If provided as a dictionary, it must contain a "function" key that specifies
         the function, and optionally, keys such as "output_dim", "type", and "bounds."
         This is useful to define a single function that handles all outputs.
     function_list : list of callable or list of dict, optional
-        A list of functions (or dictionaries) to evaluate. Each entry can either be a 
-        callable function or a dictionary that includes keys such as "function", 
+        A list of functions (or dictionaries) to evaluate. Each entry can either be a
+        callable function or a dictionary that includes keys such as "function",
         "output_dim", "type", etc.
     single_objective : callable or dict, optional
-        A single objective function. If a dictionary is provided, it must contain a 
+        A single objective function. If a dictionary is provided, it must contain a
         "function" key, and optionally, "output_dim" and "type."
     objective_list : list of callable or list of dict, optional
-        A list of objective functions. Each can either be a function or a dictionary with 
+        A list of objective functions. Each can either be a function or a dictionary with
         additional information.
     single_constraint : callable or dict, optional
-        A single constraint function. If provided as a dictionary, it must include a 
+        A single constraint function. If provided as a dictionary, it must include a
         "function" key and a "bounds" key that indicates the constraint bounds.
     constraint_list : list of callable or list of dict, optional
-        A list of constraint functions. Each entry can be a function or a dictionary 
+        A list of constraint functions. Each entry can be a function or a dictionary
         containing the constraint and its corresponding bounds.
     constraint_bounds : list of tuples, optional
-        A list of constraint bounds (lower_bound, upper_bound) for the constraints. 
-        This is used if constraints are not provided as dictionaries and need 
+        A list of constraint bounds (lower_bound, upper_bound) for the constraints.
+        This is used if constraints are not provided as dictionaries and need
         global bounds.
 
     Raises
     ------
     ValueError
-        - If both 'function_list'/'single_function' and 'objective_list'/'single_objective' 
+        - If both 'function_list'/'single_function' and 'objective_list'/'single_objective'
           or 'constraint_list'/'single_constraint' are provided simultaneously.
         - If a dictionary function does not include a 'function' key.
         - If a constraint dictionary does not include a 'bounds' key.
@@ -177,8 +178,8 @@ class ComputerExperiment:
         results = pb.eval(x)   # or equivalently: results = pb(x)
 
         # Extract objectives and constraints separately
-        objectives_results = pb.eval_objectives(x)  
-        constraints_results = pb.eval_constraints(x)  
+        objectives_results = pb.eval_objectives(x)
+        constraints_results = pb.eval_constraints(x)
         ```
         Note: The functions are not re-evaluated if the same x is provided
         again. The class uses caching to store the result of the last
@@ -217,6 +218,18 @@ class ComputerExperiment:
         constraint_list=None,
         constraint_bounds=None,
     ):
+        # Verify input_box has correct structure and dimensions
+        if len(input_box) != 2:
+            raise ValueError(
+                f"Input box must have exactly 2 elements (lower and upper bounds), but got {len(input_box)}."
+            )
+
+        if len(input_box[0]) != input_dim or len(input_box[1]) != input_dim:
+            raise ValueError(
+                f"Each bound in input_box must have {input_dim} dimensions, "
+                + f"but got {len(input_box[0])} for lower bounds and {len(input_box[1])} for upper bounds."
+            )
+
         self.input_dim = input_dim
         self.input_box = input_box
         self.functions = []
@@ -339,7 +352,7 @@ class ComputerExperiment:
             f"Computer Experiment object",
             f"      Input Dimension : {self.input_dim}",
             f"            Input Box : {self.input_box}",
-            f"     Output Dimension : {self.output_dim}\n"
+            f"     Output Dimension : {self.output_dim}\n",
         ]
         for i, func in enumerate(self.functions, 1):
             details.extend(
@@ -348,7 +361,11 @@ class ComputerExperiment:
                     f"                 Type : {func['type']}",
                     f"             Function : {func['function'].__name__ if callable(func['function']) else func['function']}",
                     f"     Output Dimension : {func['output_dim']}",
-                    f"               Bounds : {func['bounds']}" if "bounds" in func else "",
+                    (
+                        f"               Bounds : {func['bounds']}"
+                        if "bounds" in func
+                        else ""
+                    ),
                 ]
             )
 
