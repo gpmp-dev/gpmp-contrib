@@ -2,7 +2,7 @@
 Multi-output deterministic or stochastic computer experiments
 
 Author: Emmanuel Vazquez <emmanuel.vazquez@centralesupelec.fr>
-Copyright (c) 2022-2023, CentraleSupelec
+Copyright (c) 2022-2024, CentraleSupelec
 License: GPLv3 (see LICENSE)
 
 """
@@ -17,126 +17,192 @@ import numpy as np
 
 
 class ComputerExperiment:
-    """
-    A class representing a computer experiment problem, allowing the user to
-    specify and evaluate functions as either objectives or constraints.
+    """A class representing a multi-output computer experiment, to evaluate
+    multiple objectives and constraints simultaneously. This class allows the user to
+    specify a set of functions (or a single function) to be evaluated as part of 
+    a computational experiment.
+
+    The user can provide the functions in a variety of ways, including as individual
+    objective or constraint functions, or a combined function that outputs both 
+    objectives and constraints.
 
     Parameters
     ----------
     input_dim : int
         Dimension of the input space.
     input_box : list of tuples
-        Input domain specified as a list of tuples. Each tuple represents
-        the range for a specific dimension as (min_value, max_value).
-    single_function : callable function or dict, optional
-        A single function to be evaluated. If a dictionary is
-        provided, it must contain a "function" key. Other optional keys
-        include "output_dim", "type", "bounds" or user-defined keys.
-    function_list : list of callable functions or list of dicts, optional
-        List of functions to be evaluated. Each function can be a
-        dictionary with the key "function" and optional keys
-        "output_dim", "type"...
-    single_objective : function or dict, optional
-        A single objective function to be evaluated. If a dictionary
-        is provided, it must contain a "function" key. Other optional keys
-        include "output_dim" and "type".
-    objective_list : list of functions or list of dicts, optional
-        List of objective functions to be evaluated. Each function can
-        be a dictionary with the key "function" and optional keys
-        "output_dim", "type"...
-    single_constraint : function or dict, optional
-        A single constraint function to be evaluated. If a dictionary
-        is provided, it must contain a "function" key and a "bounds" key
-        indicating the constraint bounds.
-    constraint_list : list of functions or list of dicts, optional
-        List of constraint functions to be evaluated. Each function
-        can be a dictionary with the key "function" and a "bounds" key
-        indicating the constraint bounds.
+        Input domain specified as a list of tuples. Each tuple represents the range 
+        for a specific input dimension as (min_value, max_value).
+    single_function : callable or dict, optional
+        A single function that evaluates both objectives and constraints. 
+        If provided as a dictionary, it must contain a "function" key that specifies
+        the function, and optionally, keys such as "output_dim", "type", and "bounds."
+        This is useful to define a single function that handles all outputs.
+    function_list : list of callable or list of dict, optional
+        A list of functions (or dictionaries) to evaluate. Each entry can either be a 
+        callable function or a dictionary that includes keys such as "function", 
+        "output_dim", "type", etc.
+    single_objective : callable or dict, optional
+        A single objective function. If a dictionary is provided, it must contain a 
+        "function" key, and optionally, "output_dim" and "type."
+    objective_list : list of callable or list of dict, optional
+        A list of objective functions. Each can either be a function or a dictionary with 
+        additional information.
+    single_constraint : callable or dict, optional
+        A single constraint function. If provided as a dictionary, it must include a 
+        "function" key and a "bounds" key that indicates the constraint bounds.
+    constraint_list : list of callable or list of dict, optional
+        A list of constraint functions. Each entry can be a function or a dictionary 
+        containing the constraint and its corresponding bounds.
     constraint_bounds : list of tuples, optional
-        List of bounds for constraints. Each bound is a 2-element tuple: (lower_bound, upper_bound).
-        The number of constraint bounds should match the number of constraints.
-        Only used if constraints are not dictionaries and a global constraint bound is needed.
+        A list of constraint bounds (lower_bound, upper_bound) for the constraints. 
+        This is used if constraints are not provided as dictionaries and need 
+        global bounds.
 
     Raises
     ------
     ValueError
-        If both 'function_list'/'single_function' and either
-        'objective_list'/'single_objective' or
-        'constraint_list'/'single_constraint' are provided.
-
-        If a dictionary does not include a 'function' key.
-
-        If a constraint dictionary does not include a 'bounds' key.
-
-        If the number of constraint bounds does not match the number of constraints.
-
-        If each element in 'constraint_bounds' is not a 2-element tuple.
+        - If both 'function_list'/'single_function' and 'objective_list'/'single_objective' 
+          or 'constraint_list'/'single_constraint' are provided simultaneously.
+        - If a dictionary function does not include a 'function' key.
+        - If a constraint dictionary does not include a 'bounds' key.
+        - If the number of 'constraint_bounds' does not match the number of constraints.
+        - If 'constraint_bounds' elements are not 2-element tuples.
 
     Attributes
     ----------
     input_dim : int
         Dimension of the input space.
     input_box : list of tuples
-        Input domain.
+        The input domain, representing the ranges of each input variable.
     output_dim : int
-        Total number of function outputs (sum of output dimensions of objectives and constraints).
-    functions : list of dicts
-        List of all function dictionaries (objectives and constraints).
+        Total number of outputs (sum of output dimensions from all objectives and constraints).
+    functions : list of dict
+        A list of all functions (both objectives and constraints), where each entry is a dictionary.
     _last_x : tuple
-        Last input value evaluated.
+        The last input value that was evaluated.
     _last_result : np.ndarray
-        Last result computed from the evaluation.
+        The last result from the evaluation of the functions.
 
     Example
     -------
-    Here's how you can use the ComputerExperiment class:
+    Using the `ComputerExperiment` class to define and evaluate functions:
 
-    ```python
-    import numpy as np
+    1.  **Single objective with two constraint**:
 
-    def _pb_objective(x):
-        return (x[:, 0] - 10)**3 + (x[:, 1] - 20)**3
+        ```python
+        import numpy as np
 
-    def _pb_constraints(x):
-        c1 = - (x[:, 0] - 5)**2 - (x[:, 1] - 5)**2 + 100
-        c2 = (x[:, 0] - 6)**2 + (x[:, 1] - 5)**2 - 82.81
-        return np.column_stack((c1, c2))
+        def objective(x):
+            return (x[:, 0] - 10)**3 + (x[:, 1] - 20)**3
 
-    _pb_dict = {
-        "input_dim": 2,
-        "input_box": [[13, 0], [100, 100]],
-        "single_objective": _pb_objective,
-        "single_constraint": {'function': _pb_constraints,
-                              'output_dim': 2,
-                              'bounds': [[100., np.inf], [-np.inf, 82.81]]}
-    }
+        def constraints(x):
+            c1 = - (x[:, 0] - 5)**2 - (x[:, 1] - 5)**2 + 100
+            c2 = (x[:, 0] - 6)**2 + (x[:, 1] - 5)**2 - 82.81
+            return np.column_stack((c1, c2))
 
-    pb = ComputerExperiment(
-        _pb_dict["input_dim"],
-        _pb_dict["input_box"],
-        single_objective=_pb_dict["single_objective"],
-        single_constraint=_pb_dict["single_constraint"]
-    )
-
-    # alternative definition
-
-    def _pb_evaluation(x):
-        return np.column_stack((_pb_objective(x), _pb_constraints(x)))
-
-    pb = ComputerExperiment(
-        _pb_dict["input_dim"],
-        _pb_dict["input_box"],
-        single_function={
-            'function': _pb_evaluation,
-            'output_dim': 1+ 2,
-            'type': ["objective"] + ["constraint"] * 2,
-            'bounds': [None] + [[100., np.inf], [-np.inf, 82.81]]
+        _pb_dict = {
+            "input_dim": 2,
+            "input_box": [[13, 0], [100, 100]],
+            "single_objective": objective,
+            "single_constraint": {'function': constraints,
+                                  'output_dim': 2,
+                                  'bounds': [[100., np.inf], [-np.inf, 82.81]]}
         }
-    )
-    print(pb)
-    x = np.array([[50.0, 50.0], [80., 80.]])
-    pb.eval(x)
-    pb.eval_constraints(x) # Note that this will use the previous computation
+
+        pb = ComputerExperiment(
+            _pb_dict["input_dim"],
+            _pb_dict["input_box"],
+            single_objective=_pb_dict["single_objective"],
+            single_constraint=_pb_dict["single_constraint"]
+        )
+
+        ```
+
+    2.  **Single combined function for objectives and constraints**:
+
+        ```python
+        def combined_function(x):
+            obj = (x[:, 0] - 10)**3 + (x[:, 1] - 20)**3
+            c1 = - (x[:, 0] - 5)**2 - (x[:, 1] - 5)**2 + 100
+            c2 = (x[:, 0] - 6)**2 + (x[:, 1] - 5)**2 - 82.81
+            return np.column_stack((obj, c1, c2))
+
+        pb = ComputerExperiment(
+            input_dim=2,
+            input_box=[[0, 100], [0, 100]],
+            single_function={
+                'function': combined_function,
+                'output_dim': 1 + 2,
+                'type': ['objective', 'constraint', 'constraint'],
+                'bounds': [None, [100., np.inf], [-np.inf, 82.81]]
+            }
+        )
+
+        ```
+
+    3. **Multiple objective functions and constraints**:
+
+        ```python
+        def objective1(x):
+            return (x[:, 0] - 10)**3
+
+        def objective2(x):
+            return (x[:, 1] - 20)**2
+
+        def constraint1(x):
+            return - (x[:, 0] - 5)**2 - (x[:, 1] - 5)**2 + 100
+
+        def constraint2(x):
+            return (x[:, 0] - 6)**2 + (x[:, 1] - 5)**2 - 82.81
+
+        pb = ComputerExperiment(
+            input_dim=2,
+            input_box=[[0, 100], [0, 100]],
+            objective_list=[objective1, objective2],
+            constraint_list=[
+                {'function': constraint1, 'bounds': [100., np.inf]},
+                {'function': constraint2, 'bounds': [-np.inf, 82.81]}
+            ]
+        )
+        ```
+
+    4.  **Evaluate functions for objectives and constraints**:
+
+
+        ```python
+        x = np.array([[50.0, 50.0], [80.0, 80.0]])
+
+        # Evaluate both objectives and constraints at once
+        results = pb.eval(x)   # or equivalently: results = pb(x)
+
+        # Extract objectives and constraints separately
+        objectives_results = pb.eval_objectives(x)  
+        constraints_results = pb.eval_constraints(x)  
+        ```
+        Note: The functions are not re-evaluated if the same x is provided
+        again. The class uses caching to store the result of the last
+        evaluated input. If the input x remains unchanged, the cached
+        result is returned, improving performance for repeated
+        evaluations.
+
+    Usage Notes:
+    ------------
+    - The `single_function` approach is useful when the user wants to
+      provide a single callable that returns both objectives and
+      constraints at once, which is useful when the objectives and
+      constraints are tightly coupled.
+    - The `objective_list` and `constraint_list` approaches are more
+      modular and are recommended for distinct and separate
+      functions for each objective and constraint.
+    - The `bounds` field in constraints specifies constraint
+      violations (i.e., values falling outside the provided
+      bounds). If bounds are not provided, the class raises an error
+      for constraint functions.
+    - The `eval_objectives` and `eval_constraints` methods can be used
+      to evaluate objectives and constraints separately, even when a
+      combined function is used.
+
     """
 
     def __init__(
@@ -214,22 +280,24 @@ class ComputerExperiment:
                 if d > 1:
                     if not all(
                         isinstance(b, (tuple, list)) and len(b) == 2
-                        for b in default_bounds[bounds_index : bounds_index + d]
+                        for b in default_bounds[bounds_index: bounds_index + d]
                     ):
                         raise ValueError(
                             "Each set of bounds should be a tuple (lb, ub) of length 2."
                         )
                     func_dict["bounds"] = default_bounds[
-                        bounds_index : bounds_index + d
+                        bounds_index: bounds_index + d
                     ]
                     bounds_index += d
                 # If the function has one output, just get the next set of bounds
                 else:
                     if (
-                        not isinstance(default_bounds[bounds_index], (tuple, list))
+                        not isinstance(
+                            default_bounds[bounds_index], (tuple, list))
                         or len(default_bounds[bounds_index]) != 2
                     ):
-                        raise ValueError("Bounds should be a tuple of length 2.")
+                        raise ValueError(
+                            "Bounds should be a tuple of length 2.")
                     func_dict["bounds"] = default_bounds[bounds_index]
                     bounds_index += 1
             else:
@@ -247,7 +315,8 @@ class ComputerExperiment:
     def _wrap_in_dict(self, item, default_type):
         if isinstance(item, dict):
             if "function" not in item:
-                raise ValueError("The 'function' key is mandatory in the dictionary.")
+                raise ValueError(
+                    "The 'function' key is mandatory in the dictionary.")
             item.setdefault("output_dim", 1)
             item.setdefault("type", [default_type] * item["output_dim"])
             if len(item["type"]) != item["output_dim"]:
@@ -303,7 +372,8 @@ class ComputerExperiment:
 
     def get_constraint_bounds(self):
         return np.array(
-            [func["bounds"] for func in self.functions if func["type"] == "constraint"]
+            [func["bounds"]
+                for func in self.functions if func["type"] == "constraint"]
         )
 
     def eval(self, x):
@@ -340,7 +410,7 @@ class ComputerExperiment:
             current_output_dim = func["output_dim"]
 
             result_temp = current_function(x)
-            
+
             if result_temp.ndim == 1:
                 result_temp = result_temp[:, np.newaxis]
             elif result_temp.ndim == 2 and result_temp.shape[1] != current_output_dim:
@@ -466,7 +536,8 @@ class StochasticComputerExperiment(ComputerExperiment):
         )
 
         # Initialize noise variance
-        self.initialize_noise_variance(self.functions, simulated_noise_variance)
+        self.initialize_noise_variance(
+            self.functions, simulated_noise_variance)
 
     def initialize_noise_variance(self, function_dicts, simulated_noise_variance):
         """
@@ -490,7 +561,8 @@ class StochasticComputerExperiment(ComputerExperiment):
         # Convert scalar to array
         if np.isscalar(simulated_noise_variance):
             total_output_dim = sum(f["output_dim"] for f in function_dicts)
-            simulated_noise_variance = [simulated_noise_variance] * total_output_dim
+            simulated_noise_variance = [
+                simulated_noise_variance] * total_output_dim
 
         if simulated_noise_variance is not None:
             # Ensure that simulated_noise_variance has output_dim components
@@ -626,7 +698,8 @@ class StochasticComputerExperiment(ComputerExperiment):
 
         results = []
         for _ in range(batch_size):
-            results.append(self._eval_functions(function_dicts, x, simulate_noise))
+            results.append(self._eval_functions(
+                function_dicts, x, simulate_noise))
 
         if batch_size == 1:
             return results[0]
