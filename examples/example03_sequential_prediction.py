@@ -12,7 +12,7 @@ Imports:
   prediction
 
 Author: Emmanuel Vazquez <emmanuel.vazquez@centralesupelec.fr>
-Copyright (c) 2022-2023, CentraleSupelec
+Copyright (c) 2022-2024, CentraleSupelec
 License: GPLv3 (see LICENSE)
 
 """
@@ -48,7 +48,7 @@ def visualize_results(xt, zt, xi, zi, zpm, zpv, xnew=None):
     fig.show(grid=True, xlim=[-1.0, 1.0], legend=True, legend_fontsize=9)
 
 
-# -- Definition of a problem --
+# -- 1. Define a problem --
 
 # Create a ComputerExperiment problem instance using the twobumps test function
 problem = gpc.ComputerExperiment(
@@ -57,7 +57,7 @@ problem = gpc.ComputerExperiment(
     single_function=gp.misc.testfunctions.twobumps,
 )
 
-# -- Create initial dataset --
+# -- 2. Create initial dataset --
 
 # Generate a regular grid of test points within the input domain
 nt = 2000
@@ -70,20 +70,23 @@ ind = [100, 1000, 1600]
 xi = xt[ind]
 zi = problem(xi)
 
-# -- Create SequentialPrediction object --
+# -- 3. Create a Model and a SequentialPrediction object --
 
-# Initialize SequentialPrediction with the initial dataset
-model = gpc.Model_MaternpREML(
+# Create model
+model = gpc.Model_ConstantMean_Maternp_REML(
     "Simple function",
     output_dim=problem.output_dim,
     mean_params={"type": "constant"},
     covariance_params={"p": 2},
 )
-spred = gpc.SequentialPrediction(model)
-spred.set_data_with_model_selection(xi, zi)
+
+# Initialize SequentialPrediction with the initial dataset
+sp = gpc.SequentialPrediction(model)
+sp.set_data_with_model_selection(xi, zi)
 
 # Predict at the test points and visualize the results
-zpm, zpv = spred.predict(xt)
+zpm, zpv = sp.predict(xt)
+
 visualize_results(xt, zt, xi, zi, zpm, zpv)
 
 
@@ -93,7 +96,7 @@ def mmse_sampling(seqpred, xt):
     Select a new data point for evaluation based on maximum MSE.
 
     Parameters:
-    seqpred (SequentialPrediction): The sequential prediction model
+    seqpred (SequentialPrediction): The sequential prediction object
     xt (ndarray): Test points
 
     Returns:
@@ -105,19 +108,19 @@ def mmse_sampling(seqpred, xt):
     return xi_new.reshape(-1, 1)
 
 
-# -- Iterative model improvement --
+# -- 4. Iterative model improvement --
 
 # Number of iterations for model improvement
 n = 10
 for i in range(n):
     # Select a new data point and visualize
-    xi_new = mmse_sampling(spred, xt)
-    visualize_results(xt, zt, spred.xi, spred.zi, zpm, zpv, xi_new)
+    xi_new = mmse_sampling(sp, xt)
+    visualize_results(xt, zt, sp.xi, sp.zi, zpm, zpv, xi_new)
 
     # Evaluate the new data point and update the model
     zi_new = problem(xi_new)
-    spred.set_new_eval_with_model_selection(xi_new, zi_new)
-    zpm, zpv = spred.predict(xt)
+    sp.set_new_eval_with_model_selection(xi_new, zi_new)
+    zpm, zpv = sp.predict(xt)
 
 # Visualize the final results
-visualize_results(xt, zt, spred.xi, spred.zi, zpm, zpv)
+visualize_results(xt, zt, sp.xi, sp.zi, zpm, zpv)

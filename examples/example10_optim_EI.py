@@ -1,7 +1,7 @@
 """Implement a sketch of the EI algorithm
 
 Author: Emmanuel Vazquez <emmanuel.vazquez@centralesupelec.fr>
-Copyright (c) 2022-2023, CentraleSupelec
+Copyright (c) 2022-2024, CentraleSupelec
 License: GPLv3 (see LICENSE)
 
 """
@@ -13,7 +13,7 @@ import gpmpcontrib as gpc
 import gpmpcontrib.optim.expectedimprovement as ei
 import gpmpcontrib.samplingcriteria as sampcrit
 
-## -- definition of a mono-objective problem
+# -- define a mono-objective problem
 
 problem = gpc.ComputerExperiment(
     1,  # dim of search space
@@ -21,20 +21,19 @@ problem = gpc.ComputerExperiment(
     single_function=gp.misc.testfunctions.twobumps,  # test function
 )
 
-# objectives=[{'function': tf.f1, 'goal': 'minimize'}
 
-## -- create initial dataset
+# -- create initial dataset
 
 nt = 2000
 xt = gp.misc.designs.regulargrid(problem.input_dim, nt, problem.input_box)
-zt = gp.misc.testfunctions.twobumps(xt)
+zt = problem(xt)
 
 ni = 3
 ind = [100, 1000, 1600]
 xi = xt[ind]
 
-## -- initialize a model and the ei algorithm
-model = gpc.Model_MaternpREML(
+# -- initialize a model and the ei algorithm
+model = gpc.Model_ConstantMean_Maternp_REML(
     "GP1d",
     output_dim=problem.output_dim,
     mean_params={"type": "constant"},
@@ -45,7 +44,7 @@ eialgo = ei.ExpectedImprovement(problem, model)
 
 eialgo.set_initial_design(xi)
 
-## -- visualization
+# -- visualization
 
 
 def plot(show=True, x=None, z=None):
@@ -80,7 +79,7 @@ def plot(show=True, x=None, z=None):
 plot()
 
 # make n new evaluations
-n = 8
+n = 2
 for i in range(n):
     print(f"Iteration {i} / {n}")
     eialgo.step()

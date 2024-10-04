@@ -32,7 +32,8 @@ def visualize_results_1d(xt, zt, xi, zi, zpm, zpv, zpsim):
     """
     fig = gp.misc.plotutils.Figure(isinteractive=interactive)
     fig.plot(xt, zt, "k", linewidth=1, linestyle=(0, (5, 5)))
-    fig.plot(xt, zpsim[:, 0], "k", linewidth=0.5, label="conditional sample paths")
+    fig.plot(xt, zpsim[:, 0], "k", linewidth=0.5,
+             label="conditional sample paths")
     fig.plot(xt, zpsim[:, 1:], "k", linewidth=0.5)
     fig.plotdata(xi, zi)
     fig.plotgp(xt, zpm, zpv, colorscheme="simple")
@@ -48,7 +49,8 @@ def visualize_truth_vs_prediction(zt, zpm):
         ax = axs[i] if num_outputs > 1 else axs
         ax.scatter(zt[:, i], zpm[:, i])
         ax.plot(
-            [zt[:, i].min(), zt[:, i].max()], [zt[:, i].min(), zt[:, i].max()], "k--"
+            [zt[:, i].min(), zt[:, i].max()], [
+                zt[:, i].min(), zt[:, i].max()], "k--"
         )
         ax.set_xlabel("True Values")
         ax.set_ylabel("Predicted Values")
@@ -79,17 +81,17 @@ xi = xt[ind]
 zi = problem(xi)
 
 # Define the model, make predictions and draw conditional sample paths
-model_choice = 2
+model_choice = 1
 
 if model_choice == 1:
-    model = gpc.Model_MaternpREML(
+    model = gpc.Model_ConstantMean_Maternp_REML(
         "1d_noisefree",
         problem.output_dim,
         mean_params={"type": "constant"},
-        covariance_params={"p": 4.1},
+        covariance_params={"p": 4},
     )
 elif model_choice == 2:
-    model = gpc.Model_ConstantMeanMaternpML(
+    model = gpc.Model_ConstantMean_Maternp_ML(
         "1d_noisefree",
         problem.output_dim,
         covariance_params={"p": 4}
@@ -113,19 +115,19 @@ pb_dict = {
     "output_dim": 2,
 }
 
-pb = gpc.ComputerExperiment(
+problem = gpc.ComputerExperiment(
     pb_dict["input_dim"], pb_dict["input_box"], function_list=pb_dict["functions"]
 )
 
 # Generate data
 n_test_grid = 21
 xt1v, xt2v = np.meshgrid(
-    np.linspace(pb.input_box[0][0], pb.input_box[1][0], n_test_grid),
-    np.linspace(pb.input_box[0][1], pb.input_box[1][1], n_test_grid),
+    np.linspace(problem.input_box[0][0], problem.input_box[1][0], n_test_grid),
+    np.linspace(problem.input_box[0][1], problem.input_box[1][1], n_test_grid),
     indexing="ij",
 )
 xt = np.hstack((xt1v.reshape(-1, 1), xt2v.reshape(-1, 1)))
-zt = pb.eval(xt)
+zt = problem.eval(xt)
 
 ni = 5
 ind = np.random.choice(n_test_grid**2, ni, replace=False)
@@ -133,9 +135,9 @@ xi = xt[ind]
 zi = zt[ind]
 
 # Define the model and make predictions
-model = gpc.Model_MaternpREML(
+model = gpc.Model_ConstantMean_Maternp_REML(
     "2d_noisefree",
-    pb.output_dim,
+    problem.output_dim,
     mean_params={"type": "constant"},
     covariance_params=[
         {"p": 1},

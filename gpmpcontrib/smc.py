@@ -122,10 +122,14 @@ class ParticlesSet:
             A tuple containing the positions, log-probabilities, and
             weights of the initialized particles.
 
+        FIXME
+        -----
+        Implement more general initial densities
+
         """
         assert self.dim == len(
             box[0]
-        ), "Box dimension does not match particle dimension"
+        ), "Box dimension does not match particleg dimension"
         self.n = n
 
         # Initialize positions
@@ -450,7 +454,7 @@ class SMC:
         self,
         logpdf_parameterized_function,
         logpdf_initial_param,
-        target_logpdf_param,
+        logpdf_final_param,
         min_ess_ratio,
         p0,
         debug=False,
@@ -485,12 +489,12 @@ class SMC:
         """
         # Logging
         self.stage += 1
-        self.logging_current_logpdf_param = target_logpdf_param
-        self.logging_target_logpdf_param = target_logpdf_param
+        self.logging_current_logpdf_param = logpdf_final_param
+        self.logging_target_logpdf_param = logpdf_final_param
 
         # Set target density
         def logpdf(x): return logpdf_parameterized_function(
-            x, target_logpdf_param)
+            x, logpdf_final_param)
         self.particles.set_logpdf(logpdf)
 
         # reweight
@@ -502,18 +506,23 @@ class SMC:
             self.restart(
                 logpdf_parameterized_function,
                 logpdf_initial_param,
-                target_logpdf_param,
+                logpdf_final_param,
                 p0,
             )
             # Note: Logging will occur inside the restart method.
+
         else:
-            # resample / move
+            # Resample
             self.particles.resample()
+
+            # Move with control on acceptation rate
             self.move_with_controlled_acceptation_rate()
+
+            # Additional moves if required
             for _ in range(self.mh_params["mh_steps"] - 1):
-                # Additional moves if required
                 acceptation_rate = self.particles.move()
                 self.logging_acceptation_rate_sequence.append(acceptation_rate)
+
             # Logging
             self._log_data(log_current_state_and_reinitialize=True)
 
@@ -546,7 +555,8 @@ class SMC:
 
         self._log_data(log_current_state_and_reinitialize=True)
 
-        self.particles.particles_init(self.box, self.n)
+        self.particles.particles_init(self.box, self.n, method="randunif")
+
         current_logpdf_param = logpdf_initial_param
 
         self.logging_logpdf_param_sequence = [logpdf_initial_param]
@@ -559,6 +569,7 @@ class SMC:
                 p0,
                 debug,
             )
+
             self.logging_restart_iteration += 1
             self.logging_logpdf_param_sequence.append(next_logpdf_param)
 

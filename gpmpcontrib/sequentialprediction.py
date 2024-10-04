@@ -1,6 +1,6 @@
 """Sequential Prediction Module
 
-This module contains the `SequentialPrediction` class, which
+This module implements the `SequentialPrediction` class, which
 facilitates sequential predictions with Gaussian process (GP) models. It
 allows building and storing GP models, managing datasets, appending
 new evaluations, making predictions, and simulating conditional sample
@@ -22,7 +22,7 @@ License: GPLv3 (see LICENSE)
 """
 import gpmp.num as gnp
 import gpmp as gp
-from gpmpcontrib.models import Model
+from gpmpcontrib.model import ModelContainer
 
 
 class SequentialPrediction:
@@ -75,7 +75,7 @@ class SequentialPrediction:
             Generates conditional sample paths based on the current model state and data.
 
         """
-        if not isinstance(model, Model):
+        if not isinstance(model, ModelContainer):
             raise TypeError(
                 "model must be an instance of Model or its subclasses")
 
