@@ -20,9 +20,7 @@ License: GPLv3 (see LICENSE)
 import numpy as np
 import gpmp as gp
 import gpmpcontrib as gpc
-
-# Set interactive mode for plotting (set to True if interactive plotting is desired)
-interactive = False
+from gpmpcontrib.plot import plot_1d
 
 
 def append_noise_variance(x, noise_variance, output_dim):
@@ -42,29 +40,6 @@ def append_noise_variance(x, noise_variance, output_dim):
     else:
         noise_info = np.zeros((x.shape[0], output_dim))
     return np.hstack((x, noise_info))
-
-
-def visualize_results(xt, zt, xi, zi, zpm, zpv, xnew=None):
-    """
-    Visualize the results of the predictions and the dataset.
-
-    Parameters:
-      xt (ndarray): Test points
-      zt (ndarray): True values at test points
-      xi (ndarray): Input data points
-      zi (ndarray): Output values at input data points
-      zpm (ndarray): Posterior mean values
-      zpv (ndarray): Posterior variances
-      xnew (ndarray, optional): New data point being added
-    """
-    fig = gp.misc.plotutils.Figure(isinteractive=interactive)
-    fig.plot(xt, zt, "k", linewidth=1, linestyle=(0, (5, 5)))
-    fig.plotdata(xi, zi)
-    fig.plotgp(xt, zpm, zpv, colorscheme="simple")
-    if xnew is not None:
-        fig.plot(np.repeat(xnew, 2), fig.ylim(), color="tab:gray", linewidth=2)
-    fig.xylabels("$x$", "$z$")
-    fig.show(grid=True, xlim=[-1.0, 1.0], legend=True, legend_fontsize=9)
 
 
 # -- 1. Define a problem --
@@ -94,19 +69,20 @@ model = gpc.Model_Noisy_ConstantMean_Maternp_REML(
     "Simple function",
     output_dim=problem.output_dim,
     mean_params={"type": "constant"},
-    covariance_params={"p": 2},
+    covariance_params={"p": 3},
 )
 
 # Using the append_noise_variance function to manage noise data
-xi_with_noise_variance = append_noise_variance(
-    xi, noise_variance, problem.output_dim)
+xi_with_noise_variance = append_noise_variance(xi, noise_variance, problem.output_dim)
 xt_with_zero_noise_variance = append_noise_variance(xt, 0, problem.output_dim)
 
 sp = gpc.SequentialPrediction(model)
 sp.set_data_with_model_selection(xi_with_noise_variance, zi)
 
 zpm, zpv = sp.predict(xt_with_zero_noise_variance)
-visualize_results(xt, zt, xi, zi, zpm, zpv)
+
+title = f"1D GP model with {sp.ni} observations"
+plot_1d(xt, zt, xi, zi, zpm, zpv, title=title)
 
 # Function for selecting new data points based on maximum MSE
 
@@ -132,7 +108,7 @@ def mmse_sampling(seqpred, xt, xt_with_zero_noise_variance):
 n = 10
 for i in range(n):
     xi_new = mmse_sampling(sp, xt, xt_with_zero_noise_variance)
-    visualize_results(xt, zt, sp.xi[:, :-output_dim], sp.zi, zpm, zpv, xi_new)
+    plot_1d(xt, zt, sp.xi[:, :-output_dim], sp.zi, zpm, zpv, xnew=xi_new)
 
     zi_new = problem(xi_new)
     xi_new_with_noise = append_noise_variance(
@@ -142,4 +118,8 @@ for i in range(n):
     zpm, zpv = sp.predict(xt_with_zero_noise_variance)
 
 # Final visualization
-visualize_results(xt, zt, sp.xi[:, :-output_dim], sp.zi, zpm, zpv)
+zpsim = model.compute_conditional_simulations(
+    sp.xi, sp.zi, xt_with_zero_noise_variance, n_samplepaths=3
+)
+title = f"1D GP model with {sp.ni} observations, conditional sample paths"
+plot_1d(xt, zt, sp.xi[:, :-output_dim], sp.zi, zpm, zpv, zpsim=zpsim, title=title)

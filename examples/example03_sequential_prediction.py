@@ -16,37 +16,11 @@ Copyright (c) 2022-2024, CentraleSupelec
 License: GPLv3 (see LICENSE)
 
 """
+
 import numpy as np
 import gpmp as gp
 import gpmpcontrib as gpc
-
-# Set interactive mode for plotting (set to True if interactive plotting is desired)
-interactive = False
-
-
-def visualize_results(xt, zt, xi, zi, zpm, zpv, xnew=None):
-    """
-    Visualize the results of the predictions and the dataset.
-
-    Parameters:
-    xt (ndarray): Test points
-    zt (ndarray): True values at test points
-    xi (ndarray): Input data points
-    zi (ndarray): Output values at input data points
-    zpm (ndarray): Posterior mean values
-    zpv (ndarray): Posterior variances
-    xnew (ndarray, optional): New data point being added
-    """
-    fig = gp.misc.plotutils.Figure(isinteractive=interactive)
-    fig.plot(xt, zt, "k", linewidth=1, linestyle=(0, (5, 5)))
-    fig.plotdata(xi, zi)
-    fig.plotgp(xt, zpm, zpv, colorscheme="simple")
-    if xnew is not None:
-        fig.plot(np.repeat(xnew, 2), fig.ylim(), color="tab:gray", linewidth=3)
-        fig.title("new evaluation")
-    fig.xylabels("$x$", "$z$")
-    fig.show(grid=True, xlim=[-1.0, 1.0], legend=True, legend_fontsize=9)
-
+from gpmpcontrib.plot import plot_1d
 
 # -- 1. Define a problem --
 
@@ -87,7 +61,7 @@ sp.set_data_with_model_selection(xi, zi)
 # Predict at the test points and visualize the results
 zpm, zpv = sp.predict(xt)
 
-visualize_results(xt, zt, xi, zi, zpm, zpv)
+plot_1d(xt, zt, xi, zi, zpm, zpv)
 
 
 # Function for selecting new data points based on maximum MSE
@@ -111,11 +85,11 @@ def mmse_sampling(seqpred, xt):
 # -- 4. Iterative model improvement --
 
 # Number of iterations for model improvement
-n = 10
+n = 9
 for i in range(n):
     # Select a new data point and visualize
     xi_new = mmse_sampling(sp, xt)
-    visualize_results(xt, zt, sp.xi, sp.zi, zpm, zpv, xi_new)
+    plot_1d(xt, zt, sp.xi, sp.zi, zpm, zpv, xnew=xi_new)
 
     # Evaluate the new data point and update the model
     zi_new = problem(xi_new)
@@ -123,4 +97,5 @@ for i in range(n):
     zpm, zpv = sp.predict(xt)
 
 # Visualize the final results
-visualize_results(xt, zt, sp.xi, sp.zi, zpm, zpv)
+title = f"1D GP model with {sp.ni} observations"
+plot_1d(xt, zt, sp.xi, sp.zi, zpm, zpv, title=title)

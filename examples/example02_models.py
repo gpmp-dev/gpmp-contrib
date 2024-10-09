@@ -22,7 +22,7 @@ import gpmp as gp
 import gpmpcontrib as gpc
 import test_functions as tf
 from gpmpcontrib.plot import (
-    plot_results_1d,
+    plot_1d,
     show_truth_vs_prediction,
     show_loo_errors,
 )
@@ -71,7 +71,7 @@ zpm, zpv = model.predict(xi, zi, xt)
 zpsim = model.compute_conditional_simulations(xi, zi, xt, n_samplepaths=5)
 
 title = f"1D GP model with {ni} observations"
-plot_results_1d(xt, zt, xi, zi, zpm[:, 0], zpv[:, 0], zpsim, title)
+plot_1d(xt, zt, xi, zi, zpm[:, 0], zpv[:, 0], zpsim=zpsim, title=title)
 
 # --------------------------------
 # Example 2: Two-output 2d problem

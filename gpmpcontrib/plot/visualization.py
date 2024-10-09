@@ -19,29 +19,50 @@ import gpmp as gp
 interactive = False
 
 
-def plot_results_1d(xt, zt, xi, zi, zpm, zpv, zpsim=None, title=None):
+def plot_1d(xt, zt, xi, zi, zpm, zpv, zpsim=None, xnew=None, title=None):
     """
     Visualize the results of the predictions and the dataset.
+
+    Parameters:
+    xt (ndarray): Test points
+    zt (ndarray): True values at test points
+    xi (ndarray): Input data points
+    zi (ndarray): Output values at input data points
+    zpm (ndarray): Posterior mean values
+    zpv (ndarray): Posterior variances
+    zpsim (ndarray, optional): Conditional sample paths
+    xnew (ndarray, optional): New data point being added
+    title (str, optional): Title for the plot
     """
     fig = gp.misc.plotutils.Figure(isinteractive=interactive)
 
     # Plot zt if it is provided
     if zt is not None:
-        fig.plot(xt, zt, "k", linewidth=1, linestyle=(0, (5, 5)))
+        fig.plot(xt, zt, "k", linewidth=1, linestyle=(0, (5, 5)), label="truth")
 
     # Plot conditional sample paths only if zpsim is provided
     if zpsim is not None:
         fig.plot(xt, zpsim[:, 0], "k", linewidth=0.5, label="conditional sample paths")
         fig.plot(xt, zpsim[:, 1:], "k", linewidth=0.5)
 
+    # Plot data points
     fig.plotdata(xi, zi)
+
+    # Plot GP mean and variance
     fig.plotgp(xt, zpm, zpv, colorscheme="simple")
-    fig.xylabels("$x$", "$z$")
+
+    # Plot new evaluation point if provided
+    if xnew is not None:
+        fig.plot(np.repeat(xnew, 2), fig.ylim(), color="tab:gray", linewidth=3)
+        if title is None:
+            fig.title("New Evaluation")
 
     # Add title if it is provided
     if title is not None:
         fig.title(title)
 
+    # Set labels and show plot
+    fig.xylabels("$x$", "$z$")
     fig.show(grid=True, xlim=[-1.0, 1.0], legend=True, legend_fontsize=9)
 
 

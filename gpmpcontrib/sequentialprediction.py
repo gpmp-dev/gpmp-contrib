@@ -20,9 +20,10 @@ Copyright (c) 2022-2024, CentraleSupelec
 License: GPLv3 (see LICENSE)
 
 """
+
 import gpmp.num as gnp
 import gpmp as gp
-from gpmpcontrib.model import ModelContainer
+from gpmpcontrib.modelcontainer import ModelContainer
 
 
 class SequentialPrediction:
@@ -99,8 +100,16 @@ class SequentialPrediction:
         return self.model.name
 
     @property
+    def input_dim(self):
+        return self.xi.shape[1]
+
+    @property
     def output_dim(self):
         return self.model.output_dim
+
+    @property
+    def ni(self):
+        return self.xi.shape[0]
 
     def set_data(self, xi, zi):
         self.xi = gnp.asarray(xi)
