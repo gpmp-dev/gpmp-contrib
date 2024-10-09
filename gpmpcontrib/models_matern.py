@@ -13,7 +13,7 @@ License: GPLv3 (refer to LICENSE file for usage terms)
 
 import gpmp.num as gnp
 import gpmp as gp
-import gpmpcontrib.model
+import gpmpcontrib.modelcontainer
 from math import log
 
 
@@ -22,7 +22,7 @@ from math import log
 # ==============================================================================
 
 
-class Model_ConstantMean_Maternp_REML(gpmpcontrib.model.ModelContainer):
+class Model_ConstantMean_Maternp_REML(gpmpcontrib.modelcontainer.ModelContainer):
     def __init__(self, name, output_dim, mean_params, covariance_params):
         """
         Initialize a Model.
@@ -72,12 +72,11 @@ class Model_ConstantMean_Maternp_REML(gpmpcontrib.model.ModelContainer):
             raise ValueError(f"Mean 'type' should be specified in 'param'")
 
         if param["type"] == "constant":
-            return (gpmpcontrib.model.mean_linpred_constant, 0)
+            return (gpmpcontrib.modelcontainer.mean_linpred_constant, 0)
         elif param["type"] == "linear":
-            return (gpmpcontrib.model.mean_linpred_linear, 0)
+            return (gpmpcontrib.modelcontainer.mean_linpred_linear, 0)
         else:
-            raise NotImplementedError(
-                f"Mean type {param['type']} not implemented")
+            raise NotImplementedError(f"Mean type {param['type']} not implemented")
 
     def build_covariance(self, output_idx: int, param: dict):
         """Create a Matérn covariance function for a specific output
@@ -140,7 +139,7 @@ class Model_ConstantMean_Maternp_REML(gpmpcontrib.model.ModelContainer):
 # ==============================================================================
 
 
-class Model_ConstantMean_Maternp_ML(gpmpcontrib.model.ModelContainer):
+class Model_ConstantMean_Maternp_ML(gpmpcontrib.modelcontainer.ModelContainer):
     """GP model with a constant mean and a Matern covariance function. Parameters are estimated by ML"""
 
     def __init__(self, name, output_dim, covariance_params=None):
@@ -190,10 +189,9 @@ class Model_ConstantMean_Maternp_ML(gpmpcontrib.model.ModelContainer):
             raise ValueError(f"Mean 'type' should be specified in 'param'")
 
         if param["type"] == "constant":
-            return (gpmpcontrib.model.mean_parameterized_constant, 1)
+            return (gpmpcontrib.modelcontainer.mean_parameterized_constant, 1)
         else:
-            raise NotImplementedError(
-                f"Mean type {param['type']} not implemented")
+            raise NotImplementedError(f"Mean type {param['type']} not implemented")
 
     def build_covariance(self, output_idx: int, param: dict):
         """Create a Matérn covariance function for a specific output
@@ -275,8 +273,7 @@ def build_mown_kernel(output_idx: int, **params):
 
         if pairwise:
             # return a vector of covariances between predictands
-            K = sigma2 * gnp.ones((x.shape[0],)) + \
-                x[:, noise_idx] + nugget  # nx x 0
+            K = sigma2 * gnp.ones((x.shape[0],)) + x[:, noise_idx] + nugget  # nx x 0
         else:
             # return a covariance matrix between observations
             K = gnp.scaled_distance(loginvrho, x[:, :d], x[:, :d])  # nx x nx
@@ -295,8 +292,7 @@ def build_mown_kernel(output_idx: int, **params):
 
         if pairwise:
             # return a vector of covariances
-            K = gnp.scaled_distance_elementwise(
-                loginvrho, x[:, :d], y[:, :d])  # nx x 0
+            K = gnp.scaled_distance_elementwise(loginvrho, x[:, :d], y[:, :d])  # nx x 0
         else:
             # return a covariance matrix
             K = gnp.scaled_distance(loginvrho, x[:, :d], y[:, :d])  # nx x ny
@@ -363,7 +359,7 @@ def noisy_outputs_parameters_initial_guess(model, xi, zi, output_dim):
     return gnp.concatenate((gnp.log(sigma2_GLS), -gnp.log(rho)))
 
 
-class Model_Noisy_ConstantMean_Maternp_REML(gpmpcontrib.model.ModelContainer):
+class Model_Noisy_ConstantMean_Maternp_REML(gpmpcontrib.modelcontainer.ModelContainer):
     def __init__(self, name, output_dim, mean_params, covariance_params):
         """
         Initialize a noisy Model designed to handle output-specific noise.
@@ -394,10 +390,9 @@ class Model_Noisy_ConstantMean_Maternp_REML(gpmpcontrib.model.ModelContainer):
             raise ValueError(f"Mean 'type' should be specified in 'param'")
 
         if param["type"] == "constant":
-            return (gpmpcontrib.model.mean_linpred_constant, 0)
+            return (gpmpcontrib.modelcontainer.mean_linpred_constant, 0)
         else:
-            raise NotImplementedError(
-                f"Mean type {param['type']} not implemented")
+            raise NotImplementedError(f"Mean type {param['type']} not implemented")
 
     def build_covariance(self, output_idx: int, param: dict):
         """
@@ -406,7 +401,8 @@ class Model_Noisy_ConstantMean_Maternp_REML(gpmpcontrib.model.ModelContainer):
         """
         if ("p" not in param) or (not isinstance(param["p"], int)):
             raise ValueError(
-                f"Regularity 'p' should be integer and specified in 'param'")
+                f"Regularity 'p' should be integer and specified in 'param'"
+            )
 
         # Use the specialized kernel function that handles noisy outputs
         return build_mown_kernel(output_idx, **param)
@@ -415,12 +411,15 @@ class Model_Noisy_ConstantMean_Maternp_REML(gpmpcontrib.model.ModelContainer):
         """
         Custom initial guess procedure for models with noisy outputs using spatial data dimensions.
         """
-        return lambda model, xi, zi: noisy_outputs_parameters_initial_guess(model, xi, zi, output_dim=self.output_dim)
+        return lambda model, xi, zi: noisy_outputs_parameters_initial_guess(
+            model, xi, zi, output_dim=self.output_dim
+        )
 
     def build_selection_criterion(self, output_idx: int, **build_params):
         """
         Define a REML criterion that may also account for the noise parameters.
         """
+
         def reml_criterion_noisy(model, covparam, xi, zi):
             nlrel = model.negative_log_restricted_likelihood(covparam, xi, zi)
             return nlrel
