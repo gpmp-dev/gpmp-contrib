@@ -12,56 +12,26 @@ Imports:
 - test_functions for predefined test functions.
 
 Author: Emmanuel Vazquez <emmanuel.vazquez@centralesupelec.fr>
-Copyright (c) 2022-2023, CentraleSupelec
+Copyright (c) 2022-2024, CentraleSupelec
 License: GPLv3 (see LICENSE file)
 
 """
+
 import numpy as np
 import gpmp as gp
 import gpmpcontrib as gpc
-import matplotlib.pyplot as plt
 import test_functions as tf
-
-# Set interactive mode for plotting (set to True if interactive plotting is desired)
-interactive = False
-
-
-def visualize_results_1d(xt, zt, xi, zi, zpm, zpv, zpsim):
-    """
-    Visualize the results of the predictions and the dataset.
-    """
-    fig = gp.misc.plotutils.Figure(isinteractive=interactive)
-    fig.plot(xt, zt, "k", linewidth=1, linestyle=(0, (5, 5)))
-    fig.plot(xt, zpsim[:, 0], "k", linewidth=0.5,
-             label="conditional sample paths")
-    fig.plot(xt, zpsim[:, 1:], "k", linewidth=0.5)
-    fig.plotdata(xi, zi)
-    fig.plotgp(xt, zpm, zpv, colorscheme="simple")
-    fig.xylabels("$x$", "$z$")
-    fig.show(grid=True, xlim=[-1.0, 1.0], legend=True, legend_fontsize=9)
+from gpmpcontrib.plot import (
+    plot_results_1d,
+    show_truth_vs_prediction,
+    show_loo_errors,
+)
 
 
-def visualize_truth_vs_prediction(zt, zpm):
-    num_outputs = zt.shape[1]
-    fig, axs = plt.subplots(1, num_outputs, figsize=(6 * num_outputs, 5))
-
-    for i in range(num_outputs):
-        ax = axs[i] if num_outputs > 1 else axs
-        ax.scatter(zt[:, i], zpm[:, i])
-        ax.plot(
-            [zt[:, i].min(), zt[:, i].max()], [
-                zt[:, i].min(), zt[:, i].max()], "k--"
-        )
-        ax.set_xlabel("True Values")
-        ax.set_ylabel("Predicted Values")
-        ax.set_title(f"Output {i+1}")
-
-    plt.tight_layout()
-    plt.show()
-
-
+# -----------------------------------
 # Example 1: Single-output 1d problem
 # -----------------------------------
+
 
 # Define the problem
 problem = gpc.ComputerExperiment(
@@ -75,8 +45,8 @@ nt = 2000
 xt = gp.misc.designs.regulargrid(problem.input_dim, nt, problem.input_box)
 zt = problem(xt)
 
-ni = 3
 ind = [100, 1000, 1400, 1500, 1600]
+ni = len(ind)
 xi = xt[ind]
 zi = problem(xi)
 
@@ -92,9 +62,7 @@ if model_choice == 1:
     )
 elif model_choice == 2:
     model = gpc.Model_ConstantMean_Maternp_ML(
-        "1d_noisefree",
-        problem.output_dim,
-        covariance_params={"p": 4}
+        "1d_noisefree", problem.output_dim, covariance_params={"p": 4}
     )
 
 model.select_params(xi, zi)
@@ -102,8 +70,10 @@ zpm, zpv = model.predict(xi, zi, xt)
 
 zpsim = model.compute_conditional_simulations(xi, zi, xt, n_samplepaths=5)
 
-visualize_results_1d(xt, zt, xi, zi, zpm[:, 0], zpv[:, 0], zpsim)
+title = f"1D GP model with {ni} observations"
+plot_results_1d(xt, zt, xi, zi, zpm[:, 0], zpv[:, 0], zpsim, title)
 
+# --------------------------------
 # Example 2: Two-output 2d problem
 # --------------------------------
 
@@ -129,7 +99,7 @@ xt1v, xt2v = np.meshgrid(
 xt = np.hstack((xt1v.reshape(-1, 1), xt2v.reshape(-1, 1)))
 zt = problem.eval(xt)
 
-ni = 5
+ni = 8
 ind = np.random.choice(n_test_grid**2, ni, replace=False)
 xi = xt[ind]
 zi = zt[ind]
@@ -147,4 +117,8 @@ model = gpc.Model_ConstantMean_Maternp_REML(
 model.select_params(xi, zi)
 zpm, zpv = model.predict(xi, zi, xt)
 
-visualize_truth_vs_prediction(zt, zpm)
+# Visualize results
+show_truth_vs_prediction(zt, zpm)
+
+zloom, zloov, eloo = model.loo(xi, zi)
+show_loo_errors(zi, zloom, zloov)
