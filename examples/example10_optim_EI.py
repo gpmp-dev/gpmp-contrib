@@ -5,6 +5,7 @@ Copyright (c) 2022-2024, CentraleSupelec
 License: GPLv3 (see LICENSE)
 
 """
+
 import numpy as np
 import matplotlib.pyplot as plt
 import gpmp as gp
@@ -79,7 +80,7 @@ def plot(show=True, x=None, z=None):
 plot()
 
 # make n new evaluations
-n = 2
+n = 6
 for i in range(n):
     print(f"Iteration {i} / {n}")
     eialgo.step()

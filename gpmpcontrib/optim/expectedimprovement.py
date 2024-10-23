@@ -1,6 +1,6 @@
 # --------------------------------------------------------------
 # Authors: Emmanuel Vazquez <emmanuel.vazquez@centralesupelec.fr>
-# Copyright (c) 2023, CentraleSupelec
+# Copyright (c) 2023-2024, CentraleSupelec
 # License: GPLv3 (see LICENSE)
 # --------------------------------------------------------------
 import gpmp.num as gnp
@@ -18,12 +18,12 @@ class ExpectedImprovement(SequentialStrategy):
     def __init__(self, problem, model, options=None):
         super().__init__(problem=problem, model=model, options=options)
 
-    def target_log_density(self, x, u):
+    def smc_log_density(self, x, u):
         """
         Defines the log probability of an excursion, used as a target density for SMC.
         """
-        min_threshold = 1e-6
-        sigma2_scale_factor = 2.0**2
+        min_threshold = gnp.log(1e-10)
+        sigma2_scale_factor = 1.0**2
 
         input_box = gnp.asarray(self.computer_experiments_problem.input_box)
         b = sampcrit.isinbox(input_box, x)
@@ -32,33 +32,26 @@ class ExpectedImprovement(SequentialStrategy):
 
         log_prob_excur = gnp.where(
             gnp.asarray(b),
-            gnp.log(
-                gnp.maximum(
-                    min_threshold,
-                    sampcrit.probability_excursion(
-                        u, -zpm, sigma2_scale_factor * zpv),
-                )
+            gnp.maximum(
+                min_threshold,
+                sampcrit.log_probability_excursion(
+                    u, -zpm, sigma2_scale_factor * zpv),
             ).flatten(),
             -gnp.inf,
         )
 
         return log_prob_excur
 
-    def update_target_log_density_param(self):
+    def update_smc_log_density_param(self):
         """
         Updates the target log density parameter for SMC based on the current estimate.
         """
-        self.target_log_density_param = -self.current_estimate
-        self.target_log_density_param_initial = -gnp.max(self.zi)
+        self.smc_log_density_param = -self.current_estimate
+        self.smc_log_density_param_initial = -gnp.max(self.zi)
 
     def update_current_estimate(self):
         """
-        Updates the current estimate of the objective function.
-
-        Returns
-        -------
-        float
-            The updated estimate value.
+        Updates the current estimate of the minimum.
         """
         return gnp.min(self.zi)
 
