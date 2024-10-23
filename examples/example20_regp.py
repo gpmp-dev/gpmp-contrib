@@ -11,17 +11,18 @@ import gpmp as gp
 import matplotlib.pyplot as plt
 import gpmpcontrib.regp as regp
 
+
 def generate_data():
     """
     Data generation.
-    
+
     Returns
     -------
     tuple
         (xt, zt): target data
         (xi, zi): input dataset
     """
-    s = 3.
+    s = 1.5
     ni = 15
     dim = 1
     nt = 200
@@ -29,9 +30,14 @@ def generate_data():
     xt = gp.misc.designs.regulargrid(dim, nt, box)
     zt = gnp.exp(s * gp.misc.testfunctions.twobumps(xt))
 
-    xi = gp.misc.designs.ldrandunif(dim, ni, box)
+    xi = gnp.array([-0.7, -0.6, -0.45]).reshape(-1, 1)
+    xi = gnp.vstack((xi, gnp.asarray(gp.misc.designs.ldrandunif(dim, ni, box))))
     zi = gnp.exp(s * gp.misc.testfunctions.twobumps(xi))
-   
+
+    u = 2.0
+    noise_variance = 0.01 * gnp.maximum(zi - u, 0.0)
+    zi = zi + gnp.sqrt(noise_variance) * gnp.randn(zi.shape)
+
     return xt, zt, xi, zi
 
 
@@ -47,7 +53,7 @@ def kernel(x, y, covparam, pairwise=False):
 def visualize_results(xt, zt, xi, zi, zpm, zpv, fig=None, rgb_hue=[242, 64, 76]):
     """
     Visualize the results using gp.misc.plotutils (a matplotlib wrapper).
-    
+
     Parameters
     ----------
     xt : numpy.ndarray
@@ -65,12 +71,12 @@ def visualize_results(xt, zt, xi, zi, zpm, zpv, fig=None, rgb_hue=[242, 64, 76])
     """
     if fig is None:
         fig = gp.misc.plotutils.Figure(isinteractive=True)
-    fig.plot(xt, zt, 'k', linewidth=1, linestyle=(0, (5, 5)))
+    fig.plot(xt, zt, "k", linewidth=1, linestyle=(0, (5, 5)))
     fig.plotdata(xi, zi)
-    fig.plotgp(xt, zpm, zpv, colorscheme='hue', rgb_hue=rgb_hue)
-    fig.xlabel('$x$')
-    fig.ylabel('$z$')
-    fig.title('Posterior GP with parameters selected by ReML')
+    fig.plotgp(xt, zpm, zpv, colorscheme="hue", rgb_hue=rgb_hue)
+    fig.xlabel("$x$")
+    fig.ylabel("$z$")
+    fig.title("Posterior GP")
 
     return fig
 
@@ -91,7 +97,7 @@ zpm, zpv = model.predict(xi, zi, xt)
 fig = visualize_results(xt, zt, xi, zi, zpm, zpv)
 
 # reGP prediction above u
-print('\n===== reGP =====\n')
+print("\n===== reGP =====\n")
 u = 2.0
 R = gnp.numpy.array([[u, gnp.numpy.inf]])
 
@@ -100,7 +106,7 @@ zi_relaxed, (zpm, zpv), model, info_ret = regp.predict(model, xi, zi, xt, R)
 gp.misc.modeldiagnosis.diag(model, info, xi, zi_relaxed)
 
 x_limits = fig.axes[0].get_xlim()
-plt.hlines(y=u, xmin=x_limits[0], xmax=x_limits[1], colors='b')
+plt.hlines(y=u, xmin=x_limits[0], xmax=x_limits[1], colors="b")
 visualize_results(xt, zt, xi, zi_relaxed, zpm, zpv, fig, rgb_hue=[128, 128, 255])
 
 # LOO
@@ -112,7 +118,7 @@ Rgopt = regp.select_optimal_threshold_above_t0(model, xi, zi, u)
 
 zi_relaxed, (zpm, zpv), model, info_ret = regp.predict(model, xi, zi, xt, Rgopt)
 
-fig.axes[0].hlines(y=Rgopt[0], xmin=x_limits[0], xmax=x_limits[1], colors='g')
+fig.axes[0].hlines(y=Rgopt[0], xmin=x_limits[0], xmax=x_limits[1], colors="g")
 visualize_results(xt, zt, xi, zi_relaxed, zpm, zpv, fig, rgb_hue=[128, 255, 128])
 
 # if __name__ == '__main__':

@@ -119,7 +119,7 @@ def make_regp_criterion_with_gradient(model, x0, z0, x1):
             z1 = param[-n1:]
         elif n1 == 0:
             covparam = param
-            z1 = []
+            z1 = gnp.array([])
         else:
             raise ValueError(n1)
 
@@ -134,7 +134,17 @@ def make_regp_criterion_with_gradient(model, x0, z0, x1):
     return crit_jit, dcrit
 
 
-def remodel(model, xi, zi, R, covparam0=None, info=False, verbosity=0):
+def remodel(
+    model,
+    xi,
+    zi,
+    R,
+    covparam0=None,
+    info=False,
+    verbosity=0,
+    convert_in=True,
+    convert_out=True,
+):
     """
     Perform reGP optimization (REML + relaxation)
 
@@ -154,6 +164,10 @@ def remodel(model, xi, zi, R, covparam0=None, info=False, verbosity=0):
         Whether to return additional information.
     verbosity : int, optional
         Verbosity level.
+    convert_in : bool, optional
+        Whether to convert input arrays to _gpmp_backend_ type or keep as-is.
+    convert_out : bool, optional
+        Whether to return numpy arrays or keep _gpmp_backend_ types.
 
     Returns
     -------
@@ -169,15 +183,19 @@ def remodel(model, xi, zi, R, covparam0=None, info=False, verbosity=0):
 
     tic = time.time()
 
+    xi_, zi_, _ = model.ensure_shapes_and_type(
+        xi=xi, zi=zi, convert=convert_in)
+
     # Initial guess for the covariance parameters if not provided
     if covparam0 is None:
-        covparam0 = gp.kernel.anisotropic_parameters_initial_guess(model, xi, zi)
+        covparam0 = gp.kernel.anisotropic_parameters_initial_guess(
+            model, xi_, zi_)
     covparam_dim = covparam0.shape[0]
     covparam_bounds = [gnp.array([-gnp.inf, gnp.inf])] * covparam0.shape[0]
 
     # Membership indices and split data
-    ei = get_membership_indices(gnp.to_np(zi), R)
-    (x0, z0, ind0), (x1, z1, z1_bounds, ind1) = split_data(xi, gnp.to_np(zi), ei, R)
+    ei = get_membership_indices(gnp.to_np(zi_), R)
+    (x0, z0, ind0), (x1, z1, z1_bounds, ind1) = split_data(xi_, zi_, ei, R)
     z1_size = z1.shape[0]
 
     # Initial parameter vector and bounds
@@ -208,14 +226,14 @@ def remodel(model, xi, zi, R, covparam0=None, info=False, verbosity=0):
 
     z1_relaxed = popt[covparam_dim:]
 
-    zi_relaxed = gnp.zeros(zi.shape)
-    if gnp._gpmp_backend_ == 'jax':
+    zi_relaxed = gnp.zeros(zi_.shape)
+    if gnp._gpmp_backend_ == "jax":
         zi_relaxed = zi_relaxed.at[ind0].set(gnp.asarray(z0))
         zi_relaxed = zi_relaxed.at[ind1].set(gnp.asarray(z1_relaxed))
     else:
         zi_relaxed[ind0] = gnp.asarray(z0)
         zi_relaxed[ind1] = gnp.asarray(z1_relaxed)
-    
+
     # Return results
     if info:
         info_ret["covparam0"] = covparam0
@@ -263,17 +281,11 @@ def predict(model, xi, zi, xt, R, covparam0=None, info=False, verbosity=0):
     """
     if info is True:
         model, zi_relaxed, ind_relaxed, info_ret = remodel(
-            model, xi, zi, R,
-            covparam0=None,
-            info=info,
-            verbosity=verbosity
+            model, xi, zi, R, covparam0=None, info=info, verbosity=verbosity
         )
     else:
         model, zi_relaxed, ind_relaxed = remodel(
-            model, xi, zi, R,
-            covparam0=None,
-            info=info,
-            verbosity=verbosity
+            model, xi, zi, R, covparam0=None, info=info, verbosity=verbosity
         )
         info_ret = None
 
@@ -308,14 +320,20 @@ def select_optimal_threshold_above_t0(model, xi, zi, t0, G=20):
     Rgopt : ndarray, shape (1, 2)
         Optimal relaxation interval, specified as [threshold, inf].
     """
-    t = gnp.logspace(gnp.log10(t0 - zi.min()), gnp.log10(gnp.max(zi) - zi.min()), G) + zi.min()
+    t = (
+        gnp.logspace(gnp.log10(t0 - zi.min()),
+                     gnp.log10(gnp.max(zi) - zi.min()), G)
+        + zi.min()
+    )
 
     J = gnp.numpy.zeros(G)
     for g in range(G):
         Rg = gnp.numpy.array([[t[g], gnp.numpy.inf]])
         model, zi_relaxed, _ = remodel(model, xi, zi, Rg)
         zloom, zloov, _ = model.loo(xi, zi_relaxed)
-        tCRPS = gp.misc.scoringrules.tcrps_gaussian(zloom, gnp.sqrt(zloov), zi_relaxed, a=-gnp.inf, b=t0)
+        tCRPS = gp.misc.scoringrules.tcrps_gaussian(
+            zloom, gnp.sqrt(zloov), zi_relaxed, a=-gnp.inf, b=t0
+        )
         J[g] = gnp.sum(tCRPS)
 
     gopt = gnp.argmin(gnp.asarray(J))

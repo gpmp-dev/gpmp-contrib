@@ -8,5 +8,5 @@ from .sequentialprediction import SequentialPrediction
 from .sequentialstrategy import SequentialStrategy
 from . import samplingcriteria
 from . import optim
-from . import regp
 from . import plot
+from . import regp
