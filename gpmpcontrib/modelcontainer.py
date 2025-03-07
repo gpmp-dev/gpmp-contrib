@@ -93,7 +93,7 @@ class ModelContainer:
               used for the output.
             - parameters_initial_guess_procedure (callable): Initial
               guess procedure for model parameters.
-            - pre_selection_criterion (callable): Predefined selection
+            - selection_criterion (callable): Predefined selection
               criterion for the output.
             - info (dict): Additional information after model
               parameter selection.
@@ -164,7 +164,7 @@ class ModelContainer:
                     "mean_paramlength": self.mean_functions_info[i]["param_length"],
                     "covariance_fname": model.covariance.__name__,
                     "parameters_initial_guess_procedure": None,
-                    "pre_selection_criterion": None,
+                    "selection_criterion": None,
                     "info": None,
                 }
             )
@@ -180,7 +180,7 @@ class ModelContainer:
             self.models[i]["parameters_initial_guess_procedure"] = (
                 parameters_initial_guess_procedures[i]
             )
-            self.models[i]["pre_selection_criterion"] = selection_criteria[i]
+            self.models[i]["selection_criterion"] = selection_criteria[i]
 
     def __getitem__(self, index):
         """
@@ -213,7 +213,7 @@ class ModelContainer:
             covariance = model["model"].covariance.__name__
             cov_params = model["model"].covparam
             initial_guess = model["parameters_initial_guess_procedure"]
-            selection_criterion = model["pre_selection_criterion"]
+            selection_criterion = model["selection_criterion"]
 
             model_info += f"\nGaussian process {i}:\n"
             model_info += f"  Output Name: {model['output_name']}\n"
@@ -425,29 +425,26 @@ class ModelContainer:
         xi_,
         zi_,
     ):
-        pre_selection_criterion = model["pre_selection_criterion"]
+        selection_criterion = model["selection_criterion"]
         mean_paramlength = model["mean_paramlength"]
 
         if mean_paramlength > 0:
-            # make a selection criterion with mean and covariance parameters
+            # make a selection criterion with mean parameter
             def crit_(param):
                 meanparam = param[:mean_paramlength]
                 covparam = param[mean_paramlength:]
-                l = pre_selection_criterion(
+                return selection_criterion(
                     model["model"], meanparam, covparam, xi_, zi_
                 )
-                return l
 
         else:
             # make a selection criterion without mean parameter
             def crit_(covparam):
-                l = pre_selection_criterion(model["model"], covparam, xi_, zi_)
-                return l
+                return selection_criterion(model["model"], covparam, xi_, zi_)
 
-        crit = gnp.jax.jit(crit_)
-        dcrit = gnp.jax.jit(gnp.grad(crit))
+        crit = gnp.DifferentiableFunction(crit_)
 
-        return crit, dcrit
+        return crit.evaluate, crit.gradient
 
     def select_params(self, xi, zi, force_param_initial_guess=True):
         """Parameter selection"""
