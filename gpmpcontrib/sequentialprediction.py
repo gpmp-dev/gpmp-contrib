@@ -16,7 +16,7 @@ SequentialPrediction
 
 
 Author: Emmanuel Vazquez <emmanuel.vazquez@centralesupelec.fr>
-Copyright (c) 2022-2024, CentraleSupelec
+Copyright (c) 2022-2025, CentraleSupelec
 License: GPLv3 (see LICENSE)
 
 """
@@ -77,8 +77,7 @@ class SequentialPrediction:
 
         """
         if not isinstance(model, ModelContainer):
-            raise TypeError(
-                "model must be an instance of Model or its subclasses")
+            raise TypeError("model must be an instance of Model or its subclasses")
 
         self.model = model
         self.xi = None
@@ -113,40 +112,66 @@ class SequentialPrediction:
 
     def set_data(self, xi, zi):
         self.xi = gnp.asarray(xi)
-        self.zi = gnp.asarray(zi).reshape(
-            zi.shape[0], -1)  # Ensure zi is a matrix
+        self.zi = gnp.asarray(zi).reshape(zi.shape[0], -1)  # Ensure zi is a matrix
 
     def set_data_with_model_selection(self, xi, zi):
         self.set_data(xi, zi)
         self.update_params()
 
     def set_new_eval(self, xnew, znew):
-        xnew_ = gnp.asarray(xnew)
-        znew_ = gnp.asarray(znew)
-        self.xi = gnp.vstack((self.xi, xnew_))
-        self.zi = gnp.vstack((self.zi, znew_.reshape(-1, self.output_dim)))
+        xnew = gnp.asarray(xnew)
+        znew = gnp.asarray(znew).reshape(-1, self.output_dim)
+
+        if self.xi is None or self.zi is None:
+            self.set_data(xnew, znew)
+        else:
+            if znew.shape[1] != self.output_dim:
+                raise ValueError(
+                    f"Dimension mismatch: expected {self.output_dim}, got {znew.shape[1]}"
+                )
+            self.xi = gnp.vstack((self.xi, xnew))
+            self.zi = gnp.vstack((self.zi, znew))
 
     def set_new_eval_with_model_selection(self, xnew, znew):
         self.set_new_eval(xnew, znew)
         self.update_params()
 
     def update_params(self):
-        if self.xi is not None and self.zi is not None:
-            try:
-                self.model.select_params(
-                    self.xi,
-                    self.zi,
-                    force_param_initial_guess=self.force_param_initial_guess,
-                )
-            except:
-                raise RuntimeError("Failed to update parameters")
+        if self.xi is None or self.zi is None:
+            raise ValueError("Data not set. Use `set_data` first.")
+
+        try:
+            self.model.select_params(
+                self.xi,
+                self.zi,
+                force_param_initial_guess=self.force_param_initial_guess,
+            )
+        except Exception as e:
+            raise RuntimeError(f"Failed to update parameters: {e}")
 
     def predict(self, xt, convert_out=True):
         if self.zi.ndim == 1:
             self.zi = self.zi.reshape(-1, 1)
         return self.model.predict(self.xi, self.zi, xt, convert_out=convert_out)
 
-    def compute_conditional_simulations(self, xt):
+    def compute_conditional_simulations(
+        self,
+        xt,
+        n_samplepaths=1,
+        type="intersection",
+        method="svd",
+        convert_in=True,
+        convert_out=True,
+    ):
         if self.zi.ndim == 1:
             self.zi = self.zi.reshape(-1, 1)
-        return self.model.compute_conditional_simulations(self.xi, self.zi, xt)
+        return self.model.compute_conditional_simulations(
+            self.xi,
+            self.zi,
+            xt,
+            n_samplepaths=n_samplepaths,
+            type=type,
+            method=method,
+            convert_in=convert_in,
+            convert_out=convert_out,
+        )

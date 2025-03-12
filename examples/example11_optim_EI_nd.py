@@ -147,7 +147,9 @@ for i in range(n):
     zpm, zpv = eialgo.predict(particles_x)
     zloom, zloov, eloo = eialgo.models[0]["model"].loo(eialgo.xi, eialgo.zi)
 
-    gpv.parallel_coordinates_plot(particles_x, zpm, p=particles_logpx, show_p=False)
+    pcp = False
+    if pcp:
+        gpv.parallel_coordinates_plot(particles_x, zpm, p=particles_logpx, show_p=False)
 
     # eialgo.smc.plot_particles()
 

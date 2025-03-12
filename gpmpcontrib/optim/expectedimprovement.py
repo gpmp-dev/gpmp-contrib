@@ -6,10 +6,10 @@
 import gpmp.num as gnp
 import gpmp as gp
 import gpmpcontrib.samplingcriteria as sampcrit
-from gpmpcontrib import SequentialStrategy
+from gpmpcontrib import SequentialStrategySMC
 
 
-class ExpectedImprovement(SequentialStrategy):
+class ExpectedImprovement(SequentialStrategySMC):
     """
     Implements the Expected Improvement (EI) optimization algorithm
     using a Sequential Monte Carlo (SMC) method to adapt the search space.
@@ -34,8 +34,7 @@ class ExpectedImprovement(SequentialStrategy):
             gnp.asarray(b),
             gnp.maximum(
                 min_threshold,
-                sampcrit.log_probability_excursion(
-                    u, -zpm, sigma2_scale_factor * zpv),
+                sampcrit.log_probability_excursion(u, -zpm, sigma2_scale_factor * zpv),
             ).flatten(),
             -gnp.inf,
         )

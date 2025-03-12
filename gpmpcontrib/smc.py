@@ -88,7 +88,7 @@ class ParticlesSet:
         self.particles_set_params = {
             "param_s_initial_value": 0.5,  # Initial scaling parameter for MH perturbation
             "param_s_upper_bound": 10**4,
-            "param_s_lower_bound": 10 ** (-2),
+            "param_s_lower_bound": 10 ** (-3),
             # Jitter added to pertubation covariance matrix when it's not PSD
             "jitter_initial_value": 1e-16,
             "jitter_max_iterations": 10,
@@ -176,16 +176,14 @@ class ParticlesSet:
             __import__("pdb").post_mortem(tb)
 
         if debug:
-            print(
-                f"Resample: proportion discarded = {gnp.sum(counts==0) / self.n} ")
+            print(f"Resample: proportion discarded = {gnp.sum(counts==0) / self.n} ")
 
         i = 0
         j = 0
         while j < self.n:
             while counts[j] > 0:
                 x_resampled = gnp.set_row2(x_resampled, i, self.x[j, :])
-                logpx_resampled = gnp.set_elem1(
-                    logpx_resampled, i, self.logpx[j])
+                logpx_resampled = gnp.set_elem1(logpx_resampled, i, self.logpx[j])
                 counts = gnp.set_elem1(counts, j, counts[j] - 1)
                 i += 1
             j += 1
@@ -228,8 +226,7 @@ class ParticlesSet:
             for i in range(
                 self.particles_set_params["jitter_max_iterations"]
             ):  # Try iterations of jittering
-                jitter = self.particles_set_params["jitter_initial_value"] * (
-                    10**i)
+                jitter = self.particles_set_params["jitter_initial_value"] * (10**i)
                 C_jittered = C + jitter * np.eye(C.shape[0])  # Add jitter
                 try:
                     eps = ParticlesSet.multivariate_normal_rvs(
@@ -579,8 +576,7 @@ class SMC:
             self.logging_restart_iteration += 1
             self.logging_logpdf_param_sequence.append(next_logpdf_param)
 
-            self.step(logpdf_parameterized_function,
-                      next_logpdf_param, debug=debug)
+            self.step(logpdf_parameterized_function, next_logpdf_param, debug=debug)
 
             current_logpdf_param = next_logpdf_param
 
@@ -760,10 +756,8 @@ class SMC:
                 ar_length = 1
 
             stages.extend([entry["stage"]] * ar_length)
-            target_logpdf_params.extend(
-                [entry["target_logpdf_param"]] * ar_length)
-            current_logpdf_params.extend(
-                [entry["current_logpdf_param"]] * ar_length)
+            target_logpdf_params.extend([entry["target_logpdf_param"]] * ar_length)
+            current_logpdf_params.extend([entry["current_logpdf_param"]] * ar_length)
             ess_values.extend([entry["ess"]] * ar_length)
             acceptation_rates.extend(entry["acceptation_rate_sequence"])
 

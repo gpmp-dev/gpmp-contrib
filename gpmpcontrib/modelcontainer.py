@@ -10,7 +10,7 @@ Likelihood, Restricted Maximum Likelihood...).
 It is used by `SequentialPrediction` and `SequentialStrategy`.
 
 Author: Emmanuel Vazquez <emmanuel.vazquez@centralesupelec.fr>
-Copyright: 2022-2024, CentraleSupelec
+Copyright: 2022-2025, CentraleSupelec
 License: GPLv3 (refer to LICENSE file)
 
 """
@@ -748,6 +748,65 @@ class ModelContainer:
 
     def build_selection_criterion(self, output_idx: int, **build_params):
         raise NotImplementedError("This method should be implemented by subclasses")
+
+    # --- Serialization methods for model state ---
+
+    def _filter_info(self, info):
+        """Remove non-pickleable entries from the info dict."""
+        if info is None:
+            return None
+        info_copy = info.copy()
+        # Remove keys that are functions or other non-pickleable objects.
+        for key in list(info_copy.keys()):
+            if callable(info_copy[key]):
+                del info_copy[key]
+        return info_copy
+
+    def get_state(self):
+        """Return a serializable snapshot of model parameters and info."""
+        state = {"models": []}
+        for m in self.models:
+            state["models"].append(
+                {
+                    "meanparam": (
+                        gnp.copy(m["model"].meanparam)
+                        if m["model"].meanparam is not None
+                        else None
+                    ),
+                    "covparam": (
+                        gnp.copy(m["model"].covparam)
+                        if m["model"].covparam is not None
+                        else None
+                    ),
+                    "info": self._filter_info(m["info"]),
+                }
+            )
+        return state
+
+    def set_state(self, state):
+        """Load model parameters and info from a previously saved state."""
+        for m, m_state in zip(self.models, state.get("models", [])):
+            if m_state["meanparam"] is not None:
+                m["model"].meanparam = m_state["meanparam"]
+            if m_state["covparam"] is not None:
+                m["model"].covparam = m_state["covparam"]
+            m["info"] = m_state.get("info", None)
+
+    def save_state(self, filename):
+        """Save the model state to a file."""
+        from pickle import dump
+
+        state = self.get_state()
+        with open(filename, "wb") as f:
+            dump(state, f)
+
+    def load_state(self, filename):
+        """Load model state from a file."""
+        from pickle import load
+
+        with open(filename, "rb") as f:
+            state = load(f)
+        self.set_state(state)
 
 
 # ==============================================================================

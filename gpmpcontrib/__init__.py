@@ -5,7 +5,7 @@ from .models_matern import Model_Noisy_ConstantMean_Maternp_REML
 from . import modelcontainer
 from .smc import SMC
 from .sequentialprediction import SequentialPrediction
-from .sequentialstrategy import SequentialStrategy
+from .sequentialstrategy import SequentialStrategyPC, SequentialStrategySMC
 from . import samplingcriteria
 from . import optim
 from . import plot

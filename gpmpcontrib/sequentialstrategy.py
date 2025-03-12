@@ -1,171 +1,290 @@
 # --------------------------------------------------------------
 # Authors: Emmanuel Vazquez <emmanuel.vazquez@centralesupelec.fr>
-# Copyright (c) 2023-2024, CentraleSupelec
+# Copyright (c) 2023-2025, CentraleSupelec
 # License: GPLv3 (see LICENSE)
 # --------------------------------------------------------------
+import time
+import pickle
 import gpmp.num as gnp
 from gpmpcontrib import SequentialPrediction, SMC
 
 
 class SequentialStrategy(SequentialPrediction):
-    """Implements sequential decision-making by maximizing a sampling criterion.
+    """Sequential decision-making via a sampling criterion.
 
-    This class extends SequentialPrediction to use a sampling
-    criterion and adapts the search space using a Sequential Monte
-    Carlo (SMC) method using a target density.
+    This abstract class extends SequentialPrediction to incorporate a
+    sampling criterion for sequential decision-making. It selects new points
+    based on the criterion and updates the predictive model accordingly.
 
     Parameters
     ----------
     problem : object
-        Instance of the problem containing the function to be optimized.
+        Problem instance with the objective function.
     model : object
-        Predictive model for making predictions.
+        Predictive model.
     options : dict, optional
-        Configuration options for SMC and other processes.
+        Strategy configuration. Options may include:
+            maximize_criterion : bool, default True.
+            update_model_at_init : bool, default True.
+            update_estimate_at_init : bool, default True.
+            update_search_space_at_init : bool, default False.
 
     Attributes
     ----------
     computer_experiments_problem : object
-        Optimization problem instance.
+        Problem instance.
     options : dict
-        Configuration options.
-    current_estimate : float
-        Best current estimate based on sampling criterion.
-    smc : SMC
-        Sequential Monte Carlo instance for search space.
-    sampling_criterion_values : gnp array
-        Array holding the calculated values of the sampling criterion for each particle
-        within the SMC's search space. These values are used to guide the selection of
-        new points for evaluation, aiming to maximize the information gain during the
-        sequential decision-making process.
-
-    Notes
-    -----
-    This class is derived from the SequentialPrediction class, which
-    handles data and a (single- or multi-output) Model object for
-    sequential predictions. It also relies on the a ComputerExperiment
-    object to specify a set of functions (objectives, contraints...)
-    to be evaluated, and an SMC object to sequentiallly adjust the
-    search space for the optimization of the sampling criterion (aka
-    acquisition function).
-
-    The class requires implementation of the sampling criterion and
-    a target density for the SMC, as well as a procedure to estimate the
-    quantity of interest.
-
+        Strategy options.
+    current_estimate : None
+        Current best estimate.
+    sampling_criterion_values : array_like
+        Sampling criterion values.
+    n_iter : int
+        Iteration counter.
+    exec_times : dict
+        Timing metrics.
+    history : dict
+        Evaluation history with keys:
+            - "estimates": recorded estimates,
+            - "criterion_best": best criterion value per iteration,
+            - "model_params": snapshots of model parameters.
+    maximize_criterion : bool
+        If True, the criterion is maximized; if False, minimized.
     """
 
     def __init__(self, problem, model, options=None):
-        # computer experiments problem
         self.computer_experiments_problem = problem
-
-        # model initialization
         super().__init__(model=model)
-
-        # options
         self.options = self.set_options(options)
-
-        # Best current value
         self.current_estimate = None
-
-        # search space
-        self.smc = self.init_smc(self.options["n_smc"])
-        self.smc_log_density_param_initial = None
-        self.smc_log_density_param = None
-
-        # Sampling criterion
-        self.sampling_criterion_values = gnp.empty(self.options["n_smc"])
-
-        # Current estimate of the quantity of interest
-        self.current_estimate = None
+        self.sampling_criterion_values = None
+        self.n_iter = 0
+        self.exec_times = {}
+        self.history = {"estimates": [], "criterion_best": [], "model_params": []}
+        self.maximize_criterion = self.options.get("maximize_criterion", True)
 
     def set_options(self, options):
-        """
-        Sets configuration options with defaults.
-
-        Parameters
-        ----------
-        options : dict
-            User-provided configuration options.
-
-        Returns
-        -------
-        dict
-            Options with defaults filled in.
-        """
-        default_options = {"n_smc": 1000}
+        default_options = {
+            "update_model_at_init": True,
+            "update_estimate_at_init": True,
+            "update_search_space_at_init": False,
+            "maximize_criterion": True,
+        }
         default_options.update(options or {})
         return default_options
 
-    def set_initial_design(self, xi, update_model=True, update_search_space=True):
-        """
-        Sets initial design and optionally updates the model and search space.
-
-        Parameters
-        ----------
-        xi : array_like
-            Initial design points.
-        update_model : bool, optional
-            If True, update model with initial design. Default is True.
-        update_search_space : bool, optional
-            If True, update search space based on initial design. Default is True.
-        """
+    def set_initial_design(
+        self, xi, update_model=True, update_estimate=True, update_search_space=False
+    ):
+        update_model = self.options.get("update_model_at_init", update_model)
+        update_estimate = self.options.get("update_estimate_at_init", update_estimate)
+        update_search_space = self.options.get(
+            "update_search_space_at_init", update_search_space
+        )
+        tic = time.time()
         zi = self.computer_experiments_problem.eval(xi)
-
         if update_model:
             super().set_data_with_model_selection(xi, zi)
         else:
             super().set_data(xi, zi)
-
-        self.current_estimate = self.update_current_estimate()
-
+        if update_estimate:
+            self.current_estimate = self.update_current_estimate()
         if update_search_space:
             self.update_search_space()
+        self.exec_times["initial_design"] = time.time() - tic
+
+    def update_current_estimate(self, *args, **kwargs):
+        raise NotImplementedError("update_current_estimate must be implemented.")
+
+    def update_search_space(self, *args, **kwargs):
+        raise NotImplementedError("update_search_space must be implemented.")
+
+    def sampling_criterion(self, x, zpm, zpv, *args, **kwargs):
+        raise NotImplementedError("sampling_criterion must be implemented.")
+
+    def update_sampling_criterion_values(self, x, zpm, zpv):
+        self.sampling_criterion_values = self.sampling_criterion(x, zpm, zpv)
+
+    def select_best_index(self, criterion_values):
+        arr = gnp.asarray(criterion_values)
+        return gnp.argmax(arr) if self.maximize_criterion else gnp.argmin(arr)
+
+    def make_new_eval(self, xnew, update_model=True):
+        tic = time.time()
+        znew = self.computer_experiments_problem.eval(xnew)
+        self.exec_times["new_eval"] = time.time() - tic
+        tic = time.time()
+        if update_model:
+            self.set_new_eval_with_model_selection(xnew, znew)
+        else:
+            self.set_new_eval(xnew, znew)
+        self.current_estimate = self.update_current_estimate()
+        self.exec_times["update_model"] = time.time() - tic
+
+    def get_model_params(self):
+        """Return a snapshot of model parameters from the ModelContainer."""
+        params = []
+        for m in self.model.models:
+            mp = m["model"].meanparam
+            cp = m["model"].covparam
+            # Store copies to avoid later modifications
+            params.append(
+                {
+                    "meanparam": gnp.copy(mp) if mp is not None else None,
+                    "covparam": gnp.copy(cp) if cp is not None else None,
+                }
+            )
+        return params
+
+    def get_model_state(self):
+        """Return the  pickleable model state."""
+        return self.model.get_state()
+
+    def step(self):
+        raise NotImplementedError("step must be implemented in the subclass.")
+
+    def save_state(self, filename="state.pkl"):
+        state = {
+            "n_iter": self.n_iter,
+            "history": self.history,
+            "exec_times": self.exec_times,
+            "current_estimate": self.current_estimate,
+        }
+        with open(filename, "wb") as f:
+            pickle.dump(state, f)
+
+    def load_state(self, filename="state.pkl"):
+        with open(filename, "rb") as f:
+            state = pickle.load(f)
+        self.n_iter = state.get("n_iter", 0)
+        self.history = state.get("history", {})
+        self.exec_times = state.get("exec_times", {})
+        self.current_estimate = state.get("current_estimate", None)
+
+
+class SequentialStrategyPC(SequentialStrategy):
+    """Sequential strategy using a fixed candidate set / point collection (PC).
+
+    Parameters
+    ----------
+    problem : object
+        Problem instance.
+    model : object
+        Predictive model.
+    xt : array_like
+        Fixed candidate points.
+    options : dict, optional
+        Additional options. Defaults for PC:
+            update_model_at_init = True,
+            update_estimate_at_init = True,
+            update_search_space_at_init = False.
+
+    Attributes
+    ----------
+    xt : ndarray
+        Candidate points.
+    nt : int
+        Number of candidates.
+    zpm, zpv : ndarray or None
+        Posterior mean and variance at candidates.
+    """
+
+    def __init__(self, problem, model, xt, options=None):
+        if options is None:
+            options = {}
+        options.setdefault("update_model_at_init", True)
+        options.setdefault("update_estimate_at_init", True)
+        options.setdefault("update_search_space_at_init", False)
+        super().__init__(problem, model, options)
+        self.xt = gnp.asarray(xt)
+        self.nt = self.xt.shape[0]
+        self.zpm = None
+        self.zpv = None
+
+    def update_predictions(self):
+        tic = time.time()
+        self.zpm, self.zpv = self.predict(self.xt, convert_out=True)
+        self.exec_times["update_predictions"] = time.time() - tic
+
+    def step(self):
+        step_start = time.time()
+        self.update_predictions()
+        self.update_sampling_criterion_values(self.xt, self.zpm, self.zpv)
+        best_idx = self.select_best_index(self.sampling_criterion_values)
+        x_new = self.xt[best_idx].reshape(1, -1)
+        self.make_new_eval(x_new)
+        self.n_iter += 1
+        self.history.setdefault("eval_indices", []).append(int(best_idx))
+        self.history.setdefault("criterion_best", []).append(
+            float(self.sampling_criterion_values[best_idx])
+        )
+        # Save a snapshot of the model parameters.
+        self.history.setdefault("model_params", []).append(self.get_model_params())
+        self.exec_times["step"] = time.time() - step_start
+
+
+# ==============================================================================
+# Sequential Strategy with SMC for Search Space Adaptation
+# ==============================================================================
+
+
+class SequentialStrategySMC(SequentialStrategy):
+    """Sequential strategy using SMC to adapt the search space.
+
+    This class augments the base strategy with SMC functionalities. It updates
+    the search space using an SMC sampler.
+
+    Parameters
+    ----------
+    problem : object
+        Problem instance.
+    model : object
+        Predictive model.
+    options : dict, optional
+        Strategy configuration. Options for SMC default to:
+            n_smc = 1000,
+            update_model_at_init = True,
+            update_estimate_at_init = True,
+            update_search_space_at_init = True.
+
+    Attributes
+    ----------
+    smc : SMC
+        SMC instance for adapting the search space.
+    smc_log_density_param_initial : any
+        Initial parameter for SMC target density.
+    smc_log_density_param : any
+        Current parameter for SMC target density.
+    """
+
+    def __init__(self, problem, model, options=None):
+        if options is None:
+            options = {}
+        options.setdefault("n_smc", 1000)
+        options.setdefault("update_model_at_init", True)
+        options.setdefault("update_estimate_at_init", True)
+        options.setdefault("update_search_space_at_init", True)
+        self.computer_experiments_problem = problem
+        super().__init__(problem, model, options)
+        # Merge SMC-specific defaults.
+        self.options = self.set_options(options)
+        self.smc = self.init_smc(self.options.get("n_smc", 1000))
+        self.smc_log_density_param_initial = None
+        self.smc_log_density_param = None
 
     def init_smc(self, n_smc):
-        """Initializes the SMC process for the search space.
-
-        Parameters
-        ----------
-        n_smc : int
-            The number of particles to use in the SMC process.
-
-        Returns
-        -------
-        SMC
-            An instance of the SMC class initialized with the problem's input box and particle count.
-        """
+        """Initialize the SMC instance using the problem's input box."""
         return SMC(self.computer_experiments_problem.input_box, n_smc)
 
     def smc_log_density(self, *args, **kwargs):
-        """
-        Defines target log density for SMC. Override this method.
-
-        Raises
-        ------
-        NotImplementedError
-            If method is not implemented.
-        """
-        raise NotImplementedError(
-            "Target density method for SMC must be implemented.")
+        raise NotImplementedError("smc_log_density must be implemented.")
 
     def update_smc_log_density_param(self):
-        """
-        Updates the parameter of the target log density for SMC. Override this method.
-
-        Raises
-        ------
-        NotImplementedError
-            If method is not implemented.
-        """
-        raise NotImplementedError(
-            "Update target density parameter method must be implemented."
-        )
+        raise NotImplementedError("update_smc_log_density_param must be implemented.")
 
     def update_search_space(self, method="step_with_possible_restart"):
-
+        """Update the SMC search space using the specified method."""
         self.update_smc_log_density_param()
-
         if method == "simple_step":
             self.smc.step(
                 logpdf_parameterized_function=self.smc_log_density,
@@ -189,85 +308,21 @@ class SequentialStrategy(SequentialPrediction):
                 debug=False,
             )
 
-    def update_current_estimate(self, *args, **kwargs):
-        """
-        Computes current best estimate. Override this method.
-
-        Raises
-        ------
-        NotImplementedError
-            If method is not implemented.
-        """
-        raise NotImplementedError(
-            "compute_current_estimate method must be implemented."
-        )
-
-    def sampling_criterion(self, x, *args, **kwargs):
-        """
-        Computes sampling criterion values at points x. Override this method.
-
-        Parameters
-        ----------
-        x : array_like
-            Points to evaluate the sampling criterion.
-
-        Returns
-        -------
-        array_like
-            Sampling criterion values.
-
-        Raises
-        ------
-        NotImplementedError
-            If method is not implemented.
-        """
-        raise NotImplementedError(
-            "Sampling criterion method must be implemented.")
-
-    def update_sampling_criterion_values(self, x, zpm, zpv):
-        """Updates the sampling criterion values based on current predictions."""
-        self.sampling_criterion_values = self.sampling_criterion(x, zpm, zpv)
-
-    def make_new_eval(self, xnew, update_model=True, update_search_space=True):
-        """
-        Makes a new evaluation at xnew and optionally updates the model and search space.
-
-        Parameters
-        ----------
-        xnew : array_like
-            New evaluation point.
-        update_model : bool, optional
-            If True, update model with new evaluation. Default is True.
-        update_search_space : bool, optional
-            If True, update search space based on new evaluation. Default is True.
-        """
-        znew = self.computer_experiments_problem.eval(xnew)
-
-        if update_model:
-            self.set_new_eval_with_model_selection(xnew, znew)
-        else:
-            self.set_new_eval(xnew, znew)
-
-        self.current_estimate = self.update_current_estimate()
-
-        if update_search_space:
-            self.update_search_space()
-
     def step(self):
-        """
-        Performs a step in the sequential decision-making process by evaluating the
-        sampling criterion, making a new evaluation, and updating the search space.
-        """
-
-        # evaluate sampling criterion on the search space
-        zpm, zpv = self.predict(self.smc.particles.x, convert_out=False)
-
-        # Update the sampling criterion values
-        self.update_sampling_criterion_values(self.smc.particles.x, zpm, zpv)
-
-        # make new evaluation
-        x_new = self.smc.particles.x[
-            gnp.argmax(gnp.asarray(self.sampling_criterion_values))
-        ].reshape(1, -1)
-
+        step_start = time.time()
+        # Evaluate the sampling criterion on SMC particles.
+        xt = self.smc.particles.x
+        zpm, zpv = self.predict(xt, convert_out=False)
+        self.update_sampling_criterion_values(xt, zpm, zpv)
+        best_idx = self.select_best_index(self.sampling_criterion_values)
+        x_new = xt[best_idx].reshape(1, -1)
         self.make_new_eval(x_new)
+        # Update the SMC search space.
+        self.update_search_space()
+        self.n_iter += 1
+        self.history.setdefault("eval_indices", []).append(int(best_idx))
+        self.history.setdefault("criterion_best", []).append(
+            gnp.to_scalar(self.sampling_criterion_values[best_idx])
+        )
+        self.history.setdefault("model_params", []).append(self.get_model_params())
+        self.exec_times["step"] = time.time() - step_start
