@@ -53,6 +53,8 @@ class ParticlesSet:
         Function to compute the log-probability density.
     param_s : float
         Scaling parameter for the perturbation step.
+    resample_scheme : str
+        Scheme for resampling ('multinomial' or 'residual').
     rng : numpy.random.Generator
         Random number generator.
 
@@ -68,6 +70,10 @@ class ParticlesSet:
         Calculate the effective sample size (ESS) of the particles.
     resample()
         Resample the particles based on their weights.
+    multinomial_resample()
+        Resample using multinomial resampling.
+    residual_resample()
+        Resample using residual resampling.
     perturb()
         Perturb the particles by adding random noise.
     move()
@@ -86,6 +92,7 @@ class ParticlesSet:
 
         # Dictionary to hold parameters for the particle set
         self.particles_set_params = {
+            "resample_scheme": "residual",
             "param_s_initial_value": 0.5,  # Initial scaling parameter for MH perturbation
             "param_s_upper_bound": 10**4,
             "param_s_lower_bound": 10 ** (-3),
@@ -94,6 +101,7 @@ class ParticlesSet:
             "jitter_max_iterations": 10,
         }
         self.param_s = self.particles_set_params["param_s_initial_value"]
+        self.resample_scheme = self.particles_set_params["resample_scheme"]
 
         # Initialize the particles.  Returns a tuple containing the
         # positions, log-probabilities, and weights of the particles
@@ -165,18 +173,40 @@ class ParticlesSet:
         return gnp.sum(self.w) ** 2 / gnp.sum(self.w**2)
 
     def resample(self, debug=False):
+        """
+        Resample the particles based on the chosen resampling scheme.
+
+        The resample method routes to either multinomial_resample or
+        residual_resample according to self.resample_scheme.
+        """
+        if self.resample_scheme == "multinomial":
+            self.multinomial_resample(debug=debug)
+        elif self.resample_scheme == "residual":
+            self.residual_resample(debug=debug)
+        else:
+            raise ValueError("Unknown resample scheme: {}".format(self.resample_scheme))
+
+    def multinomial_resample(self, debug=False):
+        """
+        Resample using multinomial resampling.
+
+        This method assigns offspring counts to particles according
+        to a multinomial distribution.
+        """
         x_resampled = gnp.empty(self.x.shape)
         logpx_resampled = gnp.empty(self.logpx.shape)
         p = self.w / gnp.sum(self.w)
         try:
             counts = self.multinomial_rvs(self.n, p, self.rng)
-        except:
+        except Exception:
             extype, value, tb = __import__("sys").exc_info()
             __import__("traceback").print_exc()
             __import__("pdb").post_mortem(tb)
 
         if debug:
-            print(f"Resample: proportion discarded = {gnp.sum(counts==0) / self.n} ")
+            print(
+                f"Multinomial resample: proportion discarded = {gnp.sum(counts==0) / self.n} "
+            )
 
         i = 0
         j = 0
@@ -191,6 +221,90 @@ class ParticlesSet:
         self.x = x_resampled
         self.logpx = logpx_resampled
         self.w = gnp.full((self.n,), 1 / self.n)
+
+    def residual_resample(self, debug=False):
+        """
+        Resample using residual resampling.
+
+        This method reduces variance by first assigning a deterministic
+        number of copies to each particle and then assigning the remainder
+        via multinomial sampling.
+        """
+        x_resampled = gnp.empty(self.x.shape)
+        logpx_resampled = gnp.empty(self.logpx.shape)
+        p = self.w / gnp.sum(self.w)
+        N = self.n
+
+        # Deterministic assignment: floor of expected counts
+        counts_det = gnp.asint(gnp.floor(N * p))
+        N_det = int(gnp.sum(counts_det))
+
+        # Compute residuals
+        residuals = N * p - counts_det
+        N_residual = N - N_det
+
+        # Multinomial step on residuals
+        if N_residual > 0:
+            try:
+                counts_res = self.multinomial_rvs(
+                    N_residual, residuals / N_residual, self.rng
+                )
+            except Exception:
+                extype, value, tb = __import__("sys").exc_info()
+                __import__("traceback").print_exc()
+                __import__("pdb").post_mortem(tb)
+        else:
+            counts_res = gnp.zeros_like(counts_det)
+
+        # Total counts
+        counts = counts_det + counts_res
+
+        if debug:
+            print(
+                f"Residual resample: proportion discarded = {gnp.sum(counts==0) / self.n} "
+            )
+
+        i = 0
+        j = 0
+        while j < self.n:
+            while counts[j] > 0:
+                x_resampled = gnp.set_row2(x_resampled, i, self.x[j, :])
+                logpx_resampled = gnp.set_elem1(logpx_resampled, i, self.logpx[j])
+                counts = gnp.set_elem1(counts, j, counts[j] - 1)
+                i += 1
+            j += 1
+
+        self.x = x_resampled
+        self.logpx = logpx_resampled
+        self.w = gnp.full((self.n,), 1 / self.n)
+
+    # def resample(self, debug=False):
+    #     x_resampled = gnp.empty(self.x.shape)
+    #     logpx_resampled = gnp.empty(self.logpx.shape)
+    #     p = self.w / gnp.sum(self.w)
+    #     try:
+    #         counts = self.multinomial_rvs(self.n, p, self.rng)
+    #     except:
+    #         extype, value, tb = __import__("sys").exc_info()
+    #         __import__("traceback").print_exc()
+    #         __import__("pdb").post_mortem(tb)
+
+    #     if debug:
+    #         print(f"Resample: proportion discarded = {gnp.sum(counts==0) / self.n} ")
+
+    #     i = 0
+    #     j = 0
+    #     while j < self.n:
+    #         while counts[j] > 0:
+    #             x_resampled = gnp.set_row2(x_resampled, i, self.x[j, :])
+    #             logpx_resampled = gnp.set_elem1(logpx_resampled, i, self.logpx[j])
+    #             counts = gnp.set_elem1(counts, j, counts[j] - 1)
+    #             i += 1
+    #         j += 1
+
+    #     self.x = x_resampled
+    #     self.logpx = logpx_resampled
+    #     self.w = gnp.full((self.n,), 1 / self.n)
 
     def perturb(self):
         """Perturb the particles by adding Gaussian noise.

@@ -49,9 +49,6 @@ eialgo.set_initial_design(xi)
 
 
 def plot(show=True, x=None, z=None):
-
-    __import__("pdb").set_trace()
-
     zpm, zpv = eialgo.predict(xt, convert_out=False)
     ei = sampcrit.expected_improvement(-gnp.min(eialgo.zi), -zpm, zpv)
     pe = sampcrit.probability_excursion(-gnp.min(eialgo.zi), -zpm, zpv)
