@@ -92,6 +92,7 @@ class ParticlesSet:
 
         # Dictionary to hold parameters for the particle set
         self.particles_set_params = {
+            "init_scheme": "randunif",
             "resample_scheme": "residual",
             "param_s_initial_value": 0.5,  # Initial scaling parameter for MH perturbation
             "param_s_upper_bound": 10**4,
@@ -108,7 +109,7 @@ class ParticlesSet:
         self.x = None
         self.logpx = None
         self.w = None
-        self.particles_init(box, n)
+        self.particles_init(box, n, method=self.particles_set_params["init_scheme"])
 
     def particles_init(self, box, n, method="randunif"):
         """Initialize particles within the given box.
@@ -277,34 +278,6 @@ class ParticlesSet:
         self.x = x_resampled
         self.logpx = logpx_resampled
         self.w = gnp.full((self.n,), 1 / self.n)
-
-    # def resample(self, debug=False):
-    #     x_resampled = gnp.empty(self.x.shape)
-    #     logpx_resampled = gnp.empty(self.logpx.shape)
-    #     p = self.w / gnp.sum(self.w)
-    #     try:
-    #         counts = self.multinomial_rvs(self.n, p, self.rng)
-    #     except:
-    #         extype, value, tb = __import__("sys").exc_info()
-    #         __import__("traceback").print_exc()
-    #         __import__("pdb").post_mortem(tb)
-
-    #     if debug:
-    #         print(f"Resample: proportion discarded = {gnp.sum(counts==0) / self.n} ")
-
-    #     i = 0
-    #     j = 0
-    #     while j < self.n:
-    #         while counts[j] > 0:
-    #             x_resampled = gnp.set_row2(x_resampled, i, self.x[j, :])
-    #             logpx_resampled = gnp.set_elem1(logpx_resampled, i, self.logpx[j])
-    #             counts = gnp.set_elem1(counts, j, counts[j] - 1)
-    #             i += 1
-    #         j += 1
-
-    #     self.x = x_resampled
-    #     self.logpx = logpx_resampled
-    #     self.w = gnp.full((self.n,), 1 / self.n)
 
     def perturb(self):
         """Perturb the particles by adding Gaussian noise.

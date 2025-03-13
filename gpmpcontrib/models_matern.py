@@ -6,7 +6,7 @@ multi-output models. The models enable parameter selection through
 Maximum Likelihood (ML) and Restricted Maximum Likelihood (REML).
 
 Author: Emmanuel Vazquez <emmanuel.vazquez@centralesupelec.fr>
-Copyright: 2022-2024, CentraleSupelec
+Copyright: 2022-2025, CentraleSupelec
 License: GPLv3 (refer to LICENSE file for usage terms)
 
 """

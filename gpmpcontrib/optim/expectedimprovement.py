@@ -1,15 +1,37 @@
 # --------------------------------------------------------------
 # Authors: Emmanuel Vazquez <emmanuel.vazquez@centralesupelec.fr>
-# Copyright (c) 2023-2024, CentraleSupelec
+# Copyright (c) 2023-2025, CentraleSupelec
 # License: GPLv3 (see LICENSE)
 # --------------------------------------------------------------
 import gpmp.num as gnp
 import gpmp as gp
 import gpmpcontrib.samplingcriteria as sampcrit
-from gpmpcontrib import SequentialStrategySMC
+from gpmpcontrib import SequentialStrategyGridSearch, SequentialStrategySMC
 
 
-class ExpectedImprovement(SequentialStrategySMC):
+class ExpectedImprovementGridSearch(SequentialStrategyGridSearch):
+    """
+    Implements the Expected Improvement (EI) optimization algorithm
+    using a finite search space.
+    """
+
+    def __init__(self, problem, model, xt, options=None):
+        super().__init__(problem=problem, model=model, xt=xt, options=options)
+
+    def update_current_estimate(self):
+        """
+        Updates the current estimate of the minimum.
+        """
+        return gnp.min(self.zi)
+
+    def sampling_criterion(self, x, zpm, zpv):
+        """
+        Computes the Expected Improvement (EI) at given points.
+        """
+        return sampcrit.expected_improvement(-self.current_estimate, -zpm, zpv)
+
+
+class ExpectedImprovementSMC(SequentialStrategySMC):
     """
     Implements the Expected Improvement (EI) optimization algorithm
     using a Sequential Monte Carlo (SMC) method to adapt the search space.

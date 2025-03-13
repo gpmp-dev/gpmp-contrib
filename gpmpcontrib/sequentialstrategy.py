@@ -118,7 +118,6 @@ class SequentialStrategy(SequentialPrediction):
             self.set_new_eval_with_model_selection(xnew, znew)
         else:
             self.set_new_eval(xnew, znew)
-        self.current_estimate = self.update_current_estimate()
         self.exec_times["update_model"] = time.time() - tic
 
     def get_model_params(self):
@@ -162,7 +161,7 @@ class SequentialStrategy(SequentialPrediction):
         self.current_estimate = state.get("current_estimate", None)
 
 
-class SequentialStrategyPC(SequentialStrategy):
+class SequentialStrategyGridSearch(SequentialStrategy):
     """Sequential strategy using a fixed candidate set / point collection (PC).
 
     Parameters
@@ -203,16 +202,17 @@ class SequentialStrategyPC(SequentialStrategy):
 
     def update_predictions(self):
         tic = time.time()
-        self.zpm, self.zpv = self.predict(self.xt, convert_out=True)
+        self.zpm, self.zpv = self.predict(self.xt, convert_out=False)
         self.exec_times["update_predictions"] = time.time() - tic
 
     def step(self):
         step_start = time.time()
         self.update_predictions()
+        self.current_estimate = self.update_current_estimate()
         self.update_sampling_criterion_values(self.xt, self.zpm, self.zpv)
         best_idx = self.select_best_index(self.sampling_criterion_values)
         x_new = self.xt[best_idx].reshape(1, -1)
-        self.make_new_eval(x_new)
+        self.make_new_eval(x_new, update_model=True)
         self.n_iter += 1
         self.history.setdefault("eval_indices", []).append(int(best_idx))
         self.history.setdefault("criterion_best", []).append(
@@ -313,10 +313,11 @@ class SequentialStrategySMC(SequentialStrategy):
         # Evaluate the sampling criterion on SMC particles.
         xt = self.smc.particles.x
         zpm, zpv = self.predict(xt, convert_out=False)
+        self.current_estimate = self.update_current_estimate()
         self.update_sampling_criterion_values(xt, zpm, zpv)
         best_idx = self.select_best_index(self.sampling_criterion_values)
         x_new = xt[best_idx].reshape(1, -1)
-        self.make_new_eval(x_new)
+        self.make_new_eval(x_new, update_model=True)
         # Update the SMC search space.
         self.update_search_space()
         self.n_iter += 1

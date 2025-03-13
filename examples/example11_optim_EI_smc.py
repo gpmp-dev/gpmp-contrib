@@ -1,7 +1,7 @@
 """Implement a sketch of the EI algorithm
 
 Author: Emmanuel Vazquez <emmanuel.vazquez@centralesupelec.fr>
-Copyright (c) 2022-2024, CentraleSupelec
+Copyright (c) 2022-2025, CentraleSupelec
 License: GPLv3 (see LICENSE)
 
 """
@@ -41,7 +41,9 @@ model = gpc.Model_ConstantMean_Maternp_REML(
     covariance_params={"p": 2},
 )
 
-eialgo = ei.ExpectedImprovement(problem, model)
+__import__("pdb").set_trace()
+
+eialgo = ei.ExpectedImprovementSMC(problem, model)
 
 eialgo.set_initial_design(xi)
 
