@@ -609,7 +609,7 @@ class ModelContainer:
             The shape of the array is (nt, n_samplepaths) for a single output model,
             and (nt, n_samplepaths, output_dim) for multi-output models.
         """
-        xi_, zi_, xt_ = gp.core.Model.ensure_shapes_and_type(
+        xi_, zi_, xt_ = gp.core.Model._ensure_shapes_and_type(
             xi=xi, zi=zi, xt=xt, convert=convert_in
         )
         if zi_.ndim == 1:

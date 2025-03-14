@@ -124,7 +124,7 @@ model = gpc.Model_ConstantMean_Maternp_REML(
     covariance_params={"p": 2},
 )
 
-eialgo = ei.ExpectedImprovement(problem, model)
+eialgo = ei.ExpectedImprovementSMC(problem, model)
 
 eialgo.set_initial_design(xi)
 

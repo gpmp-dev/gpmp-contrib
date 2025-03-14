@@ -116,7 +116,7 @@ class SequentialStrategy(SequentialPrediction):
 
     def update_predictions(self):
         tic = time.time()
-        self.zpm, self.zpv = self.predict(self.xt, convert_out=False)
+        self.predict(self.xt, convert_out=False)
         self.exec_times["update_predictions"] = time.time() - tic
 
     def update_current_estimate(self, *args, **kwargs):

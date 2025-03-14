@@ -21,6 +21,7 @@ License: GPLv3 (see LICENSE)
 
 """
 
+import hashlib
 import gpmp.num as gnp
 import gpmp as gp
 from gpmpcontrib.modelcontainer import ModelContainer
@@ -90,6 +91,14 @@ class SequentialPrediction:
         self.zsim = None
         self.zpsim = None
 
+        # Caching attributes
+        self.xt = None
+        self.zpm = None
+        self.zpv = None
+        self._cache_key = None  # Hash for model parameters
+        self._cached_xi = None  # Last used xi
+        self._cached_zi = None  # Last used zi
+
     @property
     def models(self):
         return self.model.models
@@ -120,14 +129,20 @@ class SequentialPrediction:
 
     def set_new_eval(self, xnew, znew):
         xnew = gnp.asarray(xnew)
+        if xnew.ndim == 1:
+            xnew = xnew.reshape(1, -1)  # Reshape to (1, D)
         znew = gnp.asarray(znew).reshape(-1, self.output_dim)
 
         if self.xi is None or self.zi is None:
             self.set_data(xnew, znew)
         else:
+            if xnew.shape[1] != self.xi.shape[1]:
+                raise ValueError(
+                    f"Input dimension mismatch: expected {self.xi.shape[1]}, got {xnew.shape[1]}"
+                )
             if znew.shape[1] != self.output_dim:
                 raise ValueError(
-                    f"Dimension mismatch: expected {self.output_dim}, got {znew.shape[1]}"
+                    f"Output dimension mismatch: expected {self.output_dim}, got {znew.shape[1]}"
                 )
             self.xi = gnp.vstack((self.xi, xnew))
             self.zi = gnp.vstack((self.zi, znew))
@@ -149,10 +164,44 @@ class SequentialPrediction:
         except Exception as e:
             raise RuntimeError(f"Failed to update parameters: {e}")
 
+    def _compute_cache_key(self):
+        """Compute a hash for model parameters."""
+        state = self.model.get_state()
+        return hashlib.sha256(str(state).encode()).hexdigest()
+
     def predict(self, xt, convert_out=True):
+        """Predict with caching to avoid redundant computations."""
+        if self.xi is None or self.zi is None:
+            raise ValueError("No data set. Use `set_data` first.")
         if self.zi.ndim == 1:
             self.zi = self.zi.reshape(-1, 1)
-        return self.model.predict(self.xi, self.zi, xt, convert_out=convert_out)
+        xt = gnp.asarray(xt)
+
+        # Compute new cache key for model parameters
+        new_cache_key = self._compute_cache_key()
+
+        # Check if xi, zi, xt, and model parameters remain unchanged
+        if (
+            self.xt is not None
+            and self._cached_xi is not None
+            and self._cached_zi is not None
+            and gnp.array_equal(self.xt, xt)
+            and gnp.array_equal(self._cached_xi, self.xi)
+            and gnp.array_equal(self._cached_zi, self.zi)
+            and self._cache_key == new_cache_key  # Model parameters hash
+        ):
+            return self.zpm, self.zpv
+
+        # Otherwise, recompute predictions and update cache
+        self.xt = xt
+        self.zpm, self.zpv = self.model.predict(
+            self.xi, self.zi, self.xt, convert_out=convert_out
+        )
+        self._cache_key = new_cache_key  # Update cache key
+        self._cached_xi = gnp.copy(self.xi)  # Cache xi
+        self._cached_zi = gnp.copy(self.zi)  # Cache zi
+
+        return self.zpm, self.zpv
 
     def compute_conditional_simulations(
         self,
