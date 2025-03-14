@@ -41,8 +41,6 @@ model = gpc.Model_ConstantMean_Maternp_REML(
     covariance_params={"p": 2},
 )
 
-__import__("pdb").set_trace()
-
 eialgo = ei.ExpectedImprovementSMC(problem, model)
 
 eialgo.set_initial_design(xi)

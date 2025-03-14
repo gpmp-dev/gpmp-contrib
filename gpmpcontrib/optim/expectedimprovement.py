@@ -63,7 +63,7 @@ class ExpectedImprovementSMC(SequentialStrategySMC):
 
         return log_prob_excur
 
-    def update_smc_log_density_param(self):
+    def update_smc_target_log_density_param(self):
         """
         Updates the target log density parameter for SMC based on the current estimate.
         """

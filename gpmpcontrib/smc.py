@@ -34,8 +34,10 @@ class ParticlesSet:
     ----------
     box : array_like
         The domain box in which the particles are initialized.
-    n : int, optional
-        Number of particles (default is 1000).
+    n : int, optional, default: 1000
+        Number of particles.
+    initial_distribution: str, optional, default: "randunif"
+        Initial distribution for the particles.
     rng : numpy.random.Generator
         Random number generator.
 
@@ -81,7 +83,7 @@ class ParticlesSet:
 
     """
 
-    def __init__(self, box, n=1000, rng=default_rng()):
+    def __init__(self, box, n=1000, initial_distribution="randunif", rng=default_rng()):
         """
         Initialize the ParticlesSet instance.
         """
@@ -92,7 +94,7 @@ class ParticlesSet:
 
         # Dictionary to hold parameters for the particle set
         self.particles_set_params = {
-            "init_scheme": "randunif",
+            "initial_distribution": initial_distribution,
             "resample_scheme": "residual",
             "param_s_initial_value": 0.5,  # Initial scaling parameter for MH perturbation
             "param_s_upper_bound": 10**4,
@@ -109,7 +111,9 @@ class ParticlesSet:
         self.x = None
         self.logpx = None
         self.w = None
-        self.particles_init(box, n, method=self.particles_set_params["init_scheme"])
+        self.particles_init(
+            box, n, method=self.particles_set_params["initial_distribution"]
+        )
 
     def particles_init(self, box, n, method="randunif"):
         """Initialize particles within the given box.
@@ -138,7 +142,7 @@ class ParticlesSet:
         """
         assert self.dim == len(
             box[0]
-        ), "Box dimension does not match particleg dimension"
+        ), "Box dimension does not match particles dimension"
         self.n = n
 
         # Initialize positions
@@ -397,8 +401,10 @@ class SMC:
     ----------
     box : array_like
         The domain box for particle initialization.
-    n : int, optional
-        Number of particles (default is 1000).
+    n : int, optional, default: 1000
+        Number of particles.
+    initial_distribution: str, optional, default: "randunif"
+        Initial distribution for the particles.
     rng : numpy.random.Generator
         Random number generator.
 
@@ -420,13 +426,14 @@ class SMC:
 
     """
 
-    def __init__(self, box, n=2000, rng=default_rng()):
+    def __init__(self, box, n=2000, initial_distribution="randunif", rng=default_rng()):
         """
         Initialize the SMC sampler.
         """
         self.box = box
         self.n = n
-        self.particles = ParticlesSet(box, n, rng)
+        self.initial_distribution = initial_distribution
+        self.particles = ParticlesSet(box, n, initial_distribution, rng)
 
         # Dictionary to hold MH algorithm parameters
         self.mh_params = {
@@ -645,7 +652,9 @@ class SMC:
 
         self._log_data(log_current_state_and_reinitialize=True)
 
-        self.particles.particles_init(self.box, self.n, method="randunif")
+        self.particles.particles_init(
+            self.box, self.n, method=self.initial_distribution
+        )
 
         current_logpdf_param = initial_logpdf_param
 
@@ -702,24 +711,24 @@ class SMC:
 
             break
 
-    def _compute_p_value(self, logpdf_function, logpdf_param, initial_logpdf_param):
+    def _compute_p_value(self, logpdf_function, new_logpdf_param, current_logpdf_param):
         """
         Compute the mean value of the exponentiated difference in
         log-probability densities between two logpdf_params.
 
         .. math::
 
-            \\frac{1}{n} \\sum_{i=1}^{n} \\exp(logpdf_function(x_i, logpdf_param)
-            - logpdf_function(x_i, initial_logpdf_param))
+            \\frac{1}{n} \\sum_{i=1}^{n} \\exp(logpdf_function(x_i, new_logpdf_param)
+            - logpdf_function(x_i, current_logpdf_param))
 
         Parameters
         ----------
         logpdf_function : callable
             Function to compute log-probability density.
-        logpdf_param : float
-            The current logpdf_param value.
-        initial_logpdf_param : float
-            The initial logpdf_param value used as a reference.
+        new_logpdf_param : float
+            The new logpdf_param value.
+        current_logpdf_param : float
+            The current logpdf_param value used as a reference.
 
         Returns
         -------
@@ -729,15 +738,15 @@ class SMC:
         """
         return gnp.mean(
             gnp.exp(
-                logpdf_function(self.particles.x, logpdf_param)
-                - logpdf_function(self.particles.x, initial_logpdf_param)
+                logpdf_function(self.particles.x, new_logpdf_param)
+                - logpdf_function(self.particles.x, current_logpdf_param)
             )
         )
 
     def compute_next_logpdf_param(
         self,
         logpdf_parameterized_function,
-        initial_logpdf_param,
+        current_logpdf_param,
         target_logpdf_param,
         p0,
         debug=False,
@@ -756,7 +765,7 @@ class SMC:
         ----------
         logpdf_parameterized_function : callable
             Parametric log-probability density.
-        initial_logpdf_param : float
+        current_logpdf_param : float
             Starting logpdf_param value.
         target_logpdf_param : float
             Target logpdf_param value.
@@ -772,12 +781,12 @@ class SMC:
 
         """
         tolerance = 0.05
-        low = initial_logpdf_param
+        low = current_logpdf_param
         high = target_logpdf_param
 
         # Check if target_logpdf_param can be reached with p >= p0
         p_target = self._compute_p_value(
-            logpdf_parameterized_function, target_logpdf_param, initial_logpdf_param
+            logpdf_parameterized_function, target_logpdf_param, current_logpdf_param
         )
         if p_target >= p0:
             if debug:
@@ -787,14 +796,14 @@ class SMC:
         while True:
             mid = (high + low) / 2
             p = self._compute_p_value(
-                logpdf_parameterized_function, mid, initial_logpdf_param
+                logpdf_parameterized_function, mid, current_logpdf_param
             )
 
             if debug:
                 print(
                     f"Search: p = {p:.2f} / p0 = {p0:.2f}, "
-                    + f"current logpdf_param = {mid}, "
-                    + f"initial = {initial_logpdf_param}, "
+                    + f"test logpdf_param = {mid}, "
+                    + f"current = {current_logpdf_param}, "
                     + f"target = {target_logpdf_param}"
                 )
 
