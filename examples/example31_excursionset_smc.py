@@ -100,29 +100,63 @@ plot()
 def interactive():
     while True:
         print("\nChoose an action:")
+        print("(n [p0]) Update threshold with the p0 rule (default: 0.1)")
         print("(m[n]) Move particles and update threshold [n] times (default: 1)")
+        print("(u[n]) Move particles without updating threshold [n] times (default: 1)")
         print("(e[n]) Make a new evaluation [n] times (default: 1)")
-        print("(u[n]) Move particles without updating threshold")
+        print("(s x) Set mu to x (e.g., 's 0.4')")
         print("(r) Restart the particles")
         print("(p) Plot current state")
         print("(q) Quit")
 
         user_input = input("Enter your choice: ").strip().lower()
 
-        # Extract command and optional number (supports "m3", "u2", "m 3", etc.)
-        match = re.match(r"([muerpq])\s*(\d*)", user_input)
+        # Extract command and optional number or value (supports "m3", "u2", "s 0.4", "n 0.2", etc.)
+        match = re.match(r"([muerpsqn])\s*([\d\.]*)", user_input)
 
         if not match:
             print("Invalid input. Please enter a valid choice.")
             continue
 
-        user_choice, repeat_str = match.groups()
-        # Default to 1 if empty
-        repeat = int(repeat_str) if repeat_str.isdigit() else 1
+        user_choice, param_str = match.groups()
+
+        # Handle the "s" option separately (setting mu manually)
+        if user_choice == "s":
+            try:
+                mu_value = float(param_str)
+                if not (0 <= mu_value <= 1):
+                    print("mu must be between 0 and 1.")
+                    continue
+                algo.mu = mu_value
+                print(f"Set mu to {algo.mu:.4f}")
+            except ValueError:
+                print("Invalid value for mu. Please enter a number between 0 and 1.")
+            continue  # Skip to next iteration after setting mu
+
+        # Default repeat count for commands that take an integer (m, u, e)
+        repeat = int(param_str) if param_str.isdigit() else 1
+
+        # Default p0 value for "n" (threshold update)
+        if user_choice == "n":
+            try:
+                p0 = float(param_str) if param_str else 0.1  # Default p0 = 0.1
+                mu_next = algo.smc.compute_next_logpdf_param(
+                    algo.smc_log_density,
+                    current_logpdf_param=algo.mu,
+                    target_logpdf_param=1.0,
+                    p0=p0,
+                    debug=False,
+                )
+                algo.mu = mu_next
+                print(f"Updated mu: {algo.mu:.4f} using p0 = {p0:.2f}")
+                plot()
+            except ValueError:
+                print("Invalid p0 value. Please enter a number (e.g., 'n 0.2').")
+            continue
 
         if user_choice == "m":
             for _ in range(repeat):
-                p0 = 0.1
+                p0 = 0.1  # Default threshold update probability
                 mu_next = algo.smc.compute_next_logpdf_param(
                     algo.smc_log_density,
                     current_logpdf_param=algo.mu,
@@ -164,7 +198,9 @@ def interactive():
             break
 
         else:
-            print("Invalid input. Please enter 'm', 'u', 'e', 'r', 'p', or 'q'.")
+            print(
+                "Invalid input. Please enter 'm', 'u', 'e', 's x', 'n p0', 'r', 'p', or 'q'."
+            )
 
 
 interactive()
