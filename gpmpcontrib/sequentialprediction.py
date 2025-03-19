@@ -92,12 +92,12 @@ class SequentialPrediction:
         self.zpsim = None
 
         # Caching attributes
-        self.xt = None
-        self.zpm = None
-        self.zpv = None
+        self._cache_xt = None
+        self._cache_zpm = None
+        self._cache_zpv = None
         self._cache_key = None  # Hash for model parameters
-        self._cached_xi = None  # Last used xi
-        self._cached_zi = None  # Last used zi
+        self._cache_xi = None  # Last used xi
+        self._cache_zi = None  # Last used zi
 
     @property
     def models(self):
@@ -169,7 +169,7 @@ class SequentialPrediction:
         state = self.model.get_state()
         return hashlib.sha256(str(state).encode()).hexdigest()
 
-    def predict(self, xt, convert_out=True):
+    def predict(self, xt, convert_out=True, use_cache=False):
         """Predict with caching to avoid redundant computations."""
         if self.xi is None or self.zi is None:
             raise ValueError("No data set. Use `set_data` first.")
@@ -177,31 +177,34 @@ class SequentialPrediction:
             self.zi = self.zi.reshape(-1, 1)
         xt = gnp.asarray(xt)
 
-        # Compute new cache key for model parameters
-        new_cache_key = self._compute_cache_key()
+        if use_cache:
+            # Compute new cache key for model parameters
+            new_cache_key = self._compute_cache_key()
 
-        # Check if xi, zi, xt, and model parameters remain unchanged
-        if (
-            self.xt is not None
-            and self._cached_xi is not None
-            and self._cached_zi is not None
-            and gnp.array_equal(self.xt, xt)
-            and gnp.array_equal(self._cached_xi, self.xi)
-            and gnp.array_equal(self._cached_zi, self.zi)
-            and self._cache_key == new_cache_key  # Model parameters hash
-        ):
-            return self.zpm, self.zpv
+            # Check if xi, zi, xt, and model parameters remain unchanged
+            if (
+                self._cache_xt is not None
+                and gnp.array_equal(self._cache_xt, xt)
+                and self._cache_zi is not None
+                and gnp.array_equal(self._cache_zi, self.zi)
+                and self._cache_xi is not None
+                and gnp.array_equal(self._cache_xi, self.xi)
+                and self._cache_key == new_cache_key  # Model parameters hash
+            ):
+                return self._cache_zpm, self._cache_zpv
 
-        # Otherwise, recompute predictions and update cache
-        self.xt = xt
-        self.zpm, self.zpv = self.model.predict(
-            self.xi, self.zi, self.xt, convert_out=convert_out
-        )
-        self._cache_key = new_cache_key  # Update cache key
-        self._cached_xi = gnp.copy(self.xi)  # Cache xi
-        self._cached_zi = gnp.copy(self.zi)  # Cache zi
+            # Otherwise, recompute predictions and update cache
+            self._cache_xt = gnp.copy(xt)
+            self._cache_zpm, self._cache_zpv = self.model.predict(
+                self.xi, self.zi, self._cache_xt, convert_out=convert_out
+            )
+            self._cache_key = new_cache_key  # Update cache key
+            self._cache_xi = gnp.copy(self.xi)  # Cache xi
+            self._cache_zi = gnp.copy(self.zi)  # Cache zi
 
-        return self.zpm, self.zpv
+            return self._cache_zpm, self._cache_zpv
+        else:
+            return self.model.predict(self.xi, self.zi, xt, convert_out=convert_out)
 
     def compute_conditional_simulations(
         self,

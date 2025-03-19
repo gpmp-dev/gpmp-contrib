@@ -36,7 +36,7 @@ class ParticlesSet:
         The domain box in which the particles are initialized.
     n : int, optional, default: 1000
         Number of particles.
-    initial_distribution: str, optional, default: "randunif"
+    initial_distribution_type: str, optional, default: "randunif"
         Initial distribution for the particles.
     rng : numpy.random.Generator
         Random number generator.
@@ -83,7 +83,9 @@ class ParticlesSet:
 
     """
 
-    def __init__(self, box, n=1000, initial_distribution="randunif", rng=default_rng()):
+    def __init__(
+        self, box, n=1000, initial_distribution_type="randunif", rng=default_rng()
+    ):
         """
         Initialize the ParticlesSet instance.
         """
@@ -94,7 +96,7 @@ class ParticlesSet:
 
         # Dictionary to hold parameters for the particle set
         self.particles_set_params = {
-            "initial_distribution": initial_distribution,
+            "initial_distribution_type": initial_distribution_type,
             "resample_scheme": "residual",
             "param_s_initial_value": 0.5,  # Initial scaling parameter for MH perturbation
             "param_s_upper_bound": 10**4,
@@ -112,7 +114,7 @@ class ParticlesSet:
         self.logpx = None
         self.w = None
         self.particles_init(
-            box, n, method=self.particles_set_params["initial_distribution"]
+            box, n, method=self.particles_set_params["initial_distribution_type"]
         )
 
     def particles_init(self, box, n, method="randunif"):
@@ -403,7 +405,7 @@ class SMC:
         The domain box for particle initialization.
     n : int, optional, default: 1000
         Number of particles.
-    initial_distribution: str, optional, default: "randunif"
+    initial_distribution_type: str, optional, default: "randunif"
         Initial distribution for the particles.
     rng : numpy.random.Generator
         Random number generator.
@@ -426,14 +428,16 @@ class SMC:
 
     """
 
-    def __init__(self, box, n=2000, initial_distribution="randunif", rng=default_rng()):
+    def __init__(
+        self, box, n=2000, initial_distribution_type="randunif", rng=default_rng()
+    ):
         """
         Initialize the SMC sampler.
         """
         self.box = box
         self.n = n
-        self.initial_distribution = initial_distribution
-        self.particles = ParticlesSet(box, n, initial_distribution, rng)
+        self.initial_distribution_type = initial_distribution_type
+        self.particles = ParticlesSet(box, n, initial_distribution_type, rng)
 
         # Dictionary to hold MH algorithm parameters
         self.mh_params = {
@@ -653,7 +657,7 @@ class SMC:
         self._log_data(log_current_state_and_reinitialize=True)
 
         self.particles.particles_init(
-            self.box, self.n, method=self.initial_distribution
+            self.box, self.n, method=self.initial_distribution_type
         )
 
         current_logpdf_param = initial_logpdf_param
@@ -711,7 +715,7 @@ class SMC:
 
             break
 
-    def _compute_p_value(self, logpdf_function, new_logpdf_param, current_logpdf_param):
+    def compute_p_value(self, logpdf_function, new_logpdf_param, current_logpdf_param):
         """
         Compute the mean value of the exponentiated difference in
         log-probability densities between two logpdf_params.
@@ -785,7 +789,7 @@ class SMC:
         high = target_logpdf_param
 
         # Check if target_logpdf_param can be reached with p >= p0
-        p_target = self._compute_p_value(
+        p_target = self.compute_p_value(
             logpdf_parameterized_function, target_logpdf_param, current_logpdf_param
         )
         if p_target >= p0:
@@ -795,7 +799,7 @@ class SMC:
 
         while True:
             mid = (high + low) / 2
-            p = self._compute_p_value(
+            p = self.compute_p_value(
                 logpdf_parameterized_function, mid, current_logpdf_param
             )
 

@@ -22,13 +22,15 @@ class ExpectedImprovementGridSearch(SequentialStrategyGridSearch):
         """
         Updates the current estimate of the minimum.
         """
-        return gnp.min(self.zi)
+        self.current_estimate = gnp.min(self.zi)
 
-    def sampling_criterion(self, x, zpm, zpv):
+    def sampling_criterion(self):
         """
         Computes the Expected Improvement (EI) at given points.
         """
-        return sampcrit.expected_improvement(-self.current_estimate, -zpm, zpv)
+        return sampcrit.expected_improvement(
+            -self.current_estimate, -self.zpm, self.zpv
+        )
 
 
 class ExpectedImprovementSMC(SequentialStrategySMC):
@@ -50,13 +52,13 @@ class ExpectedImprovementSMC(SequentialStrategySMC):
         input_box = gnp.asarray(self.computer_experiments_problem.input_box)
         b = sampcrit.isinbox(input_box, x)
 
-        zpm, zpv = self.predict(x, convert_out=False)
+        zpm, zpv = self.predict(x, convert_out=False, use_cache=True)
 
         log_prob_excur = gnp.where(
             gnp.asarray(b),
             gnp.maximum(
                 min_threshold,
-                sampcrit.log_probability_excursion(u, -zpm, sigma2_scale_factor * zpv),
+                sampcrit.log_excursion_probability(u, -zpm, sigma2_scale_factor * zpv),
             ).flatten(),
             -gnp.inf,
         )
@@ -67,17 +69,19 @@ class ExpectedImprovementSMC(SequentialStrategySMC):
         """
         Updates the target log density parameter for SMC based on the current estimate.
         """
-        self.smc_log_density_param = -self.current_estimate
+        self.smc_log_density_param = -gnp.min(self.zi)
         self.smc_log_density_param_initial = -gnp.max(self.zi)
 
     def update_current_estimate(self):
         """
         Updates the current estimate of the minimum.
         """
-        return gnp.min(self.zi)
+        self.current_estimate = gnp.min(self.zi)
 
-    def sampling_criterion(self, x, zpm, zpv):
+    def sampling_criterion(self):
         """
         Computes the Expected Improvement (EI) at given points.
         """
-        return sampcrit.expected_improvement(-self.current_estimate, -zpm, zpv)
+        return sampcrit.expected_improvement(
+            -self.current_estimate, -self.zpm, self.zpv
+        )

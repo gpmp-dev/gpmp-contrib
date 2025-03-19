@@ -93,12 +93,12 @@ class SequentialStrategy(SequentialPrediction):
         update_model=True,
         update_predictions=True,
         update_estimate=True,
-        update_search_space=False,
+        update_search_space_at_init=False,
     ):
         update_model = self.options.get("update_model_at_init", update_model)
         update_estimate = self.options.get("update_estimate_at_init", update_estimate)
-        update_search_space = self.options.get(
-            "update_search_space_at_init", update_search_space
+        update_search_space_at_init = self.options.get(
+            "update_search_space_at_init", update_search_space_at_init
         )
         tic = time.time()
         zi = self.computer_experiments_problem.eval(xi)
@@ -107,16 +107,18 @@ class SequentialStrategy(SequentialPrediction):
         else:
             super().set_data(xi, zi)
         if update_predictions:
-            self.update_predictions()
-        if update_estimate:
-            self.current_estimate = self.update_current_estimate()
-        if update_search_space:
+            self.update_predictions()  # initial predictions
+        if update_search_space_at_init:
             self.update_search_space()
+            if update_predictions:
+                self.update_predictions()  # search space may be modified, update predictions
+        if update_estimate:
+            self.update_current_estimate()
         self.exec_times["initial_design"] = time.time() - tic
 
     def update_predictions(self):
         tic = time.time()
-        self.predict(self.xt, convert_out=False)
+        self.zpm, self.zpv = self.predict(self.xt, convert_out=False, use_cache=True)
         self.exec_times["update_predictions"] = time.time() - tic
 
     def update_current_estimate(self, *args, **kwargs):
@@ -125,11 +127,11 @@ class SequentialStrategy(SequentialPrediction):
     def update_search_space(self, *args, **kwargs):
         raise NotImplementedError("update_search_space must be implemented.")
 
-    def sampling_criterion(self, x, zpm, zpv, *args, **kwargs):
+    def sampling_criterion(self, *args, **kwargs):
         raise NotImplementedError("sampling_criterion must be implemented.")
 
-    def update_sampling_criterion_values(self, x, zpm, zpv):
-        self.sampling_criterion_values = self.sampling_criterion(x, zpm, zpv)
+    def update_sampling_criterion_values(self):
+        self.sampling_criterion_values = self.sampling_criterion()
 
     def select_best_index(self, criterion_values):
         arr = gnp.asarray(criterion_values)
@@ -223,12 +225,12 @@ class SequentialStrategyGridSearch(SequentialStrategy):
 
     def step(self):
         step_start = time.time()
-        self.update_sampling_criterion_values(self.xt, self.zpm, self.zpv)
+        self.update_sampling_criterion_values()
         best_idx = self.select_best_index(self.sampling_criterion_values)
         x_new = self.xt[best_idx].reshape(1, -1)
         self.make_new_eval(x_new, update_model=True)
         self.update_predictions()
-        self.current_estimate = self.update_current_estimate()
+        self.update_current_estimate()
         self.n_iter += 1
         self.history.setdefault("eval_indices", []).append(int(best_idx))
         self.history.setdefault("criterion_best", []).append(
@@ -277,24 +279,25 @@ class SequentialStrategySMC(SequentialStrategy):
         if options is None:
             options = {}
         options.setdefault("n_smc", 1000)
-        options.setdefault("initial_distribution", "randunif")
+        options.setdefault("initial_distribution_type", "randunif")
         options.setdefault("update_model_at_init", True)
         options.setdefault("update_predictions_at_init", True)
         options.setdefault("update_estimate_at_init", True)
         options.setdefault("update_search_space_at_init", True)
+        options.setdefault("update_method", "step_with_possible_restart")
         self.computer_experiments_problem = problem
         # Merge SMC-specific options with sequentialstrategy defaults.
         self.options = self.set_options(options)
         self.smc = self.init_smc(
             self.computer_experiments_problem.input_box,
             self.options["n_smc"],
-            self.options["initial_distribution"],
+            self.options["initial_distribution_type"],
         )
         self.smc_log_density_param_initial = None
         self.smc_log_density_param = None
         super().__init__(problem, model, options)
 
-    def init_smc(self, box, n_smc, initial_distribution):
+    def init_smc(self, box, n_smc, initial_distribution_type):
         """Initialize the SMC instance using the problem's input box.
 
         Notes
@@ -304,7 +307,7 @@ class SequentialStrategySMC(SequentialStrategy):
         return SMC(
             box,
             n_smc,
-            initial_distribution=initial_distribution,
+            initial_distribution_type=initial_distribution_type,
         )
 
     def set_initial_xt(self):
@@ -316,8 +319,10 @@ class SequentialStrategySMC(SequentialStrategy):
     def update_smc_target_log_density_param(self):
         raise NotImplementedError("update_smc_log_density_param must be implemented.")
 
-    def update_search_space(self, method="step_with_possible_restart"):
+    def update_search_space(self):
         """Update the SMC search space using the specified method."""
+
+        method = self.options["update_method"]
         self.update_smc_target_log_density_param()
         if method == "simple_step":
             self.smc.step(
@@ -347,19 +352,18 @@ class SequentialStrategySMC(SequentialStrategy):
     def step(self):
         step_start = time.time()
         # Evaluate the sampling criterion on SMC particles.
-        self.update_sampling_criterion_values(self.smc.particles.x, self.zpm, self.zpv)
+        self.update_sampling_criterion_values()
         best_idx = self.select_best_index(self.sampling_criterion_values)
         x_new = self.xt[best_idx].reshape(1, -1)
         self.make_new_eval(x_new, update_model=True)
         # Update current predictions & estimate for SMC
         self.update_predictions()
-        self.current_estimate = self.update_current_estimate()
+        self.update_current_estimate()
         # Update the SMC search space.
         self.update_search_space()
         # Update predictions & current estimate at the end of the step
         self.update_predictions()
-        self.current_estimate = self.update_current_estimate()
-
+        self.update_current_estimate()
         self.n_iter += 1
         self.history.setdefault("eval_indices", []).append(int(best_idx))
         self.history.setdefault("criterion_best", []).append(
@@ -367,3 +371,141 @@ class SequentialStrategySMC(SequentialStrategy):
         )
         self.history.setdefault("model_params", []).append(self.get_model_params())
         self.exec_times["step"] = time.time() - step_start
+
+
+# ==============================================================================
+# Sequential Strategy with BSS for Search Space Adaptation
+# ==============================================================================
+
+
+class SequentialStrategyBSS(SequentialStrategy):
+    """Sequential strategy using Bayesian Subset Simulation (BSS) for search space adaptation.
+
+    This extends `SequentialStrategy` by incorporating a Sequential
+    Monte Carlo (SMC) sampler to refine the search space based on
+    Bayesian Subset Simulation principles.
+
+    Parameters
+    ----------
+    problem : object
+        The optimization problem.
+    model : object
+        Predictive model (e.g., Gaussian process).
+    options : dict, optional
+        Strategy configuration:
+            - n_smc (int, default 1000): Number of SMC particles.
+            - initial_distribution_type (str, default "randunif"): Initial particle distribution.
+            - update_model_at_init (bool, default True): Update model at initialization.
+            - update_predictions_at_init (bool, default True): Update predictions at initialization.
+            - update_estimate_at_init (bool, default True): Update estimate at initialization.
+            - update_search_space_at_init (bool, default True): Update search space at initialization.
+
+    Attributes
+    ----------
+    smc : SMC
+        SMC sampler used for search space adaptation.
+    smc_log_density_param : any
+        Current parameter for the SMC target density.
+
+    """
+
+    def __init__(self, problem, model, options=None):
+        if options is None:
+            options = {}
+        options.setdefault("n_smc", 1000)
+        options.setdefault("initial_distribution_type", "randunif")
+        options.setdefault("update_model_at_init", True)
+        options.setdefault("update_predictions_at_init", True)
+        options.setdefault("update_estimate_at_init", True)
+        options.setdefault("update_search_space_at_init", True)
+        self.computer_experiments_problem = problem
+        # Merge SMC-specific options with sequentialstrategy defaults.
+        self.options = self.set_options(options)
+        self.smc = self.init_smc(
+            self.computer_experiments_problem.input_box,
+            self.options["n_smc"],
+            self.options["initial_distribution_type"],
+        )
+        self.smc_log_density_param_initial = None
+        self.smc_log_density_param = None
+        super().__init__(problem, model, options)
+
+    def init_smc(self, box, n_smc, initial_distribution_type):
+        """Initialize the SMC instance using the problem's input box.
+
+        Notes
+        -----
+        At initialization, particles are distributed according to the initial distribution
+        """
+        return SMC(
+            box,
+            n_smc,
+            initial_distribution_type=initial_distribution_type,
+        )
+
+    def set_initial_xt(self):
+        return self.smc.particles.x
+
+    def smc_log_density(self, *args, **kwargs):
+        raise NotImplementedError("smc_log_density must be implemented.")
+
+    def set_smc_target_log_density_param(self):
+        raise NotImplementedError("set_smc_log_density_param must be implemented.")
+
+    def set_smc_current_log_density_param(self):
+        raise NotImplementedError("set_smc_log_density_param must be implemented.")
+
+    def update_search_space(self):
+        """Update the SMC search space using the specified method."""
+        self.smc.step(
+            logpdf_parameterized_function=self.smc_log_density,
+            logpdf_param=self.smc_log_density_param,
+        )
+
+        self.xt = self.smc.particles.x
+
+    def step_new_evaluation(self):
+        step_start = time.time()
+
+        # Evaluate the sampling criterion on SMC particles.
+        self.update_sampling_criterion_values()
+        best_idx = self.select_best_index(self.sampling_criterion_values)
+        x_new = self.xt[best_idx].reshape(1, -1)
+        self.make_new_eval(x_new, update_model=True)
+
+        # Update current predictions & estimate for SMC
+        self.update_predictions()
+        self.update_current_estimate()
+
+        self.n_iter += 1
+
+        self.history.setdefault("eval_indices", []).append(int(best_idx))
+        self.history.setdefault("criterion_best", []).append(
+            gnp.to_scalar(self.sampling_criterion_values[best_idx])
+        )
+        self.history.setdefault("model_params", []).append(self.get_model_params())
+        self.exec_times["step"] = time.time() - step_start
+
+    def step_move_particles(self):
+        step_start = time.time()
+
+        # Update the SMC search space.
+        self.update_search_space()
+
+        # Update predictions & current estimate at the end of the step
+        self.update_predictions()
+        self.update_current_estimate()
+
+        self.exec_times["step"] = time.time() - step_start
+
+    def restart(self, update_search_space=True, update_estimate=True):
+        self.smc = self.init_smc(
+            self.computer_experiments_problem.input_box,
+            self.options["n_smc"],
+            self.options["initial_distribution_type"],
+        )
+        # Update the SMC search space.
+        if update_search_space:
+            self.update_search_space()
+        if update_estimate:
+            self.update_current_estimate()

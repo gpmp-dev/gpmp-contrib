@@ -7,12 +7,11 @@ import gpmp.num as gnp
 
 
 def isinbox(box, x):
-    b = gnp.logical_and(
-        gnp.all(x >= box[0], axis=1), gnp.all(x <= box[1], axis=1))
+    b = gnp.logical_and(gnp.all(x >= box[0], axis=1), gnp.all(x <= box[1], axis=1))
     return b
 
 
-def probability_excursion(t, zpm, zpv):
+def excursion_probability(t, zpm, zpv):
     """Computes the probabilities of exceeding the threshold t for
     Gaussian predictive distributions with means zpm and variances
     zpv. The input argument must have the following sizes:
@@ -46,7 +45,7 @@ def probability_excursion(t, zpm, zpv):
     return p
 
 
-def log_probability_excursion(t, zpm, zpv):
+def log_excursion_probability(t, zpm, zpv):
     """Computes the log probabilities of exceeding the threshold t for
     Gaussian predictive distributions with means zpm and variances zpv.
 
@@ -63,10 +62,66 @@ def log_probability_excursion(t, zpm, zpv):
     b = sigma > 0.0
 
     u = gnp.where(b, delta / sigma, 0.0)  # Avoid division by zero
-    log_p = gnp.where(b, gnp.normal.logcdf(
-        u), gnp.where(delta > 0, 0.0, -gnp.inf))
+    log_p = gnp.where(b, gnp.normal.logcdf(u), gnp.where(delta > 0, 0.0, -gnp.inf))
 
     return log_p
+
+
+def excursion_misclassification_probability(t, zpm, zpv):
+    """
+    Computes the probability of misclassification for the excursion set.
+
+    The misclassification probability is defined as:
+        tau(x) = min(P_n(ξ(x) > t), 1 - P_n(ξ(x) >t))
+
+    This measures the uncertainty in classifying whether a point belongs
+    to the excursion set or not.
+
+    Parameters
+    ----------
+    t : float
+        Threshold value defining the excursion set.
+    zpm : gnp.array, shape (M, 1)
+        Predictive mean values at M points.
+    zpv : gnp.array, shape (M, 1)
+        Predictive variance values at M points.
+
+    Returns
+    -------
+    gnp.array, shape (M, 1)
+        Misclassification probabilities for each point.
+    """
+    g = excursion_probability(t, zpm, zpv)
+    return gnp.minimum(g, 1 - g)
+
+
+def excursion_wMSE(t, zpm, zpv):
+    """
+    Computes the weighted mean squared error (wMSE) for excursion set estimation.
+
+    The wMSE is defined as:
+        wMSE(x) = tau(x) * sqrt(zpv)
+
+    where:
+      - tau(x) is the misclassification probability,
+      - sqrt(zpv) represents the predictive uncertainty.
+
+    Parameters
+    ----------
+    t : float
+        Threshold value defining the excursion set.
+    zpm : gnp.array, shape (M, 1)
+        Predictive mean values at M points.
+    zpv : gnp.array, shape (M, 1)
+        Predictive variance values at M points.
+
+    Returns
+    -------
+    gnp.array, shape (M, 1)
+        Weighted mean squared error at each point.
+    """
+    tau = excursion_misclassification_probability(t, zpm, zpv)
+    return tau * gnp.sqrt(zpv)
 
 
 def probability_box(box, zpm, zpv):

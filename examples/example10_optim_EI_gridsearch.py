@@ -51,7 +51,7 @@ eialgo.set_initial_design(xi)
 def plot(show=True, x=None, z=None):
     zpm, zpv = eialgo.predict(xt, convert_out=False)
     ei = sampcrit.expected_improvement(-gnp.min(eialgo.zi), -zpm, zpv)
-    pe = sampcrit.probability_excursion(-gnp.min(eialgo.zi), -zpm, zpv)
+    pe = sampcrit.excursion_probability(-gnp.min(eialgo.zi), -zpm, zpv)
 
     fig = gp.misc.plotutils.Figure(nrows=3, ncols=1, isinteractive=True)
     fig.subplot(1)
