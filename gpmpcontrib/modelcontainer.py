@@ -497,8 +497,9 @@ class ModelContainer:
 
     def predict(self, xi, zi, xt, convert_in=True, convert_out=True):
         """Predict method"""
-        if zi.ndim == 1:
-            zi = zi.reshape(-1, 1)
+        xi, zi, xt = self._ensure_shapes_and_type(
+            xi=xi, zi=zi, xt=xt, convert=convert_in
+        )
 
         zpm_ = gnp.empty((xt.shape[0], self.output_dim))
         zpv_ = gnp.empty((xt.shape[0], self.output_dim))
@@ -539,13 +540,7 @@ class ModelContainer:
         results : dict
             A dictionary containing LOO results for each output, including predictions, errors, and variances.
         """
-        if convert_in:
-            xi = gnp.asarray(xi)
-            zi = gnp.asarray(zi)
-
-        assert (
-            zi.shape[1] == self.output_dim
-        ), "zi should have the same number of columns as the output dimension."
+        xi, zi, xt = self._ensure_shapes_and_type(xi=xi, zi=zi, convert=convert_in)
 
         zloo_ = gnp.empty((xi.shape[0], self.output_dim))
         sigma2loo_ = gnp.empty((xi.shape[0], self.output_dim))
@@ -609,11 +604,10 @@ class ModelContainer:
             The shape of the array is (nt, n_samplepaths) for a single output model,
             and (nt, n_samplepaths, output_dim) for multi-output models.
         """
-        xi_, zi_, xt_ = gp.core.Model._ensure_shapes_and_type(
+
+        xi_, zi_, xt_ = self._ensure_shapes_and_type(
             xi=xi, zi=zi, xt=xt, convert=convert_in
         )
-        if zi_.ndim == 1:
-            zi_ = zi_.reshape(-1, 1)
 
         compute_zsim = True  # FIXME: allows for reusing past computations
         if compute_zsim:
@@ -807,6 +801,63 @@ class ModelContainer:
         with open(filename, "rb") as f:
             state = load(f)
         self.set_state(state)
+
+    def _ensure_shapes_and_type(self, xi=None, zi=None, xt=None, convert=True):
+        """Validate and adjust shapes/types of input arrays.
+
+        Parameters
+        ----------
+        xi : array_like, optional
+            Observation points (n, dim).
+        zi : array_like, optional
+            Observed values (n,) or (n, output_dim). Will be converted to a 2D array.
+        xt : array_like, optional
+            Prediction points (m, dim).
+        convert : bool, optional
+            If True, convert arrays to the backend type (default is True).
+
+        Returns
+        -------
+        tuple
+            (xi, zi, xt) with proper shapes and types.
+
+        Raises
+        ------
+        AssertionError
+            If the input arrays do not meet the required shape conditions.
+        """
+        if xi is not None:
+            assert len(xi.shape) == 2, "xi must be a 2D array"
+            if convert:
+                xi = gnp.asarray(xi)
+
+        if zi is not None:
+            if convert:
+                zi = gnp.asarray(zi)
+            # Always ensure zi is a 2D array
+            if zi.ndim == 1:
+                assert (
+                    self.output_dim == 1
+                ), "zi provided as 1D array, but output_dim is not 1"
+                zi = zi.reshape(-1, 1)
+            else:
+                assert zi.shape[1] == self.output_dim, "zi must have output_dim columns"
+
+        if xt is not None:
+            assert len(xt.shape) == 2, "xt must be a 2D array"
+            if convert:
+                xt = gnp.asarray(xt)
+
+        if xi is not None and zi is not None:
+            assert (
+                xi.shape[0] == zi.shape[0]
+            ), "Number of rows in xi must equal number of rows in zi"
+        if xi is not None and xt is not None:
+            assert (
+                xi.shape[1] == xt.shape[1]
+            ), "xi and xt must have the same number of columns"
+
+        return xi, zi, xt
 
 
 # ==============================================================================
