@@ -6,6 +6,7 @@ License: GPLv3 (see LICENSE)
 
 """
 
+import warnings
 import numpy as np
 import matplotlib.pyplot as plt
 import gpmp as gp
@@ -13,6 +14,9 @@ import gpmp.num as gnp
 import gpmpcontrib as gpc
 import gpmpcontrib.optim.expectedimprovement as ei
 import gpmpcontrib.plot.visualization as gpv
+
+
+warnings.simplefilter("error", RuntimeWarning)
 
 
 def visualize(zt, zpm, zc, zi, zloom, zloov):
@@ -63,7 +67,7 @@ def visualize(zt, zpm, zc, zi, zloom, zloov):
         ax_scatter.errorbar(
             zi[:, i],
             zloom[:, i],
-            yerr=1.96 * np.sqrt(zloov[:, i]),
+            yerr=1.96 * gnp.sqrt(zloov[:, i]),
             fmt="ro",
             ls="None",
             label="LOO Predictions with 95% CI",
@@ -90,7 +94,7 @@ def visualize(zt, zpm, zc, zi, zloom, zloov):
         # Invert the x-axis to position the histogram's bottom against the right axis
         ax_hist.invert_xaxis()
 
-    plt.tight_layout()
+    # plt.tight_layout()
     plt.show()
 
 
@@ -117,7 +121,7 @@ zi = zt[ind]
 
 
 # -- initialize a model and the ei algorithm
-model = gpc.Model_ConstantMean_Maternp_REML(
+model = gpc.Model_ConstantMean_Maternp_REMAP(
     "GP6d",
     output_dim=problem.output_dim,
     mean_params={"type": "constant"},
@@ -132,14 +136,13 @@ eialgo.set_initial_design(xi)
 n = 20
 for i in range(n):
     print(f"Iteration {i} / {n}")
-    eialgo.step()
+    try:
+        eialgo.step()
+    except RuntimeWarning:
+        __import__("pdb").post_mortem()
+
     # print model diagnosis
-    gp.misc.modeldiagnosis.diag(
-        eialgo.models[0]["model"], eialgo.models[0]["info"], eialgo.xi, eialgo.zi
-    )
-    gp.misc.modeldiagnosis.perf(
-        eialgo.models[0]["model"], eialgo.xi, eialgo.zi, loo=True
-    )
+    eialgo.model.diagnosis(eialgo.xi, eialgo.zi)
 
     particles_x = eialgo.smc.particles.x
     particles_zt = problem(particles_x)

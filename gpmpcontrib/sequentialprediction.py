@@ -28,7 +28,7 @@ from gpmpcontrib.modelcontainer import ModelContainer
 
 
 class SequentialPrediction:
-    def __init__(self, model):
+    def __init__(self, model, force_param_initial_guess=True):
         """Facilitates sequential predictions with Gaussian process
         (GP) models. This class supports the building, storing, and
         managing of GP models and datasets, appending new evaluations,
@@ -59,7 +59,7 @@ class SequentialPrediction:
 
         Methods
         -------
-        __init__(model)
+        __init__(model, force_param_initial_guess)
             Initializes the SequentialPrediction instance with a specified model.
         set_data(xi, zi)
             Sets the initial dataset for the model.
@@ -83,7 +83,7 @@ class SequentialPrediction:
         self.model = model
         self.xi = None
         self.zi = None
-        self.force_param_initial_guess = True
+        self.force_param_initial_guess = force_param_initial_guess
         self.n_samplepaths = None
         self.xtsim = None
         self.xtsim_xi_ind = None

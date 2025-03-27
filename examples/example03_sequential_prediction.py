@@ -47,7 +47,7 @@ zi = problem(xi)
 # -- 3. Create a Model and a SequentialPrediction object --
 
 # Create model
-model = gpc.Model_ConstantMean_Maternp_REML(
+model = gpc.Model_ConstantMean_Maternp_REMAP(
     "Simple function",
     output_dim=problem.output_dim,
     mean_params={"type": "constant"},

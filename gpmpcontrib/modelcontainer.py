@@ -495,6 +495,14 @@ class ModelContainer:
             model["info"]["selection_criterion"] = crit
             model["info"]["time"] = time.time() - tic
 
+    def diagnosis(self, xi, zi):
+        for i in range(self.output_dim):
+            gp.misc.modeldiagnosis.diag(
+                self.models[i]["model"], self.models[i]["info"], xi, zi
+            )
+            print("\n")
+            gp.misc.modeldiagnosis.perf(self.models[i]["model"], xi, zi, loo=True)
+
     def predict(self, xi, zi, xt, convert_in=True, convert_out=True):
         """Predict method"""
         xi, zi, xt = self._ensure_shapes_and_type(
@@ -686,6 +694,44 @@ class ModelContainer:
 
         # r = {"xtsim": xtsim, "xtsim_xi_ind": xtsim_xi_ind, "xtsim_xt_ind": xtsim_xt_ind, "zsim": zsim}
         return zpsim
+
+    def sample_parameters(self, model_indices=None, **kwargs):
+        """Run MCMC sampling for GP model parameters from posterior distribution.
+
+        If model_indices is not provided, all models are processed.
+
+        Parameters
+        ----------
+        model_indices : list of int, optional
+            Indices of models to sample. Defaults to all models.
+        **kwargs
+            Extra arguments passed to sample_from_selection_criterion
+            (see
+            `gpmp.misc.param_posterior.sample_from_selection_criterion`).
+
+        Returns
+        -------
+        dict
+            Dictionary mapping model index to:
+              - 'samples': MCMC samples (np.ndarray).
+              - 'mh': MetropolisHastings instance.
+
+        """
+        from gpmp.misc.param_posterior import sample_from_selection_criterion
+
+        if model_indices is None:
+            model_indices = list(range(self.output_dim))
+
+        results = {}
+        for idx in model_indices:
+            model_info = self.models[idx].get("info")
+            if model_info is None:
+                raise ValueError(
+                    f"Model {idx} missing 'info'. Run select_params() first."
+                )
+            samples, mh = sample_from_selection_criterion(model_info, **kwargs)
+            results[idx] = {"samples": samples, "mh": mh}
+        return results
 
     def build_mean_function(self, output_idx: int, param: dict):
         """Build a mean function

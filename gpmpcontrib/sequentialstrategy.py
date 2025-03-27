@@ -1,8 +1,18 @@
-# --------------------------------------------------------------
-# Authors: Emmanuel Vazquez <emmanuel.vazquez@centralesupelec.fr>
-# Copyright (c) 2023-2025, CentraleSupelec
-# License: GPLv3 (see LICENSE)
-# --------------------------------------------------------------
+"""Sequential Decision-Making Strategies Module
+
+This module implements sequential decision-making strategies.
+It defines a base class, SequentialStrategy, that handles evaluations, model updates,
+and sampling criterion computations. Derived classes implement specific strategies:
+- SequentialStrategyGridSearch: uses a fixed candidate set for grid search.
+- SequentialStrategySMC: adapts the search space using Sequential Monte Carlo (SMC).
+- SequentialStrategyBSS: adapts the search space via Bayesian Subset Simulation (BSS) principles.
+
+
+Authors: Emmanuel Vazquez <emmanuel.vazquez@centralesupelec.fr>
+Copyright (c) 2023-2025, CentraleSupelec
+License: GPLv3 (see LICENSE)
+"""
+
 import time
 import pickle
 import gpmp.num as gnp

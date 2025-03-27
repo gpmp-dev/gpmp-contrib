@@ -135,6 +135,44 @@ class Model_ConstantMean_Maternp_REML(gpmpcontrib.modelcontainer.ModelContainer)
 
 
 # ==============================================================================
+# Model_ConstantMean_Maternp_REMAP Class
+# ==============================================================================
+
+
+class Model_ConstantMean_Maternp_REMAP(Model_ConstantMean_Maternp_REML):
+    def __init__(self, name, output_dim, mean_params, covariance_params):
+        """
+        Initialize a Model.
+
+        Parameters
+        ----------
+        name : str
+            The name of the model.
+        output_dim : int
+            The number of outputs for the model.
+        mean_params : dict or list of dicts
+            Type of mean function to use.
+        covariance_params : dict or list of dicts
+            Parameters for each covariance function, including 'p'
+        """
+        super().__init__(
+            name,
+            output_dim,
+            mean_params=mean_params,
+            covariance_params=covariance_params,
+        )
+
+    def build_selection_criterion(self, output_idx: int, **build_params):
+        def remap_criterion(model, covparam, xi, zi):
+            nlremap = gp.kernel.neg_log_restricted_posterior_with_power_law_prior(
+                model, covparam, xi, zi
+            )
+            return nlremap
+
+        return remap_criterion
+
+
+# ==============================================================================
 # Model_ConstantMean_Maternp_ML
 # ==============================================================================
 

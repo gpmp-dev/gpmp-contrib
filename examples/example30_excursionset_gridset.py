@@ -47,7 +47,7 @@ xi = xt[ind]
 u_target = 1.02
 
 # -- initialize a model and the ei algorithm
-model = gpc.Model_ConstantMean_Maternp_REML(
+model = gpc.Model_ConstantMean_Maternp_REMAP(
     "GP1d",
     output_dim=problem.output_dim,
     mean_params={"type": "constant"},

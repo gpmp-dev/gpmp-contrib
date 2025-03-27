@@ -101,8 +101,8 @@ def interactive():
     while True:
         print("\nChoose an action:")
         print("(n [p0]) Update threshold with the p0 rule (default: 0.1)")
-        print("(m[n]) Move particles and update threshold [n] times (default: 1)")
-        print("(u[n]) Move particles without updating threshold [n] times (default: 1)")
+        print("(m[n]) Move particles without updating threshold [n] times (default: 1)")
+        print("(u[n]) Move particles and update threshold [n] times (default: 1)")
         print("(e[n]) Make a new evaluation [n] times (default: 1)")
         print("(s x) Set mu to x (e.g., 's 0.4')")
         print("(r) Restart the particles")
@@ -154,7 +154,13 @@ def interactive():
                 print("Invalid p0 value. Please enter a number (e.g., 'n 0.2').")
             continue
 
-        if user_choice == "m":
+        elif user_choice == "m":
+            for _ in range(repeat):
+                algo.step_move_particles()  # Move without updating mu
+                print(f"Moved particles without updating mu (current: {algo.mu:.4f})")
+                plot()
+
+        elif user_choice == "u":
             for _ in range(repeat):
                 p0 = 0.1  # Default threshold update probability
                 mu_next = algo.smc.compute_next_logpdf_param(
@@ -169,12 +175,6 @@ def interactive():
                 algo.step_move_particles_with_mu(mu_next)
                 kappa = algo.beta / algo.alpha
                 print(f"New kappa: {kappa:.4e}")
-                plot()
-
-        elif user_choice == "u":
-            for _ in range(repeat):
-                algo.step_move_particles()  # Move without updating mu
-                print(f"Moved particles without updating mu (current: {algo.mu:.4f})")
                 plot()
 
         elif user_choice == "e":
