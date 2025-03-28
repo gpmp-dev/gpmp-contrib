@@ -1,4 +1,5 @@
 from .computerexperiment import ComputerExperiment
+from . import test_problems
 from .models_matern import Model_ConstantMean_Maternp_REML
 from .models_matern import Model_ConstantMean_Maternp_REMAP
 from .models_matern import Model_ConstantMean_Maternp_ML
