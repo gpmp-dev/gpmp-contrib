@@ -20,6 +20,27 @@ import gpmp.num as gnp
 import gpmp as gp
 
 
+class AttrDict(dict):
+    def __getattr__(self, key):
+        try:
+            return self[key]
+        except KeyError:
+            raise AttributeError(f"'AttrDict' object has no attribute '{key}'")
+
+    def __setattr__(self, key, value):
+        self[key] = value
+
+    def __delattr__(self, key):
+        try:
+            del self[key]
+        except KeyError:
+            raise AttributeError(f"'AttrDict' object has no attribute '{key}'")
+
+    def __repr__(self):
+        # Return a representation that lists only the keys.
+        return f"AttrDict({list(self.keys())})"
+
+
 # ==============================================================================
 # ModelContainer Class
 # ==============================================================================
@@ -36,16 +57,14 @@ class ModelContainer:
         initial_guess_procedures=None,
         selection_criteria=None,
     ):
-        """Base class for Gaussian Process (GP) models.
+        """
+        Base class for Gaussian Process (GP) models.
 
-        This class defines GP models that can handle multiple outputs
-        with distinct mean and covariance functions for each
-        output. It supports parameter estimation through selection
-        criteria such as Maximum Likelihood (ML) or Restricted Maximum
-        Likelihood (REML), and allows for initial guess procedures for
-        optimizing model parameters. It facilitates the use of the
-        Model class in GPmp for making predictions or generating
-        posterior sample paths.
+        This class defines GP models that can handle multiple outputs with distinct
+        mean and covariance functions for each output. It supports parameter estimation
+        through criteria such as Maximum Likelihood (ML) or Restricted Maximum Likelihood
+        (REML) and allows for initial guess procedures for optimizing model parameters.
+        It is used by `SequentialPrediction` and `SequentialStrategy`.
 
         Parameters
         ----------
@@ -54,83 +73,90 @@ class ModelContainer:
         output_dim : int
             The number of outputs for the model.
         parameterized_mean : bool
-            If True, the model uses a "parameterized" mean function. If False,
-            it uses a "linear predictor" mean function.
-        mean_params : list of dict or dict
-            Parameters for defining mean functions. Can be a single dictionary applied to
-            all outputs or a list of dictionaries, one for each output. Each dictionary includes:
-            - 'function': The mean function to be used, either a callable or a string.
-            - 'param_length': The length of the mean function's parameter vector, required if 'function' is a callable.
-        covariance_params : dict or list of dicts
-            Parameters for defining covariance functions. Each dictionary must include a key 'function'.
+            If True, the model uses a "parameterized" mean function; otherwise, it uses a
+            "linear predictor" mean function.
+        mean_params : dict or list of dict
+            Parameters for defining mean functions. Each dict should include:
+            - 'function': The mean function (callable or string identifier).
+            - 'param_length': The length of the mean function's parameter vector (if callable).
+        covariance_params : dict or list of dict
+            Parameters for defining covariance functions. Each dict must include a key 'function'.
         initial_guess_procedures : list of callables, optional
-            A list of procedures for initial guess of model parameters, one for each output.
+            Procedures for initial guess of model parameters, one for each output.
         selection_criteria : list of callables, optional
-            A list of selection criteria, one for each output.
+            Selection criteria for parameter estimation, one for each output.
 
         Attributes
         ----------
         name : str
-            The name of the model.
+            Name of the model.
         output_dim : int
-            The number of outputs in the model.
+            Number of outputs.
         parameterized_mean : bool
-            The type of mean function.
+            Type of mean function used.
         mean_functions : list of callables
-            A list of callable mean functions, one for each output.
+            List of mean functions, one for each output.
         mean_functions_info : list of dict
-            Descriptive information about each mean function,
-            including its name and parameter length.
+            Information on each mean function (description and parameter length).
         covariance_functions : list of callables
-            A list of callable covariance functions, one for each output.
-        models : list of dict
-            A list containing models for each output. Each dictionary includes:
-            - output_name (str): Name of the output.
-            - model (object): The Gaussian Process model instance for the output.
-            - mean_fname (str): Name of the mean function used for the output.
-            - mean_paramlength (int): Length of the mean function's parameter vector.
-            - covariance_fname (str): Name of the covariance function
-              used for the output.
-            - parameters_initial_guess_procedure (callable): Initial
-              guess procedure for model parameters.
-            - selection_criterion (callable): Predefined selection
-              criterion for the output.
-            - info (dict): Additional information after model
-              parameter selection.
+            List of covariance functions, one for each output.
+        models : list of AttrDict
+            For each output, an AttrDict containing:
+              - output_name (str)
+              - model (GP model instance)
+              - mean_fname (str): name of the mean function
+              - mean_paramlength (int): length of the mean function’s parameter vector
+              - covariance_fname (str): name of the covariance function
+              - parameters_initial_guess_procedure (callable)
+              - selection_criterion (callable)
+              - info (dict): additional information after parameter selection
 
         Methods
         -------
         __getitem__(index)
-            Access individual models and their attributes by index.
+            Access an individual model and its attributes by index.
         __repr__()
             Return a string representation of the model instance.
         __str__()
-            Generate a formatted string representation of the model with details on mean and covariance functions.
+            Return a formatted string with details on mean and covariance functions.
         set_mean_functions(mean_params)
-            Initialize and configure mean functions based on input parameters.
+            Initialize and configure mean functions for each output based on provided parameters.
         set_covariance_functions(covariance_params)
-            Initialize and configure covariance functions based on input parameters.
+            Initialize and configure covariance functions for each output based on provided parameters.
         set_parameters_initial_guess_procedures(initial_guess_procedures=None, build_params=None)
-            Set procedures for initial guess of model parameters.
+            Set procedures for generating initial guesses for model parameters.
         set_selection_criteria(selection_criteria=None, build_params=None)
             Set selection criteria for parameter estimation.
         make_selection_criterion_with_gradient(model, xi_, zi_)
-            Create a selection criterion with gradients for parameter optimization.
+            Create a selection criterion with gradient support for parameter optimization.
         select_params(xi, zi, force_param_initial_guess=True)
-            Select parameters for the model based on input and output data.
+            Estimate and update model parameters based on input (xi) and output (zi) data.
+        diagnosis(xi, zi)
+            Perform model diagnosis and evaluate performance.
         predict(xi, zi, xt, convert_in=True, convert_out=True)
-            Predict outputs at test points using the trained model.
+            Predict outputs at test points (xt) using the trained models.
+        loo(xi, zi, convert_in=True, convert_out=True)
+            Perform leave-one-out cross-validation for model evaluation.
         compute_conditional_simulations(xi, zi, xt, n_samplepaths=1, type="intersection", method="svd", convert_in=True, convert_out=True)
             Generate conditional sample paths based on training and test data.
+        sample_parameters(model_indices=None, **kwargs)
+            Perform MCMC sampling of GP model parameters from the posterior distribution.
         build_mean_function(output_idx, param)
-            Placeholder for building mean functions; should be implemented by subclasses.
+            (Abstract) Build and return the mean function and its parameter length for the specified output.
         build_covariance(output_idx, param)
-            Placeholder for building covariance functions; should be implemented by subclasses.
+            (Abstract) Build and return the covariance function for the specified output.
         build_parameters_initial_guess_procedure(output_idx, **build_param)
-            Placeholder for building initial guess procedures for model parameters.
+            (Abstract) Build the procedure for generating an initial guess for model parameters.
         build_selection_criterion(output_idx, **build_params)
-            Placeholder for building selection criteria for parameter estimation.
-
+            (Abstract) Build the selection criterion for parameter estimation.
+        get_state()
+            Return a serializable snapshot of model parameters and diagnostic info.
+        set_state(state)
+            Load model parameters and diagnostic info from a saved state.
+        save_state(filename)
+            Save the model state to a file.
+        load_state(filename)
+            Load the model state from a file.
         """
         self.name = name
         self.output_dim = output_dim
@@ -157,16 +183,18 @@ class ModelContainer:
                 meantype=mean_type,
             )
             self.models.append(
-                {
-                    "output_name": f"output{i}",
-                    "model": model,
-                    "mean_fname": self.mean_functions_info[i]["description"],
-                    "mean_paramlength": self.mean_functions_info[i]["param_length"],
-                    "covariance_fname": model.covariance.__name__,
-                    "parameters_initial_guess_procedure": None,
-                    "selection_criterion": None,
-                    "info": None,
-                }
+                AttrDict(
+                    {
+                        "output_name": f"output{i}",
+                        "model": model,
+                        "mean_fname": self.mean_functions_info[i]["description"],
+                        "mean_paramlength": self.mean_functions_info[i]["param_length"],
+                        "covariance_fname": model.covariance.__name__,
+                        "parameters_initial_guess_procedure": None,
+                        "selection_criterion": None,
+                        "info": None,
+                    }
+                )
             )
 
         # Set initial guess procedures and selection criteria after model initialization
