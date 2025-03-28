@@ -232,6 +232,7 @@ class ComputerExperiment:
 
         self.input_dim = input_dim
         self.input_box = input_box
+        self.normalize_input = False
         self.functions = []
 
         self._last_x = None
@@ -293,24 +294,22 @@ class ComputerExperiment:
                 if d > 1:
                     if not all(
                         isinstance(b, (tuple, list)) and len(b) == 2
-                        for b in default_bounds[bounds_index: bounds_index + d]
+                        for b in default_bounds[bounds_index : bounds_index + d]
                     ):
                         raise ValueError(
                             "Each set of bounds should be a tuple (lb, ub) of length 2."
                         )
                     func_dict["bounds"] = default_bounds[
-                        bounds_index: bounds_index + d
+                        bounds_index : bounds_index + d
                     ]
                     bounds_index += d
                 # If the function has one output, just get the next set of bounds
                 else:
                     if (
-                        not isinstance(
-                            default_bounds[bounds_index], (tuple, list))
+                        not isinstance(default_bounds[bounds_index], (tuple, list))
                         or len(default_bounds[bounds_index]) != 2
                     ):
-                        raise ValueError(
-                            "Bounds should be a tuple of length 2.")
+                        raise ValueError("Bounds should be a tuple of length 2.")
                     func_dict["bounds"] = default_bounds[bounds_index]
                     bounds_index += 1
             else:
@@ -328,8 +327,7 @@ class ComputerExperiment:
     def _wrap_in_dict(self, item, default_type):
         if isinstance(item, dict):
             if "function" not in item:
-                raise ValueError(
-                    "The 'function' key is mandatory in the dictionary.")
+                raise ValueError("The 'function' key is mandatory in the dictionary.")
             item.setdefault("output_dim", 1)
             item.setdefault("type", [default_type] * item["output_dim"])
             if len(item["type"]) != item["output_dim"]:
@@ -374,30 +372,53 @@ class ComputerExperiment:
     def __call__(self, x):
         """
         Allows the instance to be called like a function, which internally calls the eval method.
+        """
+        return self.eval(x)
+
+    def set_normalize_input(self, flag):
+        """
+        Set the internal flag for input normalization.
+
+        Parameters
+        ----------
+        flag : bool
+            If True, subsequent evaluations will scale input values from [0,1]^d
+            to the specified input domain.
+        """
+        self.normalize_input = flag
+
+    def get_constraint_bounds(self):
+        return np.array(
+            [func["bounds"] for func in self.functions if func["type"] == "constraint"]
+        )
+
+    def eval(self, x, normalize_input=False):
+        """
+        Evaluate all functions (objectives and constraints) for the given input.
+        If self.normalize_input is True, x (assumed to be in [0,1]^d) is scaled to the input domain.
 
         Parameters
         ----------
         x : array_like
-            The input values at which to evaluate the functions.
+            Input values.
 
         Returns
         -------
         ndarray
-            The evaluated results from the function or functions.
+            Function values for the given input.
         """
-        return self.eval(x)
-
-    def get_constraint_bounds(self):
-        return np.array(
-            [func["bounds"]
-                for func in self.functions if func["type"] == "constraint"]
-        )
-
-    def eval(self, x):
+        # Store the tuple representation of x (which is immutable
+        # and hashable), we can quickly check if the same input has
+        # been evaluated before and return the cached result without
+        # re-computation
         x_tuple = tuple(x) if x.ndim == 1 else tuple(map(tuple, x))
         if self._last_x is not None and self._last_x == x_tuple:
             return self._last_result
         else:
+            if self.normalize_input:
+                lower = np.array(self.input_box[0])
+                upper = np.array(self.input_box[1])
+                x = lower + (upper - lower) * x
             result = self._eval_functions(self.functions, x)
             self._last_x = x_tuple
             self._last_result = result
@@ -553,8 +574,7 @@ class StochasticComputerExperiment(ComputerExperiment):
         )
 
         # Initialize noise variance
-        self.initialize_noise_variance(
-            self.functions, simulated_noise_variance)
+        self.initialize_noise_variance(self.functions, simulated_noise_variance)
 
     def initialize_noise_variance(self, function_dicts, simulated_noise_variance):
         """
@@ -578,8 +598,7 @@ class StochasticComputerExperiment(ComputerExperiment):
         # Convert scalar to array
         if np.isscalar(simulated_noise_variance):
             total_output_dim = sum(f["output_dim"] for f in function_dicts)
-            simulated_noise_variance = [
-                simulated_noise_variance] * total_output_dim
+            simulated_noise_variance = [simulated_noise_variance] * total_output_dim
 
         if simulated_noise_variance is not None:
             # Ensure that simulated_noise_variance has output_dim components
@@ -676,7 +695,10 @@ class StochasticComputerExperiment(ComputerExperiment):
         array-like
             Function values for the given input, with optional noise.
         """
-
+        if self.normalize_input:
+            lower = np.array(self.input_box[0])
+            upper = np.array(self.input_box[1])
+            x = lower + (upper - lower) * x
         return self._eval_batch(self.functions, x, simulate_noise, batch_size)
 
     def eval_objectives(self, x):
@@ -715,8 +737,7 @@ class StochasticComputerExperiment(ComputerExperiment):
 
         results = []
         for _ in range(batch_size):
-            results.append(self._eval_functions(
-                function_dicts, x, simulate_noise))
+            results.append(self._eval_functions(function_dicts, x, simulate_noise))
 
         if batch_size == 1:
             return results[0]
