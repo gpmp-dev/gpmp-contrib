@@ -15,7 +15,7 @@ Each  example demonstrates  how to  initialize the  ComputerExperiment
 object, how to evaluate functions, and how to handle constraints.
 
 Author: Emmanuel Vazquez <emmanuel.vazquez@centralesupelec.fr>
-Copyright (c) 2022-2023, CentraleSupelec
+Copyright (c) 2022-2025, CentraleSupelec
 License: GPLv3 (see LICENSE)
 
 """
@@ -23,6 +23,7 @@ License: GPLv3 (see LICENSE)
 import numpy as np
 import gpmp as gp
 import gpmpcontrib as gpc
+import matplotlib.pyplot as plt
 
 
 # Define an objective function
@@ -122,3 +123,35 @@ results = pb(x)
 print("\n  * Evaluated Results (one objective, two constraints):\n", results)
 results_objective = pb.eval_objectives(x)
 print("\n  * Objectives only:\n", results_objective)
+
+# ------------------------------------------------------------------------
+# Example 3: Using a built-in test problem and plotting its objective
+print("\n")
+print("  *** Example 3")
+print("      =========")
+# Load the Branin test problem from gpmpcontrib
+problem = gpc.test_problems.branin
+problem.set_normalize_input(True)
+print(" " * 2 + str(problem).replace("\n", "\n  "))
+print("  Plot Branin function with normalized inputs")
+
+# Create a grid of input values over the input_box
+x1 = np.linspace(problem.input_box[0][0], problem.input_box[1][0], 100)
+x2 = np.linspace(problem.input_box[0][1], problem.input_box[1][1], 100)
+X1, X2 = np.meshgrid(x1, x2)
+X = np.column_stack((X1.ravel(), X2.ravel()))
+
+# Evaluate the objective function over the grid
+Z = problem.eval_objectives(X).reshape(X1.shape)
+
+# Plot the contour of the Branin function
+plt.figure(figsize=(8, 6))
+cp = plt.contourf(X1, X2, Z, levels=50, cmap="Greys")
+contours = plt.contour(X1, X2, Z, levels=20, cmap="gnuplot2", linewidths=1)
+plt.clabel(contours, inline=True, fontsize=8, fmt="%.1f")
+plt.colorbar(cp)
+plt.title("Branin Function - Objective Contour")
+plt.xlabel("x1")
+plt.ylabel("x2")
+plt.tight_layout()
+plt.show()
