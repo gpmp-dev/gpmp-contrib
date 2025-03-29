@@ -472,7 +472,7 @@ class ModelContainer:
 
         crit = gnp.DifferentiableFunction(crit_)
 
-        return crit.evaluate, crit.gradient
+        return crit.evaluate, crit.gradient, crit.evaluate_no_grad
 
     def select_params(self, xi, zi, force_param_initial_guess=True):
         """Parameter selection"""
@@ -503,7 +503,7 @@ class ModelContainer:
 
             param0 = gnp.concatenate((meanparam0, covparam0))
 
-            crit, dcrit = self.make_selection_criterion_with_gradient(
+            crit, dcrit, crit_nograd = self.make_selection_criterion_with_gradient(
                 model, xi_, zi_[:, i]
             )
 
@@ -521,6 +521,7 @@ class ModelContainer:
             model["info"]["covparam"] = model["model"].covparam
             model["info"]["param"] = param
             model["info"]["selection_criterion"] = crit
+            model["info"]["selection_criterion_nograd"] = crit_nograd
             model["info"]["time"] = time.time() - tic
 
     def diagnosis(self, xi, zi):
