@@ -2,8 +2,6 @@ import itertools
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import plotly as px
-import plotly.graph_objects as go
 import gpmp as gp
 
 # In Matplotlib, interactive mode is a feature that allows for
@@ -192,6 +190,9 @@ def parallel_coordinates_plot(
     Returns:
     - Plotly figure object (go.Figure)
     """
+    import plotly as px
+    import plotly.graph_objects as go
+
     # Ensure x and z are 2D arrays, p is 1D array (if provided)
     assert x.ndim == 2, "x must be a 2D numpy array"
     assert z.ndim == 2, "z must be a 2D numpy array"

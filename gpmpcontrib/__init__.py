@@ -14,5 +14,4 @@ from .sequentialstrategy import (
 )
 from . import samplingcriteria
 from . import optim
-from . import plot
 from . import regp
