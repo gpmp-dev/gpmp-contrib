@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "gpmp-contrib"
-version = "0.9.20"
+version = "0.9.23"
 authors = [{name = "Emmanuel Vazquez", email = "emmanuel.vazquez@centralesupelec.fr"}]
 description = "GPmp contrib: the contrib GPmp package"
 readme = "README.md"
