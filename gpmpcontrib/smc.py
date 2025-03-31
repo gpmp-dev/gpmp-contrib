@@ -219,9 +219,9 @@ class ParticlesSet:
         j = 0
         while j < self.n:
             while counts[j] > 0:
-                x_resampled = gnp.set_row2(x_resampled, i, self.x[j, :])
-                logpx_resampled = gnp.set_elem1(logpx_resampled, i, self.logpx[j])
-                counts = gnp.set_elem1(counts, j, counts[j] - 1)
+                x_resampled = gnp.set_row_2d(x_resampled, i, self.x[j, :])
+                logpx_resampled = gnp.set_elem_1d(logpx_resampled, i, self.logpx[j])
+                counts = gnp.set_elem_1d(counts, j, counts[j] - 1)
                 i += 1
             j += 1
 
@@ -275,7 +275,7 @@ class ParticlesSet:
         j = 0
         while j < self.n:
             while counts[j] > 0:
-                x_resampled = gnp.set_row2(x_resampled, i, self.x[j, :])
+                x_resampled = gnp.set_row_2d(x_resampled, i, self.x[j, :])
                 logpx_resampled = gnp.set_elem1(logpx_resampled, i, self.logpx[j])
                 counts = gnp.set_elem1(counts, j, counts[j] - 1)
                 i += 1
@@ -362,7 +362,7 @@ class ParticlesSet:
         for i in range(self.n):
             if ParticlesSet.rand(self.rng) < rho[i]:
                 # Update the particle position and log probability if the move is accepted
-                self.x = gnp.set_row2(self.x, i, y[i, :])
+                self.x = gnp.set_row_2d(self.x, i, y[i, :])
                 self.logpx = gnp.set_elem1(self.logpx, i, logpy[i])
                 accepted_moves += 1
 
