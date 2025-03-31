@@ -546,8 +546,8 @@ class ModelContainer:
             zpm_i, zpv_i = model_predict(
                 xi, zi[:, i], xt, convert_in=convert_in, convert_out=False
             )
-            zpm_ = gnp.set_col2(zpm_, i, zpm_i)
-            zpv_ = gnp.set_col2(zpv_, i, zpv_i)
+            zpm_ = gnp.set_col_2d(zpm_, i, zpm_i)
+            zpv_ = gnp.set_col_2d(zpv_, i, zpv_i)
 
         if convert_out:
             zpm = gnp.to_np(zpm_)
@@ -588,9 +588,9 @@ class ModelContainer:
             zloo_i, sigma2loo_i, eloo_i = model_loo(
                 xi, zi[:, i], convert_in=convert_in, convert_out=False
             )
-            zloo_ = gnp.set_col2(zloo_, i, zloo_i)
-            sigma2loo_ = gnp.set_col2(sigma2loo_, i, sigma2loo_i)
-            eloo_ = gnp.set_col2(eloo_, i, eloo_i)
+            zloo_ = gnp.set_col_2d(zloo_, i, zloo_i)
+            sigma2loo_ = gnp.set_col_2d(sigma2loo_, i, sigma2loo_i)
+            eloo_ = gnp.set_col_2d(eloo_, i, eloo_i)
 
         if convert_out:
             zloo = gnp.to_np(zloo_)
@@ -670,7 +670,7 @@ class ModelContainer:
                 zsim_i = self.models[i]["model"].sample_paths(
                     xtsim, n_samplepaths, method=method
                 )
-                zsim = gnp.set_col3(zsim, i, zsim_i)
+                zsim = gnp.set_col_3d(zsim, i, zsim_i)
 
         # conditional sample paths
         zpsim = gnp.empty((nt, n_samplepaths, self.output_dim))
@@ -712,7 +712,7 @@ class ModelContainer:
                     f"gpmp.core.Model.meantype {self.models[i]['model'].meantype} not implemented"
                 )
 
-            zpsim = gnp.set_col3(zpsim, i, zpsim_i)
+            zpsim = gnp.set_col_3d(zpsim, i, zpsim_i)
 
         if self.output_dim == 1:
             # drop last dimension
