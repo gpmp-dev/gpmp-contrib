@@ -9,6 +9,8 @@ import time
 from numpy.random import default_rng
 import scipy.stats as stats
 import gpmp.num as gnp
+import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
 
 
 class ParticlesSetError(BaseException):
@@ -177,7 +179,11 @@ class ParticlesSet:
 
     def ess(self):
         """https://en.wikipedia.org/wiki/Effective_sample_size"""
-        return gnp.sum(self.w) ** 2 / gnp.sum(self.w**2)
+        normalization = gnp.sum(self.w**2)
+        if normalization == 0.0:
+            return 0.0
+        else:
+            return gnp.sum(self.w) ** 2 / normalization
 
     def resample(self, debug=False):
         """
@@ -239,7 +245,7 @@ class ParticlesSet:
         """
         x_resampled = gnp.empty(self.x.shape)
         logpx_resampled = gnp.empty(self.logpx.shape)
-        p = self.w / gnp.sum(self.w)
+        p = self.w / (gnp.sum(self.w) + 1e-16)
         N = self.n
 
         # Deterministic assignment: floor of expected counts
@@ -276,8 +282,8 @@ class ParticlesSet:
         while j < self.n:
             while counts[j] > 0:
                 x_resampled = gnp.set_row_2d(x_resampled, i, self.x[j, :])
-                logpx_resampled = gnp.set_elem1(logpx_resampled, i, self.logpx[j])
-                counts = gnp.set_elem1(counts, j, counts[j] - 1)
+                logpx_resampled = gnp.set_elem_1d(logpx_resampled, i, self.logpx[j])
+                counts = gnp.set_elem_1d(counts, j, counts[j] - 1)
                 i += 1
             j += 1
 
@@ -363,7 +369,7 @@ class ParticlesSet:
             if ParticlesSet.rand(self.rng) < rho[i]:
                 # Update the particle position and log probability if the move is accepted
                 self.x = gnp.set_row_2d(self.x, i, y[i, :])
-                self.logpx = gnp.set_elem1(self.logpx, i, logpy[i])
+                self.logpx = gnp.set_elem_1d(self.logpx, i, logpy[i])
                 accepted_moves += 1
 
         # Compute the acceptation rate
@@ -664,6 +670,13 @@ class SMC:
 
         self.logging_logpdf_param_sequence = [initial_logpdf_param]
 
+        plt.close('all')
+        plt.ion()
+        fig = plt.figure(figsize=(6, 4))
+        gs = gridspec.GridSpec(1, 2, width_ratios=[20, 1])
+        ax = fig.add_subplot(gs[0])
+        cax = fig.add_subplot(gs[1])  # fixed axis for colorbar
+        cbar = None
         while current_logpdf_param != target_logpdf_param:
             next_logpdf_param = self.compute_next_logpdf_param(
                 logpdf_parameterized_function,
@@ -672,7 +685,14 @@ class SMC:
                 p0,
                 debug,
             )
-
+            
+            print(f"next = {next_logpdf_param}")
+            ax.clear()
+            cax.clear()
+            sc = ax.scatter(self.particles.x[:, 2], self.particles.x[:, 3], c=self.particles.logpx)
+            fig.colorbar(sc, cax=cax)
+            plt.draw()
+            plt.pause(0.5)
             self.logging_restart_iteration += 1
             self.logging_logpdf_param_sequence.append(next_logpdf_param)
 
@@ -680,6 +700,8 @@ class SMC:
 
             current_logpdf_param = next_logpdf_param
 
+        plt.ioff()
+        plt.show()
         # Logging reinitialization
         self.logging_logpdf_param_sequence = []
         self.logging_restart_iteration = 0
