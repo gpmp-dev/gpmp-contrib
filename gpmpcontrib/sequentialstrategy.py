@@ -16,7 +16,8 @@ License: GPLv3 (see LICENSE)
 import time
 import pickle
 import gpmp.num as gnp
-from gpmpcontrib import SequentialPrediction, SMC
+from gpmp.misc.smc import SMC
+from gpmpcontrib import SequentialPrediction
 
 
 class SequentialStrategy(SequentialPrediction):
@@ -318,6 +319,7 @@ class SequentialStrategySMC(SequentialStrategy):
             box,
             n_smc,
             initial_distribution_type=initial_distribution_type,
+            compute_next_logpdf_param_method="p0",
         )
 
     def set_initial_xt(self):

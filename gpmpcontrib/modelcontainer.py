@@ -762,7 +762,12 @@ class ModelContainer:
             results[idx] = {"samples": samples, "mh": mh}
         return results
 
-    def sample_parameters_smc(self, init_box, model_indices=None, p0=1e-2, **kwargs):
+    def sample_parameters_smc(
+        self,
+        init_box,
+        model_indices=None,
+        **kwargs,
+    ):
         """
         Run SMC sampling for GP model parameters from the posterior distribution.
 
@@ -779,7 +784,6 @@ class ModelContainer:
               - initial_temperature: float, optional
               - final_temperature: float, optional
               - min_ess_ratio: float, optional
-              - p0: float, optional
               - max_stages: int, optional
               - debug: bool, optional
               - plot: bool, optional
@@ -801,17 +805,17 @@ class ModelContainer:
         for idx in model_indices:
             model_info = self.models[idx].get("info")
             if model_info is None:
-                raise ValueError(f"Model {idx} missing 'info'. Run select_params() first.")
+                raise ValueError(
+                    f"Model {idx} missing 'info'. Run select_params() first."
+                )
             # sample_from_selection_criterion_smc uses the negative log-posterior contained in
             # info.selection_criterion_nograd and the domain box info.box to define a tempered logpdf.
             particles, smc_instance = sample_from_selection_criterion_smc(
-                info=model_info,
-                init_box=init_box,
-                **kwargs
+                info=model_info, init_box=init_box, **kwargs
             )
             results[idx] = {"particles": particles, "smc": smc_instance}
         return results
-    
+
     def build_mean_function(self, output_idx: int, param: dict):
         """Build a mean function
 
