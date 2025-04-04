@@ -19,7 +19,7 @@ import gpmpcontrib.plot.visualization as gpv
 warnings.simplefilter("error", RuntimeWarning)
 
 
-def visualize(zt, zpm, zc, zi, zloom, zloov):
+def visualize(zt, zpm, zc, zi, zloom, zloov, dark=True):
     """
     Visualize both predictions vs truth and LOO errors on the same graph for each output dimension,
     including a histogram of zpm along the vertical axis placed on the left with its bottom axis inverted
@@ -34,6 +34,15 @@ def visualize(zt, zpm, zc, zi, zloom, zloov):
     - zloom: LOO model predictions.
     - zloov: Variance of LOO predictions.
     """
+    if dark:
+        preferred_styles = ['dark_background']
+        plt.style.use(next((s for s in preferred_styles if s in plt.style.available), None))
+        identity_line_color = "#1f77b4"
+    else:
+        preferred_styles = ['seaborn-v0_8-paper', 'bmh', 'classic']
+        plt.style.use(next((s for s in preferred_styles if s in plt.style.available), None))
+        identity_line_color = "#222222"
+
     num_outputs = zt.shape[1]
     fig = plt.figure(figsize=(6 * num_outputs, 5))
     gs = fig.add_gridspec(
@@ -56,11 +65,14 @@ def visualize(zt, zpm, zc, zi, zloom, zloov):
         )
         # Add a color bar
         cbar = plt.colorbar(scatter, ax=ax_scatter)
-        cbar.set_label("Color by zc")
+        cbar.set_label("Color by probabilities of excursion")
 
         # Plot identity line for predictions
         ax_scatter.plot(
-            [zt[:, i].min(), zt[:, i].max()], [zt[:, i].min(), zt[:, i].max()], "k--"
+            [zt[:, i].min(), zt[:, i].max()],
+            [zt[:, i].min(), zt[:, i].max()],
+            color=identity_line_color,
+            linestyle="--",
         )
 
         # Plot LOO predictions with error bars
@@ -76,8 +88,8 @@ def visualize(zt, zpm, zc, zi, zloom, zloov):
         # Quadrant formed by the minimum of observations
         min_true = min(zi[:, i])
         min_pred = min(zi[:, i])
-        ax_scatter.axvline(x=min_true, color="gray", linestyle="--", linewidth=1)
-        ax_scatter.axhline(y=min_pred, color="gray", linestyle="--", linewidth=1)
+        ax_scatter.axvline(x=min_true, color=identity_line_color, linestyle="--", linewidth=1)
+        ax_scatter.axhline(y=min_pred, color=identity_line_color, linestyle="--", linewidth=1)
 
         ax_scatter.set_xlabel("True Values")
         ax_scatter.set_title(f"Output {i+1}")
