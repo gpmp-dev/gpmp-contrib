@@ -1930,7 +1930,7 @@ detpep8d = ComputerExperiment(
 # ===== BraninPlus
 
 
-def _branin_objective(x):
+def _branin(x):
     a = 1
     b = 5.1 / (4 * (np.pi)**2)
     c = 5 / np.pi
@@ -1940,44 +1940,44 @@ def _branin_objective(x):
     return a * (x[:, 1] - b * x[:, 0]**2 + c * x[:, 0] - r)**2 + s * (1 - t) * np.cos(x[:, 0]) + s
 
 
-def _braninPlus_objective(x):
+def _braninPlus(x):
     # x is 3-dimensional: the first 2 dimensions are used for Branin,
     # and the third dimension adds an extra term.
-    return _branin_objective(x[:, :2]) + (x[:, 2]**2) * x[:, 1] * x[:, 0]
+    return _branin(x[:, :2]) + (x[:, 2]**2) * x[:, 1] * x[:, 0]
 
 
 _braninPlus_dict = {
     "input_dim": 3,
     # bounds for the 2 Branin variables and an extra variable
     "input_box": [[-5, 0, 0], [10, 15, 1]],
-    "single_objective": _braninPlus_objective,
+    "single_function": _braninPlus,
 }
 
 braninPlus = ComputerExperiment(
     _braninPlus_dict["input_dim"],
     _braninPlus_dict["input_box"],
-    single_objective=_braninPlus_dict["single_objective"]
+    single_function=_braninPlus_dict["single_function"]
 )
 
 # ===== BraninCos
 
 
-def _braninCos_objective(x):
+def _braninCos(x):
     # x is 3-dimensional: the first 2 dimensions for Branin,
     # and the third adds a cosine term.
-    return _branin_objective(x[:, :2]) + np.cos(x[:, 2] * x[:, 2]) * x[:, 1]
+    return _branin(x[:, :2]) + np.cos(x[:, 2] * x[:, 2]) * x[:, 1]
 
 
 _braninCos_dict = {
     "input_dim": 3,
     "input_box": [[-5, 0, 0], [10, 15, 1]],
-    "single_objective": _braninCos_objective,
+    "single_function": _braninCos,
 }
 
 braninCos = ComputerExperiment(
     _braninCos_dict["input_dim"],
     _braninCos_dict["input_box"],
-    single_objective=_braninCos_dict["single_objective"]
+    single_function=_braninCos_dict["single_function"]
 )
 
 # ===== Ishigami
@@ -2005,7 +2005,7 @@ ishigami = ComputerExperiment(
 # ===== Linkeletter
 
 
-def _linkeletter_objective(x):
+def _linkeletter(x):
     return (0.2 * x[:, 0] +
             0.2 / 2 * x[:, 1] +
             0.2 / 4 * x[:, 2] +
@@ -2019,19 +2019,19 @@ def _linkeletter_objective(x):
 _linkeletter_dict = {
     "input_dim": 8,
     "input_box": [[0]*8, [1]*8],
-    "single_objective": _linkeletter_objective,
+    "single_function": _linkeletter,
 }
 
 linkeletter = ComputerExperiment(
     _linkeletter_dict["input_dim"],
     _linkeletter_dict["input_box"],
-    single_objective=_linkeletter_dict["single_objective"]
+    single_function=_linkeletter_dict["single_function"]
 )
 
 # ===== Loeppky
 
 
-def _loeppky_objective(x):
+def _loeppky(x):
     return (6 * x[:, 0] +
             4 * x[:, 1] +
             5.5 * x[:, 2] +
@@ -2047,19 +2047,19 @@ def _loeppky_objective(x):
 _loeppky_dict = {
     "input_dim": 7,
     "input_box": [[0]*7, [1]*7],
-    "single_objective": _loeppky_objective,
+    "single_function": _loeppky,
 }
 
 loeppky = ComputerExperiment(
     _loeppky_dict["input_dim"],
     _loeppky_dict["input_box"],
-    single_objective=_loeppky_dict["single_objective"]
+    single_function=_loeppky_dict["single_function"]
 )
 
 # ===== Morris
 
 
-def _morris_objective(x):
+def _morris(x):
     k = 5
     a = np.sqrt(12) - 6 * np.sqrt(0.1 * (k - 1))
     b = np.sqrt(1.2 * (k - 1))
@@ -2077,19 +2077,19 @@ def _morris_objective(x):
 _morris_dict = {
     "input_dim": 5,
     "input_box": [[0]*5, [1]*5],
-    "single_objective": _morris_objective,
+    "single_function": _morris,
 }
 
 morris = ComputerExperiment(
     _morris_dict["input_dim"],
     _morris_dict["input_box"],
-    single_objective=_morris_dict["single_objective"]
+    single_function=_morris_dict["single_function"]
 )
 
 # ===== Levitan
 
 
-def _levitan_objective(x):
+def _levitan(x):
     b_vals = [2, 1.95, 1.9, 1.85, 1.8, 1.75, 1.7, 1.65,
               0.4228, 0.3077, 0.2169, 0.1471, 0.0951, 0.0577,
               0.0323, 0.0161, 0.0068, 0.0021, 0.0004, 0.0001]
@@ -2104,19 +2104,19 @@ def _levitan_objective(x):
 _levitan_dict = {
     "input_dim": 20,
     "input_box": [[0]*20, [1]*20],
-    "single_objective": _levitan_objective,
+    "single_function": _levitan,
 }
 
 levitan = ComputerExperiment(
     _levitan_dict["input_dim"],
     _levitan_dict["input_box"],
-    single_objective=_levitan_dict["single_objective"]
+    single_function=_levitan_dict["single_function"]
 )
 
 # ===== Borehole
 
 
-def _borehole_objective(x):
+def _borehole(x):
     # We assume gp.misc.testfunctions.borehole accepts x in the original domain.
     return gp.misc.testfunctions.borehole(x)
 
@@ -2127,13 +2127,13 @@ _borehole_dict = {
         [0.05, 100., 63070., 990., 63.1, 700., 1120., 9855.],
         [0.15, 50000., 115600., 1110., 116., 820., 1680., 12045.]
     ],
-    "single_objective": _borehole_objective,
+    "single_function": _borehole,
 }
 
 borehole = ComputerExperiment(
     _borehole_dict["input_dim"],
     _borehole_dict["input_box"],
-    single_objective=_borehole_dict["single_objective"]
+    single_function=_borehole_dict["single_function"]
 )
 
 # ===== SineQuadratic
@@ -2150,11 +2150,11 @@ def _sinequad(x):
 _sinequad_dict = {
     "input_dim": 2,
     "input_box": [[0, 0], [1, 1]],
-    "single_objective": _sinequad,
+    "single_function": _sinequad,
 }
 
 SineQuadratic = ComputerExperiment(
     _sinequad_dict["input_dim"],
     _sinequad_dict["input_box"],
-    single_objective=_sinequad_dict["single_objective"]
+    single_function=_sinequad_dict["single_function"]
 )
