@@ -2,28 +2,33 @@
 Test Problems (d: input dimension, q: total output dimension = q_obj + q_con)
 
 Scalar-Valued Problems (q = 1):
+  d = 1:
+    - TwoBumps              (d=1, q=1)
   d = 2:
     - TestProblem01         (d=2, q=1)
-    - GoldsteinPrice        (d=2, q=1)
-    - log-GoldsteinPrice    (d=2, q=1)
-    - Branin                (d=2, q=1)
     - Beale                 (d=2, q=1)
     - Booth                 (d=2, q=1)
+    - Branin                (d=2, q=1)
+    - Branin100             (d=2, q=1)
+    - CamelBack             (d=2, q=1)
+    - Easom                 (d=2, q=1)
+    - GoldsteinPrice        (d=2, q=1)
+    - log-GoldsteinPrice    (d=2, q=1)
     - SIN2                  (d=2, q=1)
     - Matyas                (d=2, q=1)
-    - CamelBack             (d=2, q=1)
     - Shubert               (d=2, q=1)
-    - Easom                 (d=2, q=1)
     - SineQuadratic         (d=2, q=1)
     - CrossInTray           (d=2, q=1)
     - CrossInTrayZoom       (d=2, q=1)
     - ThreeHumpCamelBack    (d=2, q=1)
+    - Wave                  (d=2, q=1)
   d = 3:
     - Hartman3              (d=3, q=1)
     - Ishigami              (d=3, q=1) [a=5, b=0.1]
     - BraninPlus            (d=3, q=1)
     - BraninCos             (d=3, q=1)
   d = 4:
+    - Ackley4               (d=4, q=1)
     - Dixon Price           (d=4, q=1)
     - Rosenbrock4           (d=4, q=1)
     - Zakharov4             (d=4, q=1)
@@ -32,7 +37,6 @@ Scalar-Valued Problems (q = 1):
     - Shekel5               (d=4, q=1, m=5)
     - PERM                  (d=4, q=1, β=1)
     - Michalewicz4          (d=4, q=1, m=10)
-    - Ackley4               (d=4, q=1)
   d = 6:
     - Rosenbrock6           (d=6, q=1)
     - Zakharov6             (d=6, q=1)
@@ -97,13 +101,14 @@ Authors: Emmanuel Vazquez <emmanuel.vazquez@centralesupelec.fr>
 Contributions from: Subhasish Basak, 2023
                     Sebastien Petit, 2022-2024
                     Eniko Bartok, 2025
+                    Boris Kratz, 2025
 
 Copyright (c) 2022-2025, CentraleSupelec
 License: GPLv3 (see LICENSE)
 """
 import numpy as np
 from gpmpcontrib.computerexperiment import ComputerExperiment
-from gpmp.misc.testfunctions import borehole, detpep8d
+from gpmp.misc.testfunctions import twobumps, borehole, detpep8d, hartmann4, braninhoo, hartmann4, wave
 
 _TEST = False
 
@@ -130,8 +135,6 @@ if _TEST:
     test_problem01.eval(np.array([[0.0, 0.0]]))
 
 # ===== TestProblem02
-
-
 def _test_problem02_objective(x):
     return x[:, 0]**2 + x[:, 1]**2
 
@@ -180,8 +183,6 @@ if _TEST:
     test_problem03.eval(np.array([[0.0, 0.0], [1.0, 1.0]]))
 
 # ===== TestProblem04
-
-
 def _test_problem04_objective1(x):
     return x[:, 0]**2 + x[:, 1]**2
 
@@ -209,6 +210,281 @@ test_problem04 = ComputerExperiment(
 
 if _TEST:
     test_problem04.eval(np.array([[0.0, 0.0], [1.0, 1.0]]))
+
+
+# ===== TwoBumps
+twobumps = ComputerExperiment(
+    1,  # dim of search space
+    [[-1], [1]],  # domain
+    single_function=twobumps,  # test function
+)
+
+# ===== Beale
+def _beale_objective(x):
+    x1 = x[:, 0]
+    x2 = x[:, 1]
+    return (1.5 - x1 + x1 * x2)**2 + (2.25 - x1 + x1 * x2**2)**2 + (2.625 - x1 + x1 * x2**3)**2
+
+
+_beale_dict = {
+    "input_dim": 2,
+    "input_box": [[-4.5, -4.5], [4.5, 4.5]],
+    "single_objective": _beale_objective,
+}
+
+beale = ComputerExperiment(
+    _beale_dict["input_dim"],
+    _beale_dict["input_box"],
+    single_objective=_beale_dict["single_objective"]
+)
+
+# ===== Booth
+def _booth_objective(x):
+    x1 = x[:, 0]
+    x2 = x[:, 1]
+    return (x1 + 2 * x2 - 7)**2 + (2 * x1 + x2 - 5)**2
+
+
+_booth_dict = {
+    "input_dim": 2,
+    "input_box": [[-10, -10], [10, 10]],
+    "single_objective": _booth_objective,
+}
+
+booth = ComputerExperiment(
+    _booth_dict["input_dim"],
+    _booth_dict["input_box"],
+    single_objective=_booth_dict["single_objective"]
+)
+
+
+# ===== Branin
+def _branin_objective(x):
+    a = 1
+    b = 5.1 / (4 * (np.pi) ** 2)
+    c = 5 / np.pi
+    r = 6
+    s = 10
+    t = 1 / (8 * np.pi)
+    return a * (x[:, 1] - b * x[:, 0] ** 2 + c * x[:, 0] - r) ** 2 + s * (1 - t) * np.cos(x[:, 0]) + s
+
+
+_branin_dict = {
+    "input_dim": 2,
+    "input_box": [[-5, 0], [10, 15]],
+    "single_objective": _branin_objective,
+}
+
+branin = ComputerExperiment(
+    _branin_dict["input_dim"],
+    _branin_dict["input_box"],
+    single_objective=_branin_dict["single_objective"]
+)
+
+# ===== Branin100 [-100, 100]^2
+branin100 = ComputerExperiment(
+    2,  # dim
+    [[-100]*2, [100]*2],  # domain
+    single_function=braninhoo,
+)
+
+# ===== CamelBack =====
+def _camel_back_objectives(x):
+    x1, x2 = x.T
+    y = - (4 - 2.1 * x1 ** 2 + (x1 ** 4)/3) * x1 ** 2 - \
+        x1 * x2 - (- 4 + 4 * x2 ** 2) * x2 ** 2
+    return - y
+
+
+_camel_back_dict = {
+    "input_dim": 2,
+    "input_box": [[-3, -2], [3, 2]],
+    "single_objective": _camel_back_objectives,
+}
+
+camel_back = ComputerExperiment(
+    _camel_back_dict["input_dim"],
+    _camel_back_dict["input_box"],
+    single_objective=_camel_back_dict["single_objective"],
+)
+
+# ===== CrossInTray
+def _crossintray_objective(x):
+    x1 = x[:, 0]
+    x2 = x[:, 1]
+    return - 10**(-4) * (
+        np.abs(
+            np.sin(x1) * np.sin(x2) *
+            np.exp(np.abs(100 - np.sqrt(x1 ** 2 + x2 ** 2)/np.pi))
+        ) + 1
+    ) ** (0.1)
+
+
+_crossintray_dict = {
+    "input_dim": 2,
+    "input_box": [[-10, -10], [10, 10]],
+    "single_objective": _crossintray_objective,
+}
+
+crossintray = ComputerExperiment(
+    _crossintray_dict["input_dim"],
+    _crossintray_dict["input_box"],
+    single_objective=_crossintray_dict["single_objective"]
+)
+
+# ====== CrossInTrayZoom
+_crossintrayzoom_dict = {
+    "input_dim": 2,
+    "input_box": [[-2, -2], [2, 2]],
+    "single_objective": _crossintray_objective,
+}
+
+crossintrayzoom = ComputerExperiment(
+    _crossintrayzoom_dict["input_dim"],
+    _crossintrayzoom_dict["input_box"],
+    single_objective=_crossintrayzoom_dict["single_objective"]
+)
+
+
+# ==== Easom
+def _easom_objective(x):
+    return - np.cos(x[:, 0]) * np.cos(x[:, 1]) * np.exp(- (x[:, 0] - np.pi)**2 - (x[:, 1] - np.pi)**2)
+
+
+_easom_dict = {
+    "input_dim": 2,
+    "input_box": [[-100, -100], [100, 100]],
+    "single_objective": _easom_objective,
+}
+
+easom = ComputerExperiment(
+    _easom_dict["input_dim"],
+    _easom_dict["input_box"],
+    single_objective=_easom_dict["single_objective"]
+)
+
+# ==== GoldsteinPrice function ====
+#
+# See https://www.sfu.ca/~ssurjano/goldpr.html
+#
+# References:
+# Dixon, L. C. W., & Szego, G. P. (1978). The global optimization problem: an introduction. Towards global optimization, 2, 1-15.
+# Molga, M., & Smutnicki, C. Test functions for optimization needs (2005). Retrieved June 2013, from http://www.zsd.ict.pwr.wroc.pl/files/docs/functions.pdf.
+#
+
+def _goldsteinprice_objective(x):
+    obj = (1 + ((x[:, 0] + x[:, 1] + 1)**2) * (19 - 14 * x[:, 0] + 3 *
+           x[:, 0]**2 - 14 * x[:, 1] + 6 * x[:, 0] * x[:, 1] + 3 * x[:, 1]**2))
+    obj = obj * (30 + ((2 * x[:, 0] - 3 * x[:, 1])**2) * (18 - 32 * x[:, 0] +
+                 12 * x[:, 0]**2 + 48 * x[:, 1] - 36 * x[:, 0] * x[:, 1] + 27 * x[:, 1]**2))
+    return obj
+
+
+_goldsteinprice_dict = {
+    "input_dim": 2,
+    "input_box": [[-2, -2], [2, 2]],
+    "single_objective": _goldsteinprice_objective,
+}
+
+goldsteinprice = ComputerExperiment(
+    _goldsteinprice_dict["input_dim"],
+    _goldsteinprice_dict["input_box"],
+    single_objective=_goldsteinprice_dict["single_objective"],
+)
+
+
+#  ==== log-GoldsteinPrice function ====
+def _goldstein_price_log_objective(x):
+    # Placeholder function for GoldsteinPrice
+    obj_gp = _goldsteinprice_objective(x).reshape(-1, 1)
+    return np.log(obj_gp)
+
+
+_goldstein_price_log_dict = {
+    "input_dim": 2,
+    "input_box": [[-2, -2], [2, 2]],
+    "single_objective": _goldstein_price_log_objective,
+}
+
+goldstein_price_log = ComputerExperiment(
+    _goldstein_price_log_dict["input_dim"],
+    _goldstein_price_log_dict["input_box"],
+    single_objective=_goldstein_price_log_dict["single_objective"],
+)
+
+# ===== Matyas
+def _matyas_objective(x):
+    x1 = x[:, 0]
+    x2 = x[:, 1]
+    return 0.26 * (x1 ** 2 + x2 ** 2) - 0.48 * x1 * x2
+
+
+_matyas_dict = {
+    "input_dim": 2,
+    "input_box": [[-10, -10], [10, 10]],
+    "single_objective": _matyas_objective,
+}
+
+matyas = ComputerExperiment(
+    _matyas_dict["input_dim"],
+    _matyas_dict["input_box"],
+    single_objective=_matyas_dict["single_objective"]
+)
+
+# ===== Shubert =====
+def _shubert_objectives(x):
+    x1, x2 = x.T
+    tmp1 = sum(i * np.cos((i + 1) * x1 + i) for i in range(1, 6))
+    tmp2 = sum(i * np.cos((i + 1) * x2 + i) for i in range(1, 6))
+    return tmp1 * tmp2
+
+
+_shubert_dict = {
+    "input_dim": 2,
+    "input_box": [[-10, -10], [10, 10]],
+    "single_objective": _shubert_objectives,
+}
+
+shubert = ComputerExperiment(
+    _shubert_dict["input_dim"],
+    _shubert_dict["input_box"],
+    single_objective=_shubert_dict["single_objective"],
+)
+
+# ===== ThreeHumpCamelBack ======
+def _three_hump_camel_back_objectives(x):
+    x1, x2 = x.T
+    return 2 * x1 ** 2 - 1.05 * x1**4 + (x1**6)/6 + x1 * x2 + x2**2
+
+
+_three_hump_camel_back_dict = {
+    "input_dim": 2,
+    "input_box": [[-5, -5], [5, 5]],
+    "single_objective": _three_hump_camel_back_objectives,
+}
+
+threehumpcamelback = ComputerExperiment(
+    _three_hump_camel_back_dict["input_dim"],
+    _three_hump_camel_back_dict["input_box"],
+    single_objective=_three_hump_camel_back_dict["single_objective"],
+)
+
+
+# ===== Wave
+wave = ComputerExperiment(
+    2,  # dim of search space
+    [[-1.1]*2, [1.1]*2],  # domain
+    single_function=wave,
+)
+
+
+# ===== Harmann4
+hartmann4 = ComputerExperiment(
+    4,  # dim of search space
+    [[0] * 4, [1] * 4],  # search box
+    single_function=hartmann4,  # test function
+)
+
 
 # ===== G1
 
@@ -823,57 +1099,6 @@ g24 = ComputerExperiment(
     _g24_dict["input_dim"],
     _g24_dict["input_box"],
     single_function=_g24_dict["single_function"]
-)
-
-# ==== GoldsteinPrice function ====
-#
-# See https://www.sfu.ca/~ssurjano/goldpr.html
-#
-# References:
-# Dixon, L. C. W., & Szego, G. P. (1978). The global optimization problem: an introduction. Towards global optimization, 2, 1-15.
-# Molga, M., & Smutnicki, C. Test functions for optimization needs (2005). Retrieved June 2013, from http://www.zsd.ict.pwr.wroc.pl/files/docs/functions.pdf.
-#
-
-
-def _goldsteinprice_objective(x):
-    obj = (1 + ((x[:, 0] + x[:, 1] + 1)**2) * (19 - 14 * x[:, 0] + 3 *
-           x[:, 0]**2 - 14 * x[:, 1] + 6 * x[:, 0] * x[:, 1] + 3 * x[:, 1]**2))
-    obj = obj * (30 + ((2 * x[:, 0] - 3 * x[:, 1])**2) * (18 - 32 * x[:, 0] +
-                 12 * x[:, 0]**2 + 48 * x[:, 1] - 36 * x[:, 0] * x[:, 1] + 27 * x[:, 1]**2))
-    return obj
-
-
-_goldsteinprice_dict = {
-    "input_dim": 2,
-    "input_box": [[-2, -2], [2, 2]],
-    "single_objective": _goldsteinprice_objective,
-}
-
-goldsteinprice = ComputerExperiment(
-    _goldsteinprice_dict["input_dim"],
-    _goldsteinprice_dict["input_box"],
-    single_objective=_goldsteinprice_dict["single_objective"],
-)
-
-#  ==== log-GoldsteinPrice function ====
-
-
-def _goldstein_price_log_objective(x):
-    # Placeholder function for GoldsteinPrice
-    obj_gp = _goldsteinprice_objective(x).reshape(-1, 1)
-    return np.log(obj_gp)
-
-
-_goldstein_price_log_dict = {
-    "input_dim": 2,
-    "input_box": [[-2, -2], [2, 2]],
-    "single_objective": _goldstein_price_log_objective,
-}
-
-goldstein_price_log = ComputerExperiment(
-    _goldstein_price_log_dict["input_dim"],
-    _goldstein_price_log_dict["input_box"],
-    single_objective=_goldstein_price_log_dict["single_objective"],
 )
 
 # ===== Shekel Problems ======
@@ -1543,67 +1768,6 @@ def create_schwefel_problem(d):
 
 schwefel10 = create_schwefel_problem(10)
 
-# ===== ThreeHumpCamelBack ======
-
-
-def _three_hump_camel_back_objectives(x):
-    x1, x2 = x.T
-    return 2 * x1 ** 2 - 1.05 * x1**4 + (x1**6)/6 + x1 * x2 + x2**2
-
-
-_three_hump_camel_back_dict = {
-    "input_dim": 2,
-    "input_box": [[-5, -5], [5, 5]],
-    "single_objective": _three_hump_camel_back_objectives,
-}
-
-threehumpcamelback = ComputerExperiment(
-    _three_hump_camel_back_dict["input_dim"],
-    _three_hump_camel_back_dict["input_box"],
-    single_objective=_three_hump_camel_back_dict["single_objective"],
-)
-
-
-# ===== CamelBack =====
-def _camel_back_objectives(x):
-    x1, x2 = x.T
-    y = - (4 - 2.1 * x1 ** 2 + (x1 ** 4)/3) * x1 ** 2 - \
-        x1 * x2 - (- 4 + 4 * x2 ** 2) * x2 ** 2
-    return - y
-
-
-_camel_back_dict = {
-    "input_dim": 2,
-    "input_box": [[-3, -2], [3, 2]],
-    "single_objective": _camel_back_objectives,
-}
-
-camel_back = ComputerExperiment(
-    _camel_back_dict["input_dim"],
-    _camel_back_dict["input_box"],
-    single_objective=_camel_back_dict["single_objective"],
-)
-
-
-# ===== Shubert =====
-def _shubert_objectives(x):
-    x1, x2 = x.T
-    tmp1 = sum(i * np.cos((i + 1) * x1 + i) for i in range(1, 6))
-    tmp2 = sum(i * np.cos((i + 1) * x2 + i) for i in range(1, 6))
-    return tmp1 * tmp2
-
-
-_shubert_dict = {
-    "input_dim": 2,
-    "input_box": [[-10, -10], [10, 10]],
-    "single_objective": _shubert_objectives,
-}
-
-shubert = ComputerExperiment(
-    _shubert_dict["input_dim"],
-    _shubert_dict["input_box"],
-    single_objective=_shubert_dict["single_objective"],
-)
 
 # ===== Dixon Price  ======
 # See https://www.sfu.ca/~ssurjano/dixonpr.html
@@ -1761,151 +1925,6 @@ zakharov4 = create_zakharov_problem(4)
 zakharov6 = create_zakharov_problem(6)
 zakharov10 = create_zakharov_problem(10)
 
-# ==== Easom
-
-
-def _easom_objective(x):
-    return - np.cos(x[:, 0]) * np.cos(x[:, 1]) * np.exp(- (x[:, 0] - np.pi)**2 - (x[:, 1] - np.pi)**2)
-
-
-_easom_dict = {
-    "input_dim": 2,
-    "input_box": [[-100, -100], [100, 100]],
-    "single_objective": _easom_objective,
-}
-
-easom = ComputerExperiment(
-    _easom_dict["input_dim"],
-    _easom_dict["input_box"],
-    single_objective=_easom_dict["single_objective"]
-)
-
-# ===== Matyas
-
-
-def _matyas_objective(x):
-    x1 = x[:, 0]
-    x2 = x[:, 1]
-    return 0.26 * (x1 ** 2 + x2 ** 2) - 0.48 * x1 * x2
-
-
-_matyas_dict = {
-    "input_dim": 2,
-    "input_box": [[-10, -10], [10, 10]],
-    "single_objective": _matyas_objective,
-}
-
-matyas = ComputerExperiment(
-    _matyas_dict["input_dim"],
-    _matyas_dict["input_box"],
-    single_objective=_matyas_dict["single_objective"]
-)
-
-
-# ===== BOOTH
-
-def _booth_objective(x):
-    x1 = x[:, 0]
-    x2 = x[:, 1]
-    return (x1 + 2 * x2 - 7)**2 + (2 * x1 + x2 - 5)**2
-
-
-_booth_dict = {
-    "input_dim": 2,
-    "input_box": [[-10, -10], [10, 10]],
-    "single_objective": _booth_objective,
-}
-
-booth = ComputerExperiment(
-    _booth_dict["input_dim"],
-    _booth_dict["input_box"],
-    single_objective=_booth_dict["single_objective"]
-)
-
-
-# ===== CrossInTray
-
-def _crossintray_objective(x):
-    x1 = x[:, 0]
-    x2 = x[:, 1]
-    return - 10**(-4) * (
-        np.abs(
-            np.sin(x1) * np.sin(x2) *
-            np.exp(np.abs(100 - np.sqrt(x1 ** 2 + x2 ** 2)/np.pi))
-        ) + 1
-    ) ** (0.1)
-
-
-_crossintray_dict = {
-    "input_dim": 2,
-    "input_box": [[-10, -10], [10, 10]],
-    "single_objective": _crossintray_objective,
-}
-
-crossintray = ComputerExperiment(
-    _crossintray_dict["input_dim"],
-    _crossintray_dict["input_box"],
-    single_objective=_crossintray_dict["single_objective"]
-)
-
-# ====== CrossInTrayZoom
-
-_crossintrayzoom_dict = {
-    "input_dim": 2,
-    "input_box": [[-2, -2], [2, 2]],
-    "single_objective": _crossintray_objective,
-}
-
-crossintrayzoom = ComputerExperiment(
-    _crossintrayzoom_dict["input_dim"],
-    _crossintrayzoom_dict["input_box"],
-    single_objective=_crossintrayzoom_dict["single_objective"]
-)
-
-# ===== Beale
-
-
-def _beale_objective(x):
-    x1 = x[:, 0]
-    x2 = x[:, 1]
-    return (1.5 - x1 + x1 * x2)**2 + (2.25 - x1 + x1 * x2**2)**2 + (2.625 - x1 + x1 * x2**3)**2
-
-
-_beale_dict = {
-    "input_dim": 2,
-    "input_box": [[-4.5, -4.5], [4.5, 4.5]],
-    "single_objective": _beale_objective,
-}
-
-beale = ComputerExperiment(
-    _beale_dict["input_dim"],
-    _beale_dict["input_box"],
-    single_objective=_beale_dict["single_objective"]
-)
-
-
-# ===== Branin
-def _branin_objective(x):
-    a = 1
-    b = 5.1 / (4 * (np.pi) ** 2)
-    c = 5 / np.pi
-    r = 6
-    s = 10
-    t = 1 / (8 * np.pi)
-    return a * (x[:, 1] - b * x[:, 0] ** 2 + c * x[:, 0] - r) ** 2 + s * (1 - t) * np.cos(x[:, 0]) + s
-
-
-_branin_dict = {
-    "input_dim": 2,
-    "input_box": [[-5, 0], [10, 15]],
-    "single_objective": _branin_objective,
-}
-
-branin = ComputerExperiment(
-    _branin_dict["input_dim"],
-    _branin_dict["input_box"],
-    single_objective=_branin_dict["single_objective"]
-)
 
 
 # ===== detpep8d
@@ -1930,7 +1949,7 @@ detpep8d = ComputerExperiment(
 # ===== BraninPlus
 
 
-def _branin_objective(x):
+def _branin(x):
     a = 1
     b = 5.1 / (4 * (np.pi)**2)
     c = 5 / np.pi
@@ -1940,44 +1959,44 @@ def _branin_objective(x):
     return a * (x[:, 1] - b * x[:, 0]**2 + c * x[:, 0] - r)**2 + s * (1 - t) * np.cos(x[:, 0]) + s
 
 
-def _braninPlus_objective(x):
+def _braninPlus(x):
     # x is 3-dimensional: the first 2 dimensions are used for Branin,
     # and the third dimension adds an extra term.
-    return _branin_objective(x[:, :2]) + (x[:, 2]**2) * x[:, 1] * x[:, 0]
+    return _branin(x[:, :2]) + (x[:, 2]**2) * x[:, 1] * x[:, 0]
 
 
 _braninPlus_dict = {
     "input_dim": 3,
     # bounds for the 2 Branin variables and an extra variable
     "input_box": [[-5, 0, 0], [10, 15, 1]],
-    "single_objective": _braninPlus_objective,
+    "single_function": _braninPlus,
 }
 
 braninPlus = ComputerExperiment(
     _braninPlus_dict["input_dim"],
     _braninPlus_dict["input_box"],
-    single_objective=_braninPlus_dict["single_objective"]
+    single_function=_braninPlus_dict["single_function"]
 )
 
 # ===== BraninCos
 
 
-def _braninCos_objective(x):
+def _braninCos(x):
     # x is 3-dimensional: the first 2 dimensions for Branin,
     # and the third adds a cosine term.
-    return _branin_objective(x[:, :2]) + np.cos(x[:, 2] * x[:, 2]) * x[:, 1]
+    return _branin(x[:, :2]) + np.cos(x[:, 2] * x[:, 2]) * x[:, 1]
 
 
 _braninCos_dict = {
     "input_dim": 3,
     "input_box": [[-5, 0, 0], [10, 15, 1]],
-    "single_objective": _braninCos_objective,
+    "single_function": _braninCos,
 }
 
 braninCos = ComputerExperiment(
     _braninCos_dict["input_dim"],
     _braninCos_dict["input_box"],
-    single_objective=_braninCos_dict["single_objective"]
+    single_function=_braninCos_dict["single_function"]
 )
 
 # ===== Ishigami
@@ -2005,7 +2024,7 @@ ishigami = ComputerExperiment(
 # ===== Linkeletter
 
 
-def _linkeletter_objective(x):
+def _linkeletter(x):
     return (0.2 * x[:, 0] +
             0.2 / 2 * x[:, 1] +
             0.2 / 4 * x[:, 2] +
@@ -2019,19 +2038,19 @@ def _linkeletter_objective(x):
 _linkeletter_dict = {
     "input_dim": 8,
     "input_box": [[0]*8, [1]*8],
-    "single_objective": _linkeletter_objective,
+    "single_function": _linkeletter,
 }
 
 linkeletter = ComputerExperiment(
     _linkeletter_dict["input_dim"],
     _linkeletter_dict["input_box"],
-    single_objective=_linkeletter_dict["single_objective"]
+    single_function=_linkeletter_dict["single_function"]
 )
 
 # ===== Loeppky
 
 
-def _loeppky_objective(x):
+def _loeppky(x):
     return (6 * x[:, 0] +
             4 * x[:, 1] +
             5.5 * x[:, 2] +
@@ -2047,19 +2066,19 @@ def _loeppky_objective(x):
 _loeppky_dict = {
     "input_dim": 7,
     "input_box": [[0]*7, [1]*7],
-    "single_objective": _loeppky_objective,
+    "single_function": _loeppky,
 }
 
 loeppky = ComputerExperiment(
     _loeppky_dict["input_dim"],
     _loeppky_dict["input_box"],
-    single_objective=_loeppky_dict["single_objective"]
+    single_function=_loeppky_dict["single_function"]
 )
 
 # ===== Morris
 
 
-def _morris_objective(x):
+def _morris(x):
     k = 5
     a = np.sqrt(12) - 6 * np.sqrt(0.1 * (k - 1))
     b = np.sqrt(1.2 * (k - 1))
@@ -2077,19 +2096,19 @@ def _morris_objective(x):
 _morris_dict = {
     "input_dim": 5,
     "input_box": [[0]*5, [1]*5],
-    "single_objective": _morris_objective,
+    "single_function": _morris,
 }
 
 morris = ComputerExperiment(
     _morris_dict["input_dim"],
     _morris_dict["input_box"],
-    single_objective=_morris_dict["single_objective"]
+    single_function=_morris_dict["single_function"]
 )
 
 # ===== Levitan
 
 
-def _levitan_objective(x):
+def _levitan(x):
     b_vals = [2, 1.95, 1.9, 1.85, 1.8, 1.75, 1.7, 1.65,
               0.4228, 0.3077, 0.2169, 0.1471, 0.0951, 0.0577,
               0.0323, 0.0161, 0.0068, 0.0021, 0.0004, 0.0001]
@@ -2104,19 +2123,19 @@ def _levitan_objective(x):
 _levitan_dict = {
     "input_dim": 20,
     "input_box": [[0]*20, [1]*20],
-    "single_objective": _levitan_objective,
+    "single_function": _levitan,
 }
 
 levitan = ComputerExperiment(
     _levitan_dict["input_dim"],
     _levitan_dict["input_box"],
-    single_objective=_levitan_dict["single_objective"]
+    single_function=_levitan_dict["single_function"]
 )
 
 # ===== Borehole
 
 
-def _borehole_objective(x):
+def _borehole(x):
     # We assume gp.misc.testfunctions.borehole accepts x in the original domain.
     return gp.misc.testfunctions.borehole(x)
 
@@ -2127,13 +2146,13 @@ _borehole_dict = {
         [0.05, 100., 63070., 990., 63.1, 700., 1120., 9855.],
         [0.15, 50000., 115600., 1110., 116., 820., 1680., 12045.]
     ],
-    "single_objective": _borehole_objective,
+    "single_function": _borehole,
 }
 
 borehole = ComputerExperiment(
     _borehole_dict["input_dim"],
     _borehole_dict["input_box"],
-    single_objective=_borehole_dict["single_objective"]
+    single_function=_borehole_dict["single_function"]
 )
 
 # ===== SineQuadratic
@@ -2150,11 +2169,11 @@ def _sinequad(x):
 _sinequad_dict = {
     "input_dim": 2,
     "input_box": [[0, 0], [1, 1]],
-    "single_objective": _sinequad,
+    "single_function": _sinequad,
 }
 
 SineQuadratic = ComputerExperiment(
     _sinequad_dict["input_dim"],
     _sinequad_dict["input_box"],
-    single_objective=_sinequad_dict["single_objective"]
+    single_function=_sinequad_dict["single_function"]
 )
