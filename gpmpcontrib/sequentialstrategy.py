@@ -16,7 +16,7 @@ License: GPLv3 (see LICENSE)
 import time
 import pickle
 import gpmp.num as gnp
-from gpmp.misc.smc import SMC
+from gpmp.misc.smc import SMC, ParticlesSetConfig, SMCConfig
 from gpmpcontrib import SequentialPrediction
 
 
@@ -315,11 +315,13 @@ class SequentialStrategySMC(SequentialStrategy):
         -----
         At initialization, particles are distributed according to the initial distribution
         """
-        return SMC(
-            box,
-            n_smc,
+        particles_config = ParticlesSetConfig(
             initial_distribution_type=initial_distribution_type,
-            compute_next_logpdf_param_method="p0",
+            resample_scheme="residual",
+        )
+        smc_config = SMCConfig(compute_next_logpdf_param_method="p0", mh_steps=40)
+        return SMC(
+            box, n=n_smc, particles_config=particles_config, smc_config=smc_config
         )
 
     def set_initial_xt(self):
@@ -449,10 +451,13 @@ class SequentialStrategyBSS(SequentialStrategy):
         -----
         At initialization, particles are distributed according to the initial distribution
         """
-        return SMC(
-            box,
-            n_smc,
+        particles_config = ParticlesSetConfig(
             initial_distribution_type=initial_distribution_type,
+            resample_scheme="residual",
+        )
+        smc_config = SMCConfig(compute_next_logpdf_param_method="p0", mh_steps=40)
+        return SMC(
+            box, n=n_smc, particles_config=particles_config, smc_config=smc_config
         )
 
     def set_initial_xt(self):
