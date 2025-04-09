@@ -768,8 +768,7 @@ class ModelContainer:
         model_indices=None,
         **kwargs,
     ):
-        """
-        Run SMC sampling for GP model parameters from the posterior distribution.
+        """Run SMC sampling for GP model parameters from the posterior distribution.
 
         If model_indices is not provided, all models are processed.
 
@@ -787,7 +786,9 @@ class ModelContainer:
               - max_stages: int, optional
               - debug: bool, optional
               - plot: bool, optional
-            (See the documentation of sample_from_selection_criterion_smc for details.)
+            (See the documentation of
+            gpmp.misc.param_posterior.sample_from_selection_criterion_smc
+            for details.)
 
         Returns
         -------
@@ -795,6 +796,7 @@ class ModelContainer:
             Dictionary mapping model index to:
               - 'particles': Final particle positions (np.ndarray).
               - 'smc': SMC instance containing additional logs and diagnostics.
+
         """
         from gpmp.misc.param_posterior import sample_from_selection_criterion_smc
 
