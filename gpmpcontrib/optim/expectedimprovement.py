@@ -58,7 +58,7 @@ class ExpectedImprovementSMC(SequentialStrategySMC):
             gnp.asarray(b),
             gnp.maximum(
                 min_threshold,
-                sampcrit.log_excursion_probability(u, -zpm, sigma2_scale_factor * zpv),
+                sampcrit.excursion_logprobability(u, -zpm, sigma2_scale_factor * zpv),
             ).flatten(),
             -gnp.inf,
         )

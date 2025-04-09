@@ -192,7 +192,7 @@ class ExcursionSetBSS(SequentialStrategyBSS):
             inside_box,
             gnp.maximum(
                 min_threshold,
-                sampcrit.log_excursion_probability(u, zpm, zpv),
+                sampcrit.excursion_logprobability(u, zpm, zpv),
             ).flatten(),
             -gnp.inf,
         )

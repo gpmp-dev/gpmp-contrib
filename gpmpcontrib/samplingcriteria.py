@@ -1,6 +1,6 @@
 # --------------------------------------------------------------
 # Author: Emmanuel Vazquez <emmanuel.vazquez@centralesupelec.fr>
-# Copyright (c) 2022-2023, CentraleSupelec
+# Copyright (c) 2022-2025, CentraleSupelec
 # License: GPLv3 (see LICENSE)
 # --------------------------------------------------------------
 import gpmp.num as gnp
@@ -45,7 +45,7 @@ def excursion_probability(t, zpm, zpv):
     return p
 
 
-def log_excursion_probability(t, zpm, zpv):
+def excursion_logprobability(t, zpm, zpv):
     """Computes the log probabilities of exceeding the threshold t for
     Gaussian predictive distributions with means zpm and variances zpv.
 
@@ -72,10 +72,14 @@ def excursion_misclassification_probability(t, zpm, zpv):
     Computes the probability of misclassification for the excursion set.
 
     The misclassification probability is defined as:
-        tau(x) = min(P_n(ξ(x) > t), 1 - P_n(ξ(x) >t))
+        tau_n(x) = min(P_n(ξ(x) > t), 1 - P_n(ξ(x) > t))
 
     This measures the uncertainty in classifying whether a point belongs
-    to the excursion set or not.
+    to the excursion set or not assuming a hard classifier eta_n(x) = 1_{p_n(x) > 1/2}
+
+    See Sequential design of computer experiments for the estimation of a probability of failure.
+    J Bect, D Ginsbourger, L Li, V Picheny, E Vazquez. Statistics and Computing 22, 773-793
+    https://arxiv.org/pdf/1009.5177
 
     Parameters
     ----------
@@ -95,16 +99,72 @@ def excursion_misclassification_probability(t, zpm, zpv):
     return gnp.minimum(g, 1 - g)
 
 
-def excursion_wMSE(t, zpm, zpv):
+def box_wMSE(box, zpm, zpv, normalization=1.0, alpha=1.0, beta=1.0):
+    """Computes the weighted mean squared error (wMSE) for box/bounds estimation.
+    
+    The wMSE combines misclassification uncertainty and predictive variance:
+        wMSE = τ^α * (σ² * normalization)^β
+    where:
+        τ = misclassification probability (min(p, 1-p))
+        σ² = predictive variance
+        α, β = weighting exponents
+    
+    Parameters
+    ----------
+    box : (2, dim_output) array-like
+        [lower, upper] bounds for each output dimension
+    zpm : (n, dim_output) gnp.array
+        Predictive means
+    zpv : (n, dim_output) gnp.array
+        Predictive variances (must be non-negative)
+    normalization : float or (dim_output,) array-like, optional
+        Scaling factor for variance (default: 1.0). Can be either:
+        - Single float (applied to all dimensions)
+        - Per-dimension scaling factors
+    alpha : float, optional
+        Exponent for misclassification term (default: 1.0)
+    beta : float, optional
+        Exponent for variance term (default: 1.0)
+    
+    Returns
+    -------
+    tuple of (gnp.array, gnp.array)
+        - wmse_sum: (n, 1) array of summed wMSE across dimensions
+        - wmse: (n, dim_output) array of wMSE per dimension
+    
+    Notes
+    -----
+    - When α=1 and β=1, this is equivalent to:
+      τ * σ * sqrt(normalization)
+    - The normalization parameter allows per-dimension scaling
+    - Higher α emphasizes uncertain classifications
+    - Higher β emphasizes high-variance regions
+    """
+    tau_prod, tau = box_misclassification_probability(box, zpm, zpv)
+    
+    # Convert normalization to array and ensure proper shape
+    norm_array = gnp.asarray(normalization)
+    if norm_array.ndim == 0:
+        norm_array = gnp.full(zpv.shape[1], norm_array)
+    elif norm_array.shape != (zpv.shape[1],):
+        raise ValueError("normalization must be scalar or have shape (dim_output,)")
+    
+    # Broadcast normalization to match zpv shape
+    norm_factors = norm_array[None, :]  # Shape (1, dim_output)
+    
+    wmse = tau**alpha * (zpv * norm_factors)**beta
+    return gnp.sum(wmse, axis=1, keepdims=True), wmse
+
+def excursion_wMSE(t, zpm, zpv, alpha=1.0, beta=0.5):
     """
     Computes the weighted mean squared error (wMSE) for excursion set estimation.
 
     The wMSE is defined as:
-        wMSE(x) = tau(x) * sqrt(zpv)
+        wMSE(x) = tau(x) * zpv
 
     where:
       - tau(x) is the misclassification probability,
-      - sqrt(zpv) represents the predictive uncertainty.
+      - zpv is the predictive variance.
 
     Parameters
     ----------
@@ -119,32 +179,202 @@ def excursion_wMSE(t, zpm, zpv):
     -------
     gnp.array, shape (M, 1)
         Weighted mean squared error at each point.
+
+    Notes
+    -----
+    - Weighting behavior:
+      * α controls misclassification sensitivity
+      * Higher α emphasizes uncertain classifications (boundary regions)
+      * Higher β emphasizes high-variance regions
+      * β=1.0: Strong focus on high-variance regions (σ² term
+        dominates). For global exploration, β=1.0 may be preferred.
+      * β=0.5: Balanced exploration (σ term, recommended default). For
+        excursion set estimation, β=0.5 typically provides better
+        boundary detection.
     """
     tau = excursion_misclassification_probability(t, zpm, zpv)
-    return tau * gnp.sqrt(zpv)
+    return tau**alpha * zpv**beta
 
 
-def probability_box(box, zpm, zpv):
-    """Computes the probability to be in a box"""
-    dim_output = zpm.shape[1]
+def box_probability(box, zpm, zpv):
+    """Compute probability that predictions fall within given bounds
+    for each dimension.
 
-    pn = gnp.empty(zpm.shape)
-    for j in range(dim_output):
+    For Gaussian predictions N(zpm, zpv), calculates P(lower <= value
+    <= upper) per dimension.
 
-        delta_min = box[0][j] - zpm[:, j]
-        delta_max = box[1][j] - zpm[:, j]
-        sigma = gnp.sqrt(zpv)
-        b = sigma > 0
+    Parameters
+    ----------
+    box : (2, dim_output) array-like
+        [lower, upper] bounds for each output dimension
+    zpm : (n, dim_output) gnp.array
+        Predictive means
+    zpv : (n, dim_output) gnp.array
+        Predictive variances (non-negative)
 
-        # Compute pn where sigma > 0
-        u_min = gnp.where(b, delta_min / sigma, 0)
-        u_max = gnp.where(b, delta_max / sigma, 0)
-        pn = gnp.where(b, normal.cdf(u_max) - normal.cdf(u_min), 0)
+    Returns
+    -------
+    Returns
+    -------
+    tuple of (gnp.array, gnp.array)
+        - product_probs: (n, 1) array of product probabilities across dimensions
+        - probs: (n, dim_output) array of probabilities per dimension
 
-        # Compute pn where sigma == 0
-        pn = gnp.where(b, pn, delta_max > 0 & delta_min < 0)
+    Notes
+    -----
+    - Returns 1 when zpv=0 and zpm is within bounds, 0 otherwise
+    - Handles infinite bounds
 
-        return pn
+    """
+    lower, upper = gnp.asarray(box[0]), gnp.asarray(box[1])
+    delta_min, delta_max = lower - zpm, upper - zpm
+    sigma = gnp.sqrt(zpv)
+    b = sigma > 0
+
+    # Compute probabilities
+    u_min = gnp.where(b, delta_min / sigma, 0)
+    u_max = gnp.where(b, delta_max / sigma, 0)
+    probs = gnp.where(
+        b, gnp.normal.cdf(u_max) - gnp.normal.cdf(u_min), (delta_max > 0) & (delta_min < 0)
+    )
+
+    # Compute product across dimensions (axis=1)
+    probs_product = gnp.prod(probs, axis=1, keepdims=True)
+
+    return probs_product, probs
+
+
+def box_logprobability(box, zpm, zpv):
+    """Compute log probabilities of predictions being within given bounds.
+
+    Returns
+    -------
+    tuple of (gnp.array, gnp.array)
+        - sum_log_probs: (n, 1) array of summed log probabilities across dimensions
+        - log_probs: (n, dim_output) array of log probabilities per dimension
+    """
+    lower, upper = gnp.asarray(box[0]), gnp.asarray(box[1])
+    delta_min, delta_max = lower - zpm, upper - zpm
+    sigma = gnp.sqrt(zpv)
+    b = sigma > 0
+
+    # Compute log probabilities
+    u_min = gnp.where(b, delta_min / sigma, 0)
+    u_max = gnp.where(b, delta_max / sigma, 0)
+
+    log_phi_max = gnp.normal.logcdf(u_max)
+    log_phi_min = gnp.normal.logcdf(u_min)
+
+    mask = log_phi_max > log_phi_min
+    log_probs = gnp.where(
+        b & mask,
+        log_phi_max + gnp.log1p(-gnp.exp(log_phi_min - log_phi_max)),
+        gnp.where((delta_max > 0) & (delta_min < 0), 0.0, -gnp.inf),
+    )
+
+    # Compute sum across dimensions (axis=1)
+    sum_logprobs = gnp.sum(log_probs, axis=1, keepdims=True)
+
+    return sum_logprobs, log_probs
+
+
+def box_misclassification_probability(box, zpm, zpv):
+    """
+    Computes the probability of misclassification for a box.
+
+    Returns
+    -------
+    gnp.array, shape (M, 1)
+        Misclassification probabilities for each point.
+    """
+    g_prod, g = box_probability(box, zpm, zpv)
+    return gnp.minimum(g_prod, 1 - g_prod), gnp.minimum(g, 1 - g)
+
+
+def box_misclassification_logprobability(box, zpm, zpv):
+    """Computes log misclassification probabilities for box estimation.
+    
+    Numerically stable version using log probabilities to avoid underflow.
+    
+    Returns
+    -------
+    tuple of (gnp.array, gnp.array)
+        - sum_log_tau: (n, 1) array of summed log misclassification probs
+        - log_tau: (n, dim_output) array of log misclassification probs
+    """
+    # Get log probabilities (more stable than log(probability))
+    sum_log_probs, log_probs = box_logprobability(box, zpm, zpv)
+    
+    # Compute log(1 - exp(log_probs)) using log1mexp for stability
+    log_1_minus_p = gnp.log1p(-gnp.exp(log_probs))  # More accurate than log(1-p)
+    
+    # log_tau = log(min(p, 1-p)) = min(log_probs, log_1_minus_p)
+    log_tau = gnp.minimum(log_probs, log_1_minus_p)
+    
+    # Sum across dimensions
+    sum_log_tau = gnp.sum(log_tau, axis=1, keepdims=True)
+    
+    return sum_log_tau, log_tau
+
+
+def box_wMSE(box, zpm, zpv, normalization=1.0, alpha=1.0, beta=0.5):
+    """Computes the weighted mean squared error (wMSE) for box/bounds estimation.
+
+    The wMSE combines misclassification uncertainty and predictive variance:
+        wMSE = τ^α * (σ² * normalization)^β
+    where:
+        τ = misclassification probability (min(p, 1-p))
+        σ² = predictive variance
+        α, β = weighting exponents
+
+    Parameters
+    ----------
+    box : (2, dim_output) array-like
+        [lower, upper] bounds for each output dimension
+    zpm : (n, dim_output) gnp.array
+        Predictive means
+    zpv : (n, dim_output) gnp.array
+        Predictive variances (must be non-negative)
+    normalization : float or (dim_output,) array-like, optional
+        Scaling factor for variance (default: 1.0). Can be either:
+        - Single float (applied to all dimensions)
+        - Per-dimension scaling factors
+    alpha : float, optional
+        Exponent for misclassification term (default: 1.0)
+    beta : float, optional
+        Exponent for variance term (default: 1.0)
+
+    Returns
+    -------
+    tuple of (gnp.array, gnp.array)
+        - wmse_sum: (n, 1) array of summed wMSE across dimensions
+        - wmse: (n, dim_output) array of wMSE per dimension
+
+    Notes
+    -----
+    - The normalization parameter allows per-dimension scaling
+    - Weighting behavior:
+      * α controls misclassification sensitivity
+      * Higher α emphasizes uncertain classifications (boundary regions)
+      * Higher β emphasizes high-variance regions
+      * β=1.0: Strong focus on high-variance regions (σ² term
+        dominates). For global exploration, β=1.0 may be preferred.
+      * β=0.5: Balanced exploration (σ term, recommended default). For
+        excursion set estimation, β=0.5 typically provides better
+        boundary detection.
+    """
+    # Get log misclassification probabilities
+    sum_log_tau, log_tau = box_misclassification_logprobability(box, zpm, zpv)
+    # Convert back from log space with proper scaling
+    tau_alpha = gnp.exp(alpha * log_tau)
+    # Compute variance term
+    var_term = (zpv * normalization)**beta
+    # Compute per-dimension wMSE
+    wmse = tau_alpha * var_term
+    # Sum across dimensions (in original space)
+    wmse_sum = gnp.sum(wmse, axis=1, keepdims=True)
+    
+    return wmse_sum, wmse
 
 
 def expected_improvement(t, zpm, zpv):

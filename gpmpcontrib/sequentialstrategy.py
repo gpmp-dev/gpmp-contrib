@@ -245,7 +245,7 @@ class SequentialStrategyGridSearch(SequentialStrategy):
         self.n_iter += 1
         self.history.setdefault("eval_indices", []).append(int(best_idx))
         self.history.setdefault("criterion_best", []).append(
-            float(self.sampling_criterion_values[best_idx])
+            gnp.to_scalar(self.sampling_criterion_values[best_idx])
         )
         # Save a snapshot of the model parameters.
         self.history.setdefault("model_params", []).append(self.get_model_params())
