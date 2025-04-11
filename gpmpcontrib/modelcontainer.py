@@ -474,32 +474,55 @@ class ModelContainer:
 
         return crit.evaluate, crit.gradient, crit.evaluate_no_grad
 
-    def select_params(self, xi, zi, force_param_initial_guess=True):
-        """Parameter selection"""
+    def select_params(self, xi, zi, force_param_initial_guess=True, param0=None):
+        """Parameter selection with optional initial parameter guess.
+
+        Parameters
+        ----------
+        xi : array_like
+            Input data points.
+        zi : array_like
+            Output data values.
+        force_param_initial_guess : bool, optional
+            If True, forces the calculation of initial guess using the procedure.
+        param0 : array or list of arrays, optional
+            If provided, used as the initial guess for parameters.
+            - When output_dim > 1, it must be a list of arrays (one per output).
+            - When output_dim == 1, it can be either a single array or a list with one array.
+            In both cases, each array should be the concatenation of mean parameters and covariance parameters.
+        """
 
         xi_ = gnp.asarray(xi)
         zi_ = gnp.asarray(zi)
         if zi_.ndim == 1:
             zi_ = zi_.reshape(-1, 1)
 
+        if param0 is not None and self.output_dim == 1 and not isinstance(param0, list):
+            param0 = [param0]
+            
         for i in range(self.output_dim):
             tic = time.time()
 
             model = self.models[i]
             mpl = model["mean_paramlength"]
 
-            if model["model"].covparam is None or force_param_initial_guess:
-                initial_guess_procedure = model["parameters_initial_guess_procedure"]
-                if mpl == 0:
-                    meanparam0 = gnp.array([])
-                    covparam0 = initial_guess_procedure(model["model"], xi_, zi_[:, i])
-                else:
-                    (meanparam0, covparam0) = initial_guess_procedure(
-                        model["model"], xi_, zi_[:, i]
-                    )
+            if param0 is not None:
+                param0_model = param0[i]
+                meanparam0 = param0_model[:mpl]
+                covparam0 = param0_model[mpl:]
             else:
-                meanparam0 = model["model"].meanparam
-                covparam0 = model["model"].covparam
+                if model["model"].covparam is None or force_param_initial_guess:
+                    initial_guess_procedure = model["parameters_initial_guess_procedure"]
+                    if mpl == 0:
+                        meanparam0 = gnp.array([])
+                        covparam0 = initial_guess_procedure(model["model"], xi_, zi_[:, i])
+                    else:
+                        (meanparam0, covparam0) = initial_guess_procedure(
+                            model["model"], xi_, zi_[:, i]
+                        )
+                else:
+                    meanparam0 = model["model"].meanparam
+                    covparam0 = model["model"].covparam
 
             param0 = gnp.concatenate((meanparam0, covparam0))
 
