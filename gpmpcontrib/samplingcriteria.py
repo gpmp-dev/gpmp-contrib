@@ -181,7 +181,7 @@ def box_probability(box, zpm, zpv):
     probs = gnp.where(
         b, 
         gnp.normal.cdf(u_max) - gnp.normal.cdf(u_min), 
-        ((delta_max > 0) & (delta_min < 0)).float()
+        gnp.asdouble((delta_max > 0) & (delta_min < 0))
     )
 
     # Compute product across dimensions (axis=1)
@@ -237,7 +237,7 @@ def box_misclassification_probability(box, zpm, zpv):
     return gnp.minimum(g_prod, 1 - g_prod), gnp.minimum(g, 1 - g)
 
 
-def box_misclassification_logprobability(box, zpm, zpv):
+def box_misclassification_logprobability(box, zpm, zpv, clip_logthreshold=1e-6):
     """Computes log misclassification probabilities for box estimation.
     
     Numerically stable version using log probabilities to avoid underflow.
@@ -252,7 +252,9 @@ def box_misclassification_logprobability(box, zpm, zpv):
     sum_log_probs, log_probs = box_logprobability(box, zpm, zpv)
     
     # Compute log(1 - exp(log_probs)) using log1mexp for stability
-    log_1_minus_p = gnp.log1p(-gnp.exp(log_probs))  # More accurate than log(1-p)
+    probs = gnp.exp(log_probs)
+    probs = gnp.clip(probs, clip_logthreshold, 1 - clip_logthreshold)
+    log_1_minus_p = gnp.log1p(-probs)  # More accurate than log(1-p)
     
     # log_tau = log(min(p, 1-p)) = min(log_probs, log_1_minus_p)
     log_tau = gnp.minimum(log_probs, log_1_minus_p)
