@@ -37,7 +37,7 @@ problem = gpc.ComputerExperiment(
 
 # -- create initial dataset
 
-nt = 2000
+nt = 20 * 100
 xt = gp.misc.designs.regulargrid(problem.input_dim, nt, problem.input_box)
 zt = problem(xt)
 
@@ -46,6 +46,7 @@ ind = [i * 20 for i in [20, 46, 60, 80]]
 xi = xt[ind]
 
 # -- initialize a model and the ei algorithm
+
 model = gpc.Model_ConstantMean_Maternp_REML(
     "GP1d",
     output_dim=problem.output_dim,
@@ -60,6 +61,7 @@ beta = 1.0
 algo = si.SetInversionBSS(problem, model, box_init, box_target, options={"beta": beta})
 
 algo.set_initial_design(xi)
+
 
 # -- visualization
 
