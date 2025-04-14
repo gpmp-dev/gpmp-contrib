@@ -524,14 +524,14 @@ class ModelContainer:
                     meanparam0 = model["model"].meanparam
                     covparam0 = model["model"].covparam
 
-            param0 = gnp.concatenate((meanparam0, covparam0))
+            param0_init = gnp.concatenate((meanparam0, covparam0))
 
             crit, dcrit, crit_nograd = self.make_selection_criterion_with_gradient(
                 model, xi_, zi_[:, i]
             )
 
             param, info = gp.kernel.autoselect_parameters(
-                param0, crit, dcrit, silent=True, info=True
+                param0_init, crit, dcrit, silent=True, info=True
             )
 
             model["model"].meanparam = gnp.asarray(param[:mpl])
@@ -539,7 +539,7 @@ class ModelContainer:
             model["info"] = info
             model["info"]["meanparam0"] = meanparam0
             model["info"]["covparam0"] = covparam0
-            model["info"]["param0"] = param0
+            model["info"]["param0"] = param0_init
             model["info"]["meanparam"] = model["model"].meanparam
             model["info"]["covparam"] = model["model"].covparam
             model["info"]["param"] = param
