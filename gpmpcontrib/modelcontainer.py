@@ -458,19 +458,17 @@ class ModelContainer:
 
         if mean_paramlength > 0:
             # make a selection criterion with mean parameter
-            def crit_(param):
-                meanparam = param[:mean_paramlength]
-                covparam = param[mean_paramlength:]
-                return selection_criterion(
-                    model["model"], meanparam, covparam, xi_, zi_
-                )
+            def crit_(param, xi, zi):
+                meanparam = param[:meanparam_len]
+                covparam = param[meanparam_len:]
+                return selection_criterion(model["model"], meanparam, covparam, xi, zi)
 
         else:
             # make a selection criterion without mean parameter
-            def crit_(covparam):
-                return selection_criterion(model["model"], covparam, xi_, zi_)
+            def crit_(covparam, xi, zi):
+                return selection_criterion(model["model"], covparam, xi, zi)
 
-        crit = gnp.DifferentiableFunction(crit_)
+        crit = gnp.DifferentiableSelectionCriterion(crit_, xi_, zi_)
 
         return crit.evaluate, crit.gradient, crit.evaluate_no_grad
 
