@@ -131,7 +131,7 @@ print("  *** Example 3")
 print("      =========")
 # Load the Branin test problem from gpmpcontrib
 problem = gpc.test_problems.branin
-problem.set_normalize_input(True)
+problem.normalize_input = True
 print(" " * 2 + str(problem).replace("\n", "\n  "))
 print("  Plot Branin function with normalized inputs")
 
