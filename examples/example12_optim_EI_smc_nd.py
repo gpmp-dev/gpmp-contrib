@@ -136,8 +136,8 @@ zi = zt[ind]
 model = gpc.Model_ConstantMean_Maternp_REMAP(
     "GP6d",
     output_dim=problem.output_dim,
-    mean_params={"type": "constant"},
-    covariance_params={"p": 2},
+    mean_specification={"type": "constant"},
+    covariance_specification={"p": 2},
 )
 
 eialgo = ei.ExpectedImprovementSMC(problem, model)
@@ -154,7 +154,7 @@ for i in range(n):
         __import__("pdb").post_mortem()
 
     # print model diagnosis
-    eialgo.model.diagnosis(eialgo.xi, eialgo.zi)
+    eialgo.model.run_diag(eialgo.xi, eialgo.zi)
 
     particles_x = eialgo.smc.particles.x
     particles_zt = problem(particles_x)

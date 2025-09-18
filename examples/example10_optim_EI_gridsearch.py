@@ -37,8 +37,8 @@ xi = xt[ind]
 model = gpc.Model_ConstantMean_Maternp_REML(
     "GP1d",
     output_dim=problem.output_dim,
-    mean_params={"type": "constant"},
-    covariance_params={"p": 2},
+    mean_specification={"type": "constant"},
+    covariance_specification={"p": 2},
 )
 
 eialgo = ei.ExpectedImprovementGridSearch(problem, model, xt)
@@ -86,6 +86,4 @@ for i in range(n):
     eialgo.step()
     plot(show=True)
     # print model diagnosis
-    gp.misc.modeldiagnosis.diag(
-        eialgo.models[0]["model"], eialgo.models[0]["info"], eialgo.xi, eialgo.zi
-    )
+    eialgo.model.run_diag(eialgo.xi, eialgo.zi)

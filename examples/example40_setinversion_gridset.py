@@ -50,8 +50,8 @@ box_target = gnp.array([[0.99], [1.02]])
 model = gpc.Model_ConstantMean_Maternp_REMAP(
     "GP1d",
     output_dim=problem.output_dim,
-    mean_params={"type": "constant"},
-    covariance_params={"p": 2},
+    mean_specification={"type": "constant"},
+    covariance_specification={"p": 2},
 )
 
 beta = 1.0
@@ -103,7 +103,4 @@ for i in range(n):
     print(f"Iteration {i} / {n}")
     algo.step()
     plot(show=True)
-    # print model diagnosis
-    gp.misc.modeldiagnosis.diag(
-        algo.models[0]["model"], algo.models[0]["info"], algo.xi, algo.zi
-    )
+    algo.model.run_diag(algo.xi, algo.zi)

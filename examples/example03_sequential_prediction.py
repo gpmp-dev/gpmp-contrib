@@ -50,8 +50,8 @@ zi = problem(xi)
 model = gpc.Model_ConstantMean_Maternp_REMAP(
     "Simple function",
     output_dim=problem.output_dim,
-    mean_params={"type": "constant"},
-    covariance_params={"p": 2},
+    mean_specification={"type": "constant"},
+    covariance_specification={"p": 2},
 )
 
 # Initialize SequentialPrediction with the initial dataset

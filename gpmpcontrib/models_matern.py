@@ -13,6 +13,7 @@ License: GPLv3 (refer to LICENSE file for usage terms)
 
 import gpmp.num as gnp
 import gpmp as gp
+from gpmp.misc.param import Param, Normalization
 import gpmpcontrib.modelcontainer
 from math import log
 
@@ -23,7 +24,7 @@ from math import log
 
 
 class Model_ConstantMean_Maternp_REML(gpmpcontrib.modelcontainer.ModelContainer):
-    def __init__(self, name, output_dim, mean_params, covariance_params):
+    def __init__(self, name, output_dim, mean_specification, covariance_specification):
         """
         Initialize a Model.
 
@@ -33,7 +34,7 @@ class Model_ConstantMean_Maternp_REML(gpmpcontrib.modelcontainer.ModelContainer)
             The name of the model.
         output_dim : int
             The number of outputs for the model.
-        mean_params : dict or list of dicts
+        mean_specification : dict or list of dicts
             Type of mean function to use.
         covariance_params : dict or list of dicts
             Parameters for each covariance function, including 'p'
@@ -42,11 +43,11 @@ class Model_ConstantMean_Maternp_REML(gpmpcontrib.modelcontainer.ModelContainer)
             name,
             output_dim,
             parameterized_mean=False,
-            mean_params=mean_params,
-            covariance_params=covariance_params,
+            mean_specification=mean_specification,
+            covariance_specification=covariance_specification,
         )
 
-    def build_mean_function(self, output_idx: int, param: dict):
+    def build_mean_function(self, output_idx: int, mean_build_param: dict):
         """Build the mean function based on the mean type.
 
         Parameters
@@ -54,7 +55,7 @@ class Model_ConstantMean_Maternp_REML(gpmpcontrib.modelcontainer.ModelContainer)
         output_idx : int
             The index of the output for which the mean function
             is being created.
-        param : dict
+        mean_build_param : dict
             Must contain a "type" key with value "constant" or "linear".
 
         Returns
@@ -68,17 +69,19 @@ class Model_ConstantMean_Maternp_REML(gpmpcontrib.modelcontainer.ModelContainer)
             If the mean type is not implemented.
 
         """
-        if "type" not in param:
+        if "type" not in mean_build_param:
             raise ValueError(f"Mean 'type' should be specified in 'param'")
 
-        if param["type"] == "constant":
+        if mean_build_param["type"] == "constant":
             return (gpmpcontrib.modelcontainer.mean_linpred_constant, 0)
-        elif param["type"] == "linear":
+        elif mean_build_param["type"] == "linear":
             return (gpmpcontrib.modelcontainer.mean_linpred_linear, 0)
         else:
-            raise NotImplementedError(f"Mean type {param['type']} not implemented")
+            raise NotImplementedError(
+                f"Mean type {mean_build_param['type']} not implemented"
+            )
 
-    def build_covariance(self, output_idx: int, param: dict):
+    def build_covariance(self, output_idx: int, covariance_build_param: dict):
         """Create a Matérn covariance function for a specific output
         index with given parameters.
 
@@ -87,7 +90,7 @@ class Model_ConstantMean_Maternp_REML(gpmpcontrib.modelcontainer.ModelContainer)
         output_idx : int
             The index of the output for which the covariance function
             is being created.
-        param : dict
+        covariance_build_param : dict
             Additional parameters for the Matérn covariance function,
             including regularity 'p'.
 
@@ -97,12 +100,14 @@ class Model_ConstantMean_Maternp_REML(gpmpcontrib.modelcontainer.ModelContainer)
             A Matern covariance function.
 
         """
-        if ("p" not in param) or (not isinstance(param["p"], int)):
+        if ("p" not in covariance_build_param) or (
+            not isinstance(covariance_build_param["p"], int)
+        ):
             raise ValueError(
                 f"Regularity 'p' should be integer and specified in 'param'"
             )
 
-        p = param["p"]
+        p = covariance_build_param["p"]
         # FIXME: p = params.get("p", 2)  # Default value of p if not provided
 
         def maternp_covariance(x, y, covparam, pairwise=False):
@@ -110,6 +115,60 @@ class Model_ConstantMean_Maternp_REML(gpmpcontrib.modelcontainer.ModelContainer)
             return gp.kernel.maternp_covariance(x, y, p, covparam, pairwise)
 
         return maternp_covariance
+
+    def build_param_procedures(self, output_idx: int, **kwargs):
+        """
+        Anisotropic covariance block with LOG/LOG_INV normalizations,
+        optional bounds and name prefix, plus optional mean block.
+
+        kwargs:
+          logsigma2_bounds: (lo, hi) | None
+          loginvrho_bounds: (lo, hi) | None
+          name_prefix     : str
+          mean_names      : list[str] | None
+        """
+        mpl = int(self.models[output_idx]["mean_paramlength"] or 0)
+        logsigma2_bounds = kwargs.get("logsigma2_bounds", None)
+        loginvrho_bounds = kwargs.get("loginvrho_bounds", None)
+        name_prefix      = kwargs.get("name_prefix", "")
+        mean_names       = kwargs.get("mean_names", None)
+
+        def _cov_param_from_vector(covparam):
+            cp = gnp.asarray(covparam).reshape(-1)
+            d  = int(cp.shape[0]) - 1
+            names  = [f"{name_prefix}sigma2"] + [f"{name_prefix}rho_{j}" for j in range(d)]
+            paths  = [["covparam", "variance"]] + [["covparam", "lengthscale"]] * d
+            norms  = [Normalization.LOG] + [Normalization.LOG_INV] * d
+            bounds = [logsigma2_bounds] + [loginvrho_bounds] * d
+            return Param(values=cp, names=names, paths=paths, normalizations=norms, bounds=bounds)
+
+        def _mean_param_from_vector(meanparam):
+            mp = gnp.asarray(meanparam).reshape(-1)
+            m  = int(mp.shape[0])
+            if m == 0:
+                return Param(values=gnp.zeros(0), names=[], paths=[], normalizations=[], bounds=[])
+            if mean_names is not None:
+                if len(mean_names) != m:
+                    raise ValueError("mean_names length must match number of mean parameters")
+                names = [f"{name_prefix}{nm}" for nm in mean_names]
+            else:
+                names = [f"{name_prefix}beta_{j}" for j in range(m)]
+            paths = [["meanparam"]] * m
+            norms = [Normalization.NONE] * m
+            return Param(values=mp, names=names, paths=paths, normalizations=norms)
+
+        def param_from_vectors(meanparam, covparam):
+            covP  = _cov_param_from_vector(covparam)
+            meanP = _mean_param_from_vector(meanparam if mpl > 0 else gnp.zeros(0))
+            return Param.concat(meanP, covP)
+
+        def vectors_from_param(param):
+            mp = (gnp.asarray(param.get_by_path(["meanparam"], prefix_match=True)).reshape(-1)
+                  if mpl > 0 else gnp.asarray([]))
+            cp = gnp.asarray(param.get_by_path(["covparam"], prefix_match=True)).reshape(-1)
+            return mp, cp
+
+        return param_from_vectors, vectors_from_param
 
     def build_parameters_initial_guess_procedure(self, output_idx: int, **build_param):
         """Build an initial guess procedure for anisotropic parameters.
@@ -140,7 +199,7 @@ class Model_ConstantMean_Maternp_REML(gpmpcontrib.modelcontainer.ModelContainer)
 
 
 class Model_ConstantMean_Maternp_REMAP(Model_ConstantMean_Maternp_REML):
-    def __init__(self, name, output_dim, mean_params, covariance_params):
+    def __init__(self, name, output_dim, mean_specification, covariance_specification):
         """
         Initialize a Model.
 
@@ -150,16 +209,16 @@ class Model_ConstantMean_Maternp_REMAP(Model_ConstantMean_Maternp_REML):
             The name of the model.
         output_dim : int
             The number of outputs for the model.
-        mean_params : dict or list of dicts
+        mean_specification : dict or list of dicts
             Type of mean function to use.
-        covariance_params : dict or list of dicts
+        covariance_specification : dict or list of dicts
             Parameters for each covariance function, including 'p'
         """
         super().__init__(
             name,
             output_dim,
-            mean_params=mean_params,
-            covariance_params=covariance_params,
+            mean_specification=mean_specification,
+            covariance_specification=covariance_specification,
         )
 
     def build_selection_criterion(self, output_idx: int, **build_params):
@@ -180,7 +239,7 @@ class Model_ConstantMean_Maternp_REMAP(Model_ConstantMean_Maternp_REML):
 class Model_ConstantMean_Maternp_ML(gpmpcontrib.modelcontainer.ModelContainer):
     """GP model with a constant mean and a Matern covariance function. Parameters are estimated by ML"""
 
-    def __init__(self, name, output_dim, covariance_params=None):
+    def __init__(self, name, output_dim, covariance_specification=None):
         """
         Initialize a Model.
 
@@ -190,15 +249,15 @@ class Model_ConstantMean_Maternp_ML(gpmpcontrib.modelcontainer.ModelContainer):
             The name of the model.
         output_dim : int
             The number of outputs for the model.
-        covariance_params : dict or list of dicts, optional
+        covariance_specification : dict or list of dicts, optional
             Parameters for each covariance function, including 'p'
         """
         super().__init__(
             name,
             output_dim,
             parameterized_mean=True,
-            mean_params={"type": "constant"},
-            covariance_params=covariance_params,
+            mean_specification={"type": "constant"},
+            covariance_specification=covariance_specification,
         )
 
     def build_mean_function(self, output_idx: int, param: dict):
@@ -398,7 +457,7 @@ def noisy_outputs_parameters_initial_guess(model, xi, zi, output_dim):
 
 
 class Model_Noisy_ConstantMean_Maternp_REML(gpmpcontrib.modelcontainer.ModelContainer):
-    def __init__(self, name, output_dim, mean_params, covariance_params):
+    def __init__(self, name, output_dim, mean_specification, covariance_specification):
         """
         Initialize a noisy Model designed to handle output-specific noise.
 
@@ -408,9 +467,9 @@ class Model_Noisy_ConstantMean_Maternp_REML(gpmpcontrib.modelcontainer.ModelCont
             The name of the model.
         output_dim : int
             The number of outputs for the model.
-        mean_params : dict or list of dicts
+        mean_specification : dict or list of dicts
             Type of mean function to use, expected to handle noise.
-        covariance_params : dict or list of dicts
+        covariance_specification : dict or list of dicts
             Parameters for each covariance function, including 'p', designed for noisy data.
 
         """
@@ -418,8 +477,8 @@ class Model_Noisy_ConstantMean_Maternp_REML(gpmpcontrib.modelcontainer.ModelCont
             name,
             output_dim,
             parameterized_mean=False,
-            mean_params=mean_params,
-            covariance_params=covariance_params,
+            mean_specification=mean_specification,
+            covariance_specification=covariance_specification,
         )
 
     def build_mean_function(self, output_idx: int, param: dict):

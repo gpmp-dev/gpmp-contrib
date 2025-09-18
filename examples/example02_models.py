@@ -57,19 +57,19 @@ if model_choice == 1:
     model = gpc.Model_ConstantMean_Maternp_REML(
         "1d_noisefree",
         problem.output_dim,
-        mean_params={"type": "constant"},
-        covariance_params={"p": 4},
+        mean_specification={"type": "constant"},
+        covariance_specification={"p": 4},
     )
 elif model_choice == 2:
     model = gpc.Model_ConstantMean_Maternp_REMAP(
         "1d_noisefree",
         problem.output_dim,
-        mean_params={"type": "constant"},
-        covariance_params={"p": 4},
+        mean_specification={"type": "constant"},
+        covariance_specification={"p": 4},
     )
 elif model_choice == 3:
     model = gpc.Model_ConstantMean_Maternp_ML(
-        "1d_noisefree", problem.output_dim, covariance_params={"p": 4}
+        "1d_noisefree", problem.output_dim, covariance_specification={"p": 4}
     )
 
 model.select_params(xi, zi)
@@ -115,14 +115,17 @@ zi = zt[ind]
 model = gpc.Model_ConstantMean_Maternp_REMAP(
     "2d_noisefree",
     problem.output_dim,
-    mean_params={"type": "constant"},
-    covariance_params=[
+    mean_specification={"type": "constant"},
+    covariance_specification=[
         {"p": 1},
         {"p": 1},
-    ],  # alternative form: covariance_params={"p": 1}
+    ],  # alternative form: covariance_specification={"p": 1}
 )
 model.select_params(xi, zi)
+model.run_diag(xi, zi)
+
 zpm, zpv = model.predict(xi, zi, xt)
+model.run_perf(xi, zi)
 
 # Visualize results
 show_truth_vs_prediction(zt, zpm)

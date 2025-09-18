@@ -50,8 +50,8 @@ xi = xt[ind]
 model = gpc.Model_ConstantMean_Maternp_REML(
     "GP1d",
     output_dim=problem.output_dim,
-    mean_params={"type": "constant"},
-    covariance_params={"p": 2},
+    mean_specification={"type": "constant"},
+    covariance_specification={"p": 2},
 )
 
 box_init = gnp.array([[-0.0], [1.2]])

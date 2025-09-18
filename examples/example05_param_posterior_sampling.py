@@ -29,12 +29,12 @@ zi = problem(xi)
 model = gpc.Model_ConstantMean_Maternp_REMAP(
     "GPnd",
     output_dim=problem.output_dim,
-    mean_params={"type": "constant"},
-    covariance_params={"p": 2},
+    mean_specification={"type": "constant"},
+    covariance_specification={"p": 2},
 )
 
 model.select_params(xi, zi)
-model.diagnosis(xi, zi)
+model.run_diag(xi, zi)
 
 zloom, zloov, eloo = model.loo(xi, zi)
 gp.misc.plotutils.plot_loo(zi.reshape(-1), zloom.reshape(-1), zloov.reshape(-1))

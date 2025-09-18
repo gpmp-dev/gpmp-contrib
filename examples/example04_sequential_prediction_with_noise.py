@@ -68,8 +68,8 @@ zi = problem(xi)
 model = gpc.Model_Noisy_ConstantMean_Maternp_REML(
     "Simple function",
     output_dim=problem.output_dim,
-    mean_params={"type": "constant"},
-    covariance_params={"p": 3},
+    mean_specification={"type": "constant"},
+    covariance_specification={"p": 3},
 )
 
 # Using the append_noise_variance function to manage noise data

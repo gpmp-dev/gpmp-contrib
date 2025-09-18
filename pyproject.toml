@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "gpmp-contrib"
-version = "0.9.25"
+version = "0.9.26"
 authors = [{name = "Emmanuel Vazquez", email = "emmanuel.vazquez@centralesupelec.fr"}]
 description = "GPmp contrib: the contrib GPmp package"
 readme = "README.md"
@@ -18,9 +18,9 @@ dependencies = [
     "numpy",
     "scipy>=1.8.0",
     "matplotlib",
-    "gpmp>=0.9.25"
+    "gpmp>=0.9.26"
 ]
-requires-python = ">=3.6"
+requires-python = ">=3.9"
 
 [project.urls]
 "Homepage" = "https://github.com/gpmp-dev/gpmp-contrib"
