@@ -86,6 +86,6 @@ for i in range(n):
     eialgo.step()
     plot(show=True)
     # print model diagnosis
-    eialgo.model.run_diag(eialgo.xi, eialgo.zi))
+    eialgo.model.run_diag(eialgo.xi, eialgo.zi)
 
 eialgo.smc.plot_state()

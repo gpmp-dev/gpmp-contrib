@@ -20,6 +20,10 @@ from gpmp.misc.param import Param
 
 
 class AttrDict(dict):
+    """Dict with attribute access to keys (d.k <-> d['k']).
+
+    Missing keys raise AttributeError.
+    """    
     def __getattr__(self, key):
         try:
             return self[key]
@@ -276,7 +280,7 @@ class ModelContainer:
         """Human-readable description of all sub-models."""
         s = [f"Model Name: {self.name}, Output Dimension: {self.output_dim}"]
         for i, model in enumerate(self.models):
-            mean_descr = self.mean_functions_info[i]["description"]
+            # mean_descr = self.mean_functions_info[i]["description"]  #FIXME
             mean_type = model["model"].meantype
             mean_params = model["model"].meanparam
             cov_fn = model["model"].covariance
@@ -291,7 +295,7 @@ class ModelContainer:
                     [
                         f"\nGaussian process {i}:",
                         f"  Output Name: {model['output_name']}",
-                        f"  Mean: {mean_descr}",
+                        # f"  Mean: {mean_descr}",
                         f"  Mean Type: {mean_type}",
                         f"  Mean Parameters: {mean_params}",
                         f"  Covariance: {covariance}",
@@ -459,21 +463,29 @@ class ModelContainer:
     # --------------------------------------------------------------------------
     # Param / Selection-criterion plumbing (builders + wrappers)
     # --------------------------------------------------------------------------
-    def make_param_object_procedures(
-        self, param_procedures=None, auxiliary_params=None
-    ):
+    def make_param_object_procedures(self, param_procedures=None, auxiliary_params=None):
         """
-        Return per-output param build functions.
+        Return per-output Param adapter procedures.
 
-        If `param_procedures` is None:
-            build via `build_param_procedures(i, **bp)` per output.
-        If a single pair (pf, pt) is passed: broadcast to all outputs.
-        If a list of pairs is passed: length must equal output_dim.
+        This procedure normalizes user input (None, a single (pf, pt) pair, or a
+        per-output list of pairs) into a validated list of (pf, pt) pairs, so the
+        rest of the code can index procedures[i] unconditionally.
 
-        Each pair:
-          (param_from_vectors, param_to_vectors)
-            - param_from_vectors(meanparam, covparam) -> Param
-            - param_to_vectors(Param) -> (meanparam, covparam)
+        If param_procedures is None:
+            build via build_param_procedures(i, **bp) per output.
+        If a single pair (pf, pt) is passed:
+            broadcast to all outputs.
+        If a list of pairs is passed:
+            length must equal output_dim.
+
+        pf, pt meanings
+        ---------------
+        pf ("param_from_vectors"):
+            Callable that packs model parameter vectors into a Param object:
+                pf(meanparam, covparam) -> Param
+        pt ("param_to_vectors"):
+            Callable that unpacks a Param object into model parameter vectors:
+                pt(Param) -> (meanparam, covparam)
         """
         # broadcast build_params
         if not isinstance(auxiliary_params, list):
@@ -487,7 +499,7 @@ class ModelContainer:
                 self.build_param_procedures(i, **(bp or {}))
                 for i, bp in enumerate(auxiliary_params)
             ]
-        # Case 2: single pair — broadcast
+        # Case 2: single pair - broadcast
         if (
             isinstance(param_procedures, tuple)
             and len(param_procedures) == 2
@@ -521,92 +533,149 @@ class ModelContainer:
         """
         Return initial-guess procedures (one per output).
 
-        `initial_guess_procedures` may be a single callable or a list. If None,
-        procedures are built via `build_parameters_initial_guess_procedure`.
-        """
-        if not isinstance(auxiliary_params, list):
-            build_params = [auxiliary_params] * self.output_dim
-        if len(build_params) != self.output_dim:
-            raise ValueError("Length of params must match output_dim")
+        This procedure normalizes user input (None, a single callable, or a
+        per-output list) into a validated list of per-output procedures, so the
+        rest of the code can index procedures[i] unconditionally.
 
+        initial_guess_procedures may be:
+          - None: build per output via build_parameters_initial_guess_procedure(...)
+          - callable: broadcast to all outputs
+          - list[callable]: one per output (length must be output_dim)
+
+        auxiliary_params may be:
+          - None: each builder gets {}
+          - dict: broadcast to all outputs
+          - list[dict|None]: one per output (length must be output_dim)
+        """
+        # Normalize auxiliary_params -> list of dicts (or {})
+        if auxiliary_params is None:
+            build_params = [{} for _ in range(self.output_dim)]
+        elif isinstance(auxiliary_params, dict):
+            build_params = [auxiliary_params] * self.output_dim
+        elif isinstance(auxiliary_params, list):
+            if len(auxiliary_params) != self.output_dim:
+                raise ValueError("Length of auxiliary_params must match output_dim")
+            build_params = [(p or {}) for p in auxiliary_params]
+        else:
+            raise TypeError("auxiliary_params must be None, a dict, or a list of dicts")
+
+        # Normalize initial_guess_procedures -> list of callables
         if initial_guess_procedures is None:
-            initial_guess_procedures = [
-                self.build_parameters_initial_guess_procedure(i, **(param or {}))
-                for i, param in enumerate(build_params)
+            procedures = [
+                self.build_parameters_initial_guess_procedure(i, **build_params[i])
+                for i in range(self.output_dim)
             ]
         elif callable(initial_guess_procedures):
-            intial_guess_procedures = [initial_guess_procedures] * self.output_dim
-        elif (
-            isinstance(initial_guess_procedures, list)
-            and len(initial_guess_procedures) != self.output_dim
-        ):
-            raise ValueError(
-                "initial_guess_procedures must be a list of length output_dim"
+            procedures = [initial_guess_procedures] * self.output_dim
+        elif isinstance(initial_guess_procedures, list):
+            if len(initial_guess_procedures) != self.output_dim:
+                raise ValueError("initial_guess_procedures must have length output_dim")
+            if not all(callable(p) for p in initial_guess_procedures):
+                raise TypeError("initial_guess_procedures must contain only callables")
+            procedures = initial_guess_procedures
+        else:
+            raise TypeError(
+                "initial_guess_procedures must be None, a callable, or a list of callables"
             )
-        return initial_guess_procedures
+
+        return procedures
 
     def make_selection_criteria(self, selection_criteria=None, auxiliary_params=None):
         """
-        Make selection criteria based on provided selection_criteria and parameters.
+        Return selection criteria (one per output).
+
+        This procedure normalizes user input (None, a single callable, or a
+        per-output list) into a validated list of per-output criteria, so the rest
+        of the code can index criteria[i] unconditionally.
 
         Parameters
         ----------
-        selection_criteria : list or callable
-            The selection criteria procedures to be used.
-        auxiliary_params : dict or list of dicts, optional
-            Parameters for each selection criterion. Can be None.
+        selection_criteria : callable | list[callable] | None
+            Criterion procedure(s). If None, criteria are built via
+            build_selection_criterion(...). If a callable is provided, it is
+            broadcast to all outputs. If a list is provided, its length must match
+            output_dim.
+        auxiliary_params : dict | list[dict] | None
+            Per-output parameters passed to build_selection_criterion when
+            selection_criteria is None. If a dict is provided, it is broadcast to
+            all outputs. If a list is provided, its length must match output_dim.
 
         Returns
         -------
-        list
-            A list of selection criterion callables.
-
-        Raises
-        ------
-        ValueError
-            If the length of selection_criteria or params does not match output_dim.
+        list[callable]
+            A list of selection criterion callables, one per output.
         """
-        if not isinstance(auxiliary_params, list):
+        # Normalize auxiliary_params -> list of dicts
+        if auxiliary_params is None:
+            build_params = [{} for _ in range(self.output_dim)]
+        elif isinstance(auxiliary_params, dict):
             build_params = [auxiliary_params] * self.output_dim
-        if len(build_params) != self.output_dim:
-            raise ValueError("Length of params must match output_dim")
+        elif isinstance(auxiliary_params, list):
+            if len(auxiliary_params) != self.output_dim:
+                raise ValueError("Length of auxiliary_params must match output_dim")
+            build_params = [(p or {}) for p in auxiliary_params]
+        else:
+            raise TypeError("auxiliary_params must be None, a dict, or a list of dicts")
 
+        # Normalize selection_criteria -> list of callables
         if selection_criteria is None:
-            selection_criteria = [
-                self.build_selection_criterion(i, **(param or {}))
-                for i, param in enumerate(build_params)
+            criteria = [
+                self.build_selection_criterion(i, **build_params[i])
+                for i in range(self.output_dim)
             ]
         elif callable(selection_criteria):
-            selection_criteria = [selection_criteria] * self.output_dim
-        elif (
-            isinstance(selection_criteria, list)
-            and len(selection_criteria) != self.output_dim
-        ):
-            raise ValueError("selection_criteria must be a list of length output_dim")
+            criteria = [selection_criteria] * self.output_dim
+        elif isinstance(selection_criteria, list):
+            if len(selection_criteria) != self.output_dim:
+                raise ValueError("selection_criteria must have length output_dim")
+            if not all(callable(c) for c in selection_criteria):
+                raise TypeError("selection_criteria must contain only callables")
+            criteria = selection_criteria
+        else:
+            raise TypeError(
+                "selection_criteria must be None, a callable, or a list of callables"
+            )
 
-        return selection_criteria
+        return criteria
 
-    def make_selection_criterion_with_gradient(self, model, xi_, zi_):
+    def make_selection_criterion_with_gradient(
+            self,
+            model,
+            xi_=None,
+            zi_=None,
+            dataloader=None,
+            batches_per_eval=0,
+            parameterized_mean=False
+    ):
         """
         Wrap the (per-output) selection criterion into a differentiable object
         compatible with `gp.kernel.autoselect_parameters`.
         """
         selection_criterion = model["selection_criterion"]
-        mean_paramlength = model["mean_paramlength"]
+        meanparam_len = model["mean_paramlength"]
+        data_source = gp.kernel.parameter_selection.check_xi_zi_or_loader(xi_, zi_, dataloader)
+        
+        if meanparam_len > 0:
+            parameterized_mean = True
 
-        if mean_paramlength > 0:
+        if parameterized_mean:
             # make a selection criterion with mean parameter
             def crit_(param, xi, zi):
-                meanparam = param[:mean_paramlength]
-                covparam = param[mean_paramlength:]
+                meanparam = param[:meanparam_len]
+                covparam = param[meanparam_len:]
                 return selection_criterion(model["model"], meanparam, covparam, xi, zi)
-
         else:
             # make a selection criterion without mean parameter
             def crit_(covparam, xi, zi):
                 return selection_criterion(model["model"], covparam, xi, zi)
 
-        crit = gnp.DifferentiableSelectionCriterion(crit_, xi_, zi_)
+        if data_source == "arrays":
+            crit = gnp.DifferentiableSelectionCriterion(crit_, xi_, zi_)
+        else:
+            crit = gnp.BatchDifferentiableSelectionCriterion(
+                crit_, dataloader, batches_per_eval=batches_per_eval
+            )
+    
         return crit.evaluate, crit.gradient, crit.evaluate_no_grad
 
     def build_param_procedures(self, output_idx: int, **kwargs):
@@ -664,12 +733,12 @@ class ModelContainer:
             For single-output, you may pass a single vector or a Param.
             If a vector is passed, it must be the concatenation of mean
             parameters (length = mean_paramlength) followed by covariance
-            parameters. If a Param is passed, the method will use the
-            model's vectors_from_param adapter to extract (mean, cov).
+            parameters. If a Param is passed, the method uses the per-output
+            adapter param_to_vectors to extract (mean, cov).
         use_bounds_from_param_obj : bool, default True
-            If True and the per-output model has a non-None Param object,
-            bounds are taken from that Param (in normalized coordinates)
-            unless overridden by manual bounds or a bounds_factory.
+            If True and a per-output Param object is available, bounds are
+            taken from Param.bounds (normalized coordinates) unless overridden
+            by manual bounds or a bounds_factory.
         bounds : None | array_like(n_params, 2) | list[array_like(n_params, 2)]
             Manual bounds in normalized space. If provided for multi-output,
             either supply a single (n_params, 2) array to broadcast to all
@@ -679,7 +748,7 @@ class ModelContainer:
             Optional callback to compute bounds from data and the initializer:
                 bounds_factory(model_dict, xi_array, zi_vector, param0_init_vector)
             It must return an array of shape (n_params, 2) or None.
-            Used only if `bounds` is None; takes precedence over Param bounds.
+            Used only if bounds is None; takes precedence over Param bounds.
         bounds_delta : None | float | array_like
             Local interval around the initializer param0_init in normalized space.
             If provided, for each parameter theta0 we build [theta0 - delta, theta0 + delta].
@@ -719,29 +788,30 @@ class ModelContainer:
                     covparam0 = model["model"].covparam
 
             param0_init = gnp.concatenate((meanparam0, covparam0))
-            n_params = param0_init.shape[0]
+            n_params = int(param0_init.shape[0])
 
             # 2) Base bounds by precedence: manual > factory > Param > None
-            base_bounds = ModelContainer._extract_bounds_for_output(bounds, i, n_params)
+            base_bounds = ModelContainer._extract_bounds_for_output(
+                bounds, i, n_params, output_dim=self.output_dim
+            )
+
             if base_bounds is None and callable(bounds_factory):
                 base_bounds = bounds_factory(model, xi_, zi_[:, i], param0_init)
                 if base_bounds is not None:
                     base_bounds = ModelContainer._as_bounds_array(base_bounds, n_params)
-            if (
-                base_bounds is None
-                and use_bounds_from_param_obj
-                and model.get("param") is not None
-            ):
-                base_bounds = ModelContainer._bounds_from_param_obj(model["param"])
+
+            if base_bounds is None and use_bounds_from_param_obj:
+                # Use existing Param if present; otherwise build a temporary one from the initializer.
+                P = model.get("param", None)
+                if P is None and callable(model.get("param_from_vectors", None)):
+                    P = model["param_from_vectors"](meanparam0, covparam0)
+                if P is not None:
+                    base_bounds = ModelContainer._bounds_from_param_obj(P)
 
             # 3) Local +-delta interval around param0_init (intersect)
             if bounds_delta is not None:
-                local_interval = ModelContainer._interval_around(
-                    param0_init, bounds_delta
-                )
-                base_bounds = ModelContainer._intersect_bounds(
-                    base_bounds, local_interval
-                )
+                local_interval = ModelContainer._interval_around(param0_init, bounds_delta)
+                base_bounds = ModelContainer._intersect_bounds(base_bounds, local_interval)
 
             # 4) Optimize
             crit, dcrit, crit_nograd = self.make_selection_criterion_with_gradient(
@@ -760,18 +830,16 @@ class ModelContainer:
             model["model"].meanparam = gnp.asarray(param[:mpl])
             model["model"].covparam = gnp.asarray(param[mpl:])
 
-            # 6) Refresh Param object and copy bounds used into it
+            # 6) Refresh Param object (pf must be pf(meanparam, covparam))
             if callable(model.get("get_param", None)):
                 model["param"] = model["get_param"]()
             elif callable(model.get("param_from_vectors", None)):
                 model["param"] = model["param_from_vectors"](
-                    xi_, zi_[:, i], model["model"].meanparam, model["model"].covparam
+                    model["model"].meanparam, model["model"].covparam
                 )
 
-            # If we have a Param, mirror the final bounds into Param.bounds (normalized space)
-            ModelContainer._apply_bounds_to_param(
-                model.get("param", None), base_bounds, mpl
-            )
+            # Mirror final bounds into Param.bounds (normalized space)
+            ModelContainer._apply_bounds_to_param(model.get("param", None), base_bounds, mpl)
 
             # 7) Record info
             model["info"] = info
@@ -784,6 +852,160 @@ class ModelContainer:
             model["info"]["selection_criterion"] = crit
             model["info"]["selection_criterion_nograd"] = crit_nograd
             model["info"]["time"] = time.time() - tic
+
+    
+    # def select_params(
+    #     self,
+    #     xi,
+    #     zi,
+    #     *,
+    #     force_param_initial_guess=True,
+    #     param0=None,
+    #     use_bounds_from_param_obj=True,
+    #     bounds=None,
+    #     bounds_factory=None,
+    #     bounds_delta=None,
+    # ):
+    #     """
+    #     Parameter selection (per output).
+
+    #     Parameters
+    #     ----------
+    #     xi : array_like
+    #         Observation points, shape (n, d).
+    #     zi : array_like
+    #         Observed values. Shape (n,) for single-output, or (n, output_dim).
+    #     force_param_initial_guess : bool, default True
+    #         If True, compute an initial guess even when the model already
+    #         has parameters. If False and the model already has parameters,
+    #         those are reused as the starting point.
+    #     param0 : None | array_like | Param | list[ array_like | Param ]
+    #         Optional initializer(s) for optimization. For multi-output:
+    #           - provide a list where param0[i] is either a vector in the
+    #             model's normalized coordinates or a Param for output i.
+    #         For single-output, you may pass a single vector or a Param.
+    #         If a vector is passed, it must be the concatenation of mean
+    #         parameters (length = mean_paramlength) followed by covariance
+    #         parameters. If a Param is passed, the method will use the
+    #         model's vectors_from_param adapter to extract (mean, cov).
+    #     use_bounds_from_param_obj : bool, default True
+    #         If True and the per-output model has a non-None Param object,
+    #         bounds are taken from that Param (in normalized coordinates)
+    #         unless overridden by manual bounds or a bounds_factory.
+    #     bounds : None | array_like(n_params, 2) | list[array_like(n_params, 2)]
+    #         Manual bounds in normalized space. If provided for multi-output,
+    #         either supply a single (n_params, 2) array to broadcast to all
+    #         outputs, or a list with one (n_params, 2) array per output.
+    #         These take precedence over bounds from Param or bounds_factory.
+    #     bounds_factory : None | callable
+    #         Optional callback to compute bounds from data and the initializer:
+    #             bounds_factory(model_dict, xi_array, zi_vector, param0_init_vector)
+    #         It must return an array of shape (n_params, 2) or None.
+    #         Used only if `bounds` is None; takes precedence over Param bounds.
+    #     bounds_delta : None | float | array_like
+    #         Local interval around the initializer param0_init in normalized space.
+    #         If provided, for each parameter theta0 we build [theta0 - delta, theta0 + delta].
+    #         If scalar, the same delta is used for all parameters; if an array, the
+    #         length must match the parameter dimension. This interval is then
+    #         intersected with whichever base bounds were chosen by precedence:
+    #             manual bounds > bounds_factory(...) > Param bounds > None
+    #     """
+    #     xi_ = gnp.asarray(xi)
+    #     zi_ = gnp.asarray(zi)
+    #     if zi_.ndim == 1:
+    #         zi_ = zi_.reshape(-1, 1)
+
+    #     # Normalize param0 container for multi-output
+    #     if param0 is not None and self.output_dim == 1 and not isinstance(param0, list):
+    #         param0 = [param0]
+
+    #     for i in range(self.output_dim):
+    #         tic = time.time()
+    #         model = self.models[i]
+    #         mpl = int(model["mean_paramlength"])
+
+    #         # 1) Initializer (meanparam0, covparam0)
+    #         if param0 is not None:
+    #             p0_i = param0[i]
+    #             meanparam0, covparam0 = self._param_to_vector_pair(p0_i, model, mpl)
+    #         else:
+    #             if model["model"].covparam is None or force_param_initial_guess:
+    #                 igp = model["parameters_initial_guess_procedure"]
+    #                 if mpl == 0:
+    #                     meanparam0 = gnp.array([])
+    #                     covparam0 = igp(model["model"], xi_, zi_[:, i])
+    #                 else:
+    #                     meanparam0, covparam0 = igp(model["model"], xi_, zi_[:, i])
+    #             else:
+    #                 meanparam0 = model["model"].meanparam
+    #                 covparam0 = model["model"].covparam
+
+    #         param0_init = gnp.concatenate((meanparam0, covparam0))
+    #         n_params = param0_init.shape[0]
+
+    #         # 2) Base bounds by precedence: manual > factory > Param > None
+    #         base_bounds = ModelContainer._extract_bounds_for_output(bounds, i, n_params)
+    #         if base_bounds is None and callable(bounds_factory):
+    #             base_bounds = bounds_factory(model, xi_, zi_[:, i], param0_init)
+    #             if base_bounds is not None:
+    #                 base_bounds = ModelContainer._as_bounds_array(base_bounds, n_params)
+    #         if (
+    #             base_bounds is None
+    #             and use_bounds_from_param_obj
+    #             and model.get("param") is not None
+    #         ):
+    #             base_bounds = ModelContainer._bounds_from_param_obj(model["param"])
+
+    #         # 3) Local +-delta interval around param0_init (intersect)
+    #         if bounds_delta is not None:
+    #             local_interval = ModelContainer._interval_around(
+    #                 param0_init, bounds_delta
+    #             )
+    #             base_bounds = ModelContainer._intersect_bounds(
+    #                 base_bounds, local_interval
+    #             )
+
+    #         # 4) Optimize
+    #         crit, dcrit, crit_nograd = self.make_selection_criterion_with_gradient(
+    #             model, xi_, zi_[:, i]
+    #         )
+    #         param, info = gp.kernel.autoselect_parameters(
+    #             param0_init,
+    #             crit,
+    #             dcrit,
+    #             bounds=base_bounds,
+    #             silent=True,
+    #             info=True,
+    #         )
+
+    #         # 5) Write back params
+    #         model["model"].meanparam = gnp.asarray(param[:mpl])
+    #         model["model"].covparam = gnp.asarray(param[mpl:])
+
+    #         # 6) Refresh Param object and copy bounds used into it
+    #         if callable(model.get("get_param", None)):
+    #             model["param"] = model["get_param"]()
+    #         elif callable(model.get("param_from_vectors", None)):
+    #             model["param"] = model["param_from_vectors"](
+    #                 xi_, zi_[:, i], model["model"].meanparam, model["model"].covparam
+    #             )
+
+    #         # If we have a Param, mirror the final bounds into Param.bounds (normalized space)
+    #         ModelContainer._apply_bounds_to_param(
+    #             model.get("param", None), base_bounds, mpl
+    #         )
+
+    #         # 7) Record info
+    #         model["info"] = info
+    #         model["info"]["meanparam0"] = meanparam0
+    #         model["info"]["covparam0"] = covparam0
+    #         model["info"]["param0"] = param0_init
+    #         model["info"]["meanparam"] = model["model"].meanparam
+    #         model["info"]["covparam"] = model["model"].covparam
+    #         model["info"]["param"] = param
+    #         model["info"]["selection_criterion"] = crit
+    #         model["info"]["selection_criterion_nograd"] = crit_nograd
+    #         model["info"]["time"] = time.time() - tic
 
     # --------------------------------------------------------------------------
     # Inference / prediction APIs
@@ -1110,11 +1332,11 @@ class ModelContainer:
         ind=None,
         ind_pooled=None,
     ):
-        """Wrapper around `gp.misc.modeldiagnosis.plot_selection_criterion_crossections`."""
+        """Wrapper around `gp.misc.modeldiagnosis.plot_selection_criterion_crosssections`."""
         info = self.models[model_index]["info"]
         if info is None:
             raise ValueError("Run select_params() first to populate info.")
-        gp.misc.modeldiagnosis.plot_selection_criterion_crossections(
+        gp.misc.modeldiagnosis.plot_selection_criterion_crosssections(
             info=info,
             selection_criterion=None,
             selection_criteria=None,
@@ -1187,7 +1409,7 @@ class ModelContainer:
         verbose=False,
     ):
         """Wrapper around `gp.misc.modeldiagnosis.selection_criterion_statistics`."""
-        info = self.models[input]["info"]
+        info = self.models[model_index]["info"]
         if info is None:
             raise ValueError("Run select_params() first to populate info.")
         return gp.misc.modeldiagnosis.selection_criterion_statistics(
@@ -1362,18 +1584,42 @@ class ModelContainer:
 
     @staticmethod
     def _param_to_vector_pair(p, model_dict, mpl):
-        """Accept Param or vector; return (mean0, cov0) in normalized space."""
+        """Accept Param or vector; return (mean0, cov0) in normalized space.
+
+        Parameters
+        ----------
+        p : Param | array_like
+            Either a Param object or a 1D vector containing [mean..., cov...].
+        model_dict : dict
+            Per-output model record (AttrDict/dict) containing adapters.
+            Expected keys:
+              - "param_to_vectors": callable, mapping Param -> (meanparam, covparam)
+        mpl : int
+            Mean-parameter length.
+
+        Returns
+        -------
+        (mean0, cov0) : (array, array)
+            1D arrays in normalized coordinates.
+        """
+        # Param object path: rely on the container-installed adapter
         if hasattr(p, "get_by_path") and callable(getattr(p, "get_by_path")):
-            vf = model_dict.get("vectors_from_param", None)
-            if vf is None:
+            pt = model_dict.get("param_to_vectors", None)
+            if pt is None or not callable(pt):
                 raise ValueError(
-                    "vectors_from_param adapter is required to use a Param initializer."
+                    "param_to_vectors adapter is required to use a Param initializer."
                 )
-            mean0, cov0 = vf(p)
+            mean0, cov0 = pt(p)
             mean0 = gnp.asarray(mean0).reshape(-1)
             cov0 = gnp.asarray(cov0).reshape(-1)
+            if mean0.shape[0] != int(mpl):
+                raise ValueError(
+                    f"Param initializer produced mean length {mean0.shape[0]}, expected {int(mpl)}."
+                )
             return mean0, cov0
-        return _split_mean_cov_from_vector(p, mpl)
+
+        # Vector path: split [mean..., cov...]
+        return ModelContainer._split_mean_cov_from_vector(p, mpl)
 
     @staticmethod
     def _bounds_from_param_obj(P):
@@ -1402,15 +1648,35 @@ class ModelContainer:
         return b
 
     @staticmethod
-    def _extract_bounds_for_output(bounds_arg, i, n_params):
+    def _extract_bounds_for_output(bounds_arg, i, n_params, output_dim=None):
+        """
+        Extract bounds for output i and validate shape.
+
+        Parameters
+        ----------
+        bounds_arg : None | array_like(n_params, 2) | list[array_like(n_params, 2)]
+            Either a single bounds array to broadcast to all outputs, or a list of
+            per-output bounds arrays.
+        i : int
+            Output index.
+        n_params : int
+            Expected number of parameters for output i.
+        output_dim : int | None
+            Required when bounds_arg is a list. If None, no length check is done.
+
+        Returns
+        -------
+        ndarray | None
+            Bounds array of shape (n_params, 2) or None.
+        """
         if bounds_arg is None:
             return None
+
         if isinstance(bounds_arg, list):
-            if len(bounds_arg) != self.output_dim:
-                raise ValueError(
-                    "When bounds is a list, its length must equal output_dim."
-                )
-            return _as_bounds_array(bounds_arg[i], n_params)
+            if output_dim is not None and len(bounds_arg) != int(output_dim):
+                raise ValueError("When bounds is a list, its length must equal output_dim.")
+            return ModelContainer._as_bounds_array(bounds_arg[i], n_params)
+
         return ModelContainer._as_bounds_array(bounds_arg, n_params)
 
     @staticmethod

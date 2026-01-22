@@ -56,8 +56,8 @@ gp.misc.plotutils.crosssections(
     model, xi, zi, problem.input_box, ind_i=[0, 1], ind_dim=list(range(dim))
 )
 
-gp.misc.modeldiagnosis.plot_selection_criterion_crossections(
-    model[0].model, model[0].info, delta=5, n_points=200
+gp.misc.modeldiagnosis.plot_selection_criterion_crosssections(
+    info=model[0].info, delta=5, n_points=200
 )
 
 savemat("data_xizi.mat", {"xi": xi, "zi": zi})
