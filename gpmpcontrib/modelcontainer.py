@@ -133,8 +133,8 @@ class ModelContainer:
         compute_conditional_simulations
 
     Diagnostics (wrappers)
-        run_diag          : per-output wrapper of `gp.misc.modeldiagnosis.diag`
-        run_perf          : per-output wrapper of `gp.misc.modeldiagnosis.perf`
+        run_diag          : per-output wrapper of `gp.modeldiagnosis.diag`
+        run_perf          : per-output wrapper of `gp.modeldiagnosis.perf`
         plot_selection_criterion_crosssections
         plot_selection_criterion_profile_2d
         selection_criterion_stats_fast
@@ -1029,8 +1029,8 @@ class ModelContainer:
             zpm_i, zpv_i = self.models[i]["model"].predict(
                 xi, zi[:, i], xt, convert_in=convert_in, convert_out=False
             )
-            zpm_ = gnp.set_col_2d(zpm_, i, zpm_i)
-            zpv_ = gnp.set_col_2d(zpv_, i, zpv_i)
+            zpm_[:, i] = zpm_i
+            zpv_[:, i] = zpv_i
 
         if convert_out:
             return gnp.to_np(zpm_), gnp.to_np(zpv_)
@@ -1066,9 +1066,9 @@ class ModelContainer:
             zloo_i, sigma2loo_i, eloo_i = self.models[i]["model"].loo(
                 xi, zi[:, i], convert_in=convert_in, convert_out=False
             )
-            zloo_ = gnp.set_col_2d(zloo_, i, zloo_i)
-            sigma2loo_ = gnp.set_col_2d(sigma2loo_, i, sigma2loo_i)
-            eloo_ = gnp.set_col_2d(eloo_, i, eloo_i)
+            zloo_[:, i] = zloo_i
+            sigma2loo_[:, i] = sigma2loo_i
+            eloo_[:, i] = eloo_i
 
         if convert_out:
             return gnp.to_np(zloo_), gnp.to_np(sigma2loo_), gnp.to_np(eloo_)
@@ -1140,7 +1140,7 @@ class ModelContainer:
             zsim_i = self.models[i]["model"].sample_paths(
                 xtsim, n_samplepaths, method=method
             )
-            zsim = gnp.set_col_3d(zsim, i, zsim_i)
+            zsim[:, :, i] = zsim_i
 
         # conditional
         zpsim = gnp.empty((nt, n_samplepaths, self.output_dim))
@@ -1180,7 +1180,7 @@ class ModelContainer:
                     f"Unsupported meantype {self.models[i]['model'].meantype}"
                 )
 
-            zpsim = gnp.set_col_3d(zpsim, i, zpsim_i)
+            zpsim[:, :, i] = zpsim_i
 
         if self.output_dim == 1:
             zpsim = zpsim.reshape((zpsim.shape[0], zpsim.shape[1]))
@@ -1225,7 +1225,7 @@ class ModelContainer:
         self, xi, zi, *, output_ind: int | None = None, convert_in: bool = True
     ):
         """
-        Wrapper around `gp.misc.modeldiagnosis.diag`.
+        Wrapper around `gp.modeldiagnosis.diag`.
 
         If `output_ind` is None, runs for all outputs; otherwise only for the
         specified output.
@@ -1241,7 +1241,7 @@ class ModelContainer:
                     f"Output {k}: no selection info. Run select_params() first."
                 )
             zi_k = zi_ if zi_.ndim == 1 else take_col_fn(zi_, k)
-            gp.misc.modeldiagnosis.diag(self.models[k]["model"], info, xi_, zi_k)
+            gp.modeldiagnosis.diag(self.models[k]["model"], info, xi_, zi_k)
 
     def run_perf(
         self,
@@ -1256,7 +1256,7 @@ class ModelContainer:
         convert_in: bool = True,
     ):
         """
-        Wrapper around `gp.misc.modeldiagnosis.perf`.
+        Wrapper around `gp.modeldiagnosis.perf`.
 
         If `output_ind` is None, runs for all outputs; otherwise only for the
         specified output. Supports providing precomputed tuples (`loo_res`,
@@ -1306,7 +1306,7 @@ class ModelContainer:
             zpmzpv_k = _slice_pred(zpmzpv, k) if zpmzpv is not None else None
             loo_k = _slice_loo(loo_res, k) if loo_res is not None else None
 
-            gp.misc.modeldiagnosis.perf(
+            gp.modeldiagnosis.perf(
                 self.models[k]["model"],
                 xi_,
                 zi_k,
@@ -1332,11 +1332,11 @@ class ModelContainer:
         ind=None,
         ind_pooled=None,
     ):
-        """Wrapper around `gp.misc.modeldiagnosis.plot_selection_criterion_crosssections`."""
+        """Wrapper around `gp.modeldiagnosis.plot_selection_criterion_crosssections`."""
         info = self.models[model_index]["info"]
         if info is None:
             raise ValueError("Run select_params() first to populate info.")
-        gp.misc.modeldiagnosis.plot_selection_criterion_crosssections(
+        gp.modeldiagnosis.plot_selection_criterion_crosssections(
             info=info,
             selection_criterion=None,
             selection_criteria=None,
@@ -1360,11 +1360,11 @@ class ModelContainer:
         param_names=None,
         criterion_name="selection criterion",
     ):
-        """Wrapper around `gp.misc.modeldiagnosis.plot_selection_criterion_2d`."""
+        """Wrapper around `gp.modeldiagnosis.plot_selection_criterion_2d`."""
         info = self.models[model_index]["info"]
         if info is None:
             raise ValueError("Run select_params() first to populate info.")
-        gp.misc.modeldiagnosis.plot_selection_criterion_2d(
+        gp.modeldiagnosis.plot_selection_criterion_2d(
             self.models[model_index]["model"],
             info,
             param_indices=param_indices,
@@ -1383,11 +1383,11 @@ class ModelContainer:
         n_points=250,
         verbose=False,
     ):
-        """Wrapper around `gp.misc.modeldiagnosis.selection_criterion_statistics_fast`."""
+        """Wrapper around `gp.modeldiagnosis.selection_criterion_statistics_fast`."""
         info = self.models[model_index]["info"]
         if info is None:
             raise ValueError("Run select_params() first to populate info.")
-        return gp.misc.modeldiagnosis.selection_criterion_statistics_fast(
+        return gp.modeldiagnosis.selection_criterion_statistics_fast(
             info=info,
             model=self.models[model_index]["model"],
             xi=gnp.asarray(xi),
@@ -1408,11 +1408,11 @@ class ModelContainer:
         delta=5.0,
         verbose=False,
     ):
-        """Wrapper around `gp.misc.modeldiagnosis.selection_criterion_statistics`."""
+        """Wrapper around `gp.modeldiagnosis.selection_criterion_statistics`."""
         info = self.models[model_index]["info"]
         if info is None:
             raise ValueError("Run select_params() first to populate info.")
-        return gp.misc.modeldiagnosis.selection_criterion_statistics(
+        return gp.modeldiagnosis.selection_criterion_statistics(
             info=info,
             model=self.models[model_index]["model"],
             xi=gnp.asarray(xi),

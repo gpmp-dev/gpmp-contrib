@@ -32,7 +32,7 @@ def plot_1d(xt, zt, xi, zi, zpm, zpv, zpsim=None, xnew=None, title=None):
     xnew (ndarray, optional): New data point being added
     title (str, optional): Title for the plot
     """
-    fig = gp.misc.plotutils.Figure(isinteractive=interactive)
+    fig = gp.plot.Figure(isinteractive=interactive)
 
     # Plot zt if it is provided
     if zt is not None:

@@ -71,7 +71,7 @@ def plot(show=True, x=None, z=None):
     crit, _ = sampcrit.box_wMSE(algo.box_current, zpm, zpv)
     pe, _ = sampcrit.box_probability(algo.box_current, zpm, zpv)
 
-    fig = gp.misc.plotutils.Figure(nrows=3, ncols=1, isinteractive=True, figsize=(10, 8))
+    fig = gp.plot.Figure(nrows=3, ncols=1, isinteractive=True, figsize=(10, 8))
     fig.subplot(1)
     fig.plot(xt, zt, "k", linewidth=0.5)
     fig.axhline(algo.box_current[0], color="k", linewidth=0.5)

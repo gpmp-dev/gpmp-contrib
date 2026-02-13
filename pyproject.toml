@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "gpmp-contrib"
-version = "0.9.30"
+dynamic = ["version"]
 authors = [{name = "Emmanuel Vazquez", email = "emmanuel.vazquez@centralesupelec.fr"}]
 description = "GPmp contrib: the contrib GPmp package"
 readme = "README.md"
@@ -16,9 +16,9 @@ classifiers = [
 ]
 dependencies = [
     "numpy",
-    "scipy>=1.8.0",
+    "scipy>=1.12.0",
     "matplotlib",
-    "gpmp>=0.9.30"
+    "gpmp>=0.9.31"
 ]
 requires-python = ">=3.9"
 
@@ -29,3 +29,6 @@ requires-python = ">=3.9"
 where = ["."]
 include = ['gpmpcontrib', 'gpmpcontrib/optim', 'gpmpcontrib/plot',
            'gpmpcontrib/misc', 'gpmpcontrib/regp', 'examples', 'test']
+
+[tool.setuptools.dynamic]
+version = {file = "VERSION"}

@@ -37,7 +37,7 @@ model.select_params(xi, zi)
 model.run_diag(xi, zi)
 
 zloom, zloov, eloo = model.loo(xi, zi)
-gp.misc.plotutils.plot_loo(zi.reshape(-1), zloom.reshape(-1), zloov.reshape(-1))
+gp.plot.plot_loo(zi.reshape(-1), zloom.reshape(-1), zloov.reshape(-1))
 
 random_init = True
 init_box = [-8, -1]
@@ -52,11 +52,11 @@ res = model.sample_parameters(
     init_box=init_box,
 )
 
-gp.misc.plotutils.crosssections(
+gp.plot.crosssections(
     model, xi, zi, problem.input_box, ind_i=[0, 1], ind_dim=list(range(dim))
 )
 
-gp.misc.modeldiagnosis.plot_selection_criterion_crosssections(
+gp.modeldiagnosis.plot_selection_criterion_crosssections(
     info=model[0].info, delta=5, n_points=200
 )
 

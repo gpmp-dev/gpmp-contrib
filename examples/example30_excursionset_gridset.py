@@ -66,7 +66,7 @@ def plot(show=True, x=None, z=None):
     crit = sampcrit.excursion_wMSE(algo.u_target, zpm, zpv)
     pe = sampcrit.excursion_probability(algo.u_target, zpm, zpv)
 
-    fig = gp.misc.plotutils.Figure(nrows=3, ncols=1, isinteractive=True)
+    fig = gp.plot.Figure(nrows=3, ncols=1, isinteractive=True)
     fig.subplot(1)
     fig.plot(xt, zt, "k", linewidth=0.5)
     fig.plot(fig.xlim(), [u_target] * 2, "k", linewidth=0.5)

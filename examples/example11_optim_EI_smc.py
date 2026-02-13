@@ -53,7 +53,7 @@ def plot(show=True, x=None, z=None):
     ei = sampcrit.expected_improvement(-gnp.min(eialgo.zi), -zpm, zpv)
     pe = sampcrit.excursion_probability(-gnp.min(eialgo.zi), -zpm, zpv)
 
-    fig = gp.misc.plotutils.Figure(nrows=3, ncols=1, isinteractive=True)
+    fig = gp.plot.Figure(nrows=3, ncols=1, isinteractive=True)
     fig.subplot(1)
     fig.plot(xt, zt, "k", linewidth=0.5)
     if z is not None:

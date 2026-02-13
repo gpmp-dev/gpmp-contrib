@@ -52,7 +52,7 @@ def kernel(x, y, covparam, pairwise=False):
 
 def visualize_results(xt, zt, xi, zi, zpm, zpv, fig=None, rgb_hue=[242, 64, 76]):
     """
-    Visualize the results using gp.misc.plotutils (a matplotlib wrapper).
+    Visualize the results using gp.plot (a matplotlib wrapper).
 
     Parameters
     ----------
@@ -70,7 +70,7 @@ def visualize_results(xt, zt, xi, zi, zpm, zpv, fig=None, rgb_hue=[242, 64, 76])
         Posterior variance
     """
     if fig is None:
-        fig = gp.misc.plotutils.Figure(isinteractive=True)
+        fig = gp.plot.Figure(isinteractive=True)
     fig.plot(xt, zt, "k", linewidth=1, linestyle=(0, (5, 5)))
     fig.plotdata(xi, zi)
     fig.plotgp(xt, zpm, zpv, colorscheme="hue", rgb_hue=rgb_hue)
@@ -90,7 +90,7 @@ model = gp.core.Model(constant_mean, kernel, meanparam, covparam0)
 
 # Automatic selection of parameters using REML
 model, info = gp.kernel.select_parameters_with_reml(model, xi, zi, info=True)
-gp.misc.modeldiagnosis.diag(model, info, xi, zi)
+gp.modeldiagnosis.diag(model, info, xi, zi)
 
 # GP prediction
 zpm, zpv = model.predict(xi, zi, xt)
@@ -103,7 +103,7 @@ R = gnp.numpy.array([[u, gnp.numpy.inf]])
 
 zi_relaxed, (zpm, zpv), model, info_ret = regp.predict(model, xi, zi, xt, R)
 
-gp.misc.modeldiagnosis.diag(model, info, xi, zi_relaxed)
+gp.modeldiagnosis.diag(model, info, xi, zi_relaxed)
 
 x_limits = fig.axes[0].get_xlim()
 plt.hlines(y=u, xmin=x_limits[0], xmax=x_limits[1], colors="b")
@@ -111,7 +111,7 @@ visualize_results(xt, zt, xi, zi_relaxed, zpm, zpv, fig, rgb_hue=[128, 128, 255]
 
 # LOO
 zloom, zloov, eloo = model.loo(xi, zi_relaxed)
-gp.misc.plotutils.plot_loo(zi_relaxed, zloom, zloov)
+gp.plot.plot_loo(zi_relaxed, zloom, zloov)
 
 # Threshold selection
 Rgopt = regp.select_optimal_threshold_above_t0(model, xi, zi, u)
