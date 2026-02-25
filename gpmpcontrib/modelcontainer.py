@@ -91,10 +91,12 @@ class ModelContainer:
         A procedure must accept `(model, xi, zi)` and return either
         `(meanparam0, covparam0)` (parameterized mean) or `covparam0`.
     selection_criteria : callable | list[callable] | None
-        Selection criterion(ia) used during parameter estimation. Either a
+        Selection criterion/criteria used during parameter estimation. Either a
         single callable applied to all outputs or a list (one per output). If
         None, they are built via `build_selection_criterion(...)`. A criterion
-        must match the signature expected by `make_selection_criterion_with_gradient`.
+        must match the expected model signature:
+        - linear-predictor mean: `criterion(model, covparam, xi, zi)`
+        - parameterized mean: `criterion(model, meanparam, covparam, xi, zi)`
 
     Attributes
     ----------
@@ -111,6 +113,11 @@ class ModelContainer:
           - "mean_fname"  : str
           - "mean_paramlength" : int
           - "covariance_fname" : str
+          - "param" : gpmp.misc.param.Param | None
+          - "param_from_vectors" : callable
+          - "param_to_vectors" : callable
+          - "get_param" : callable
+          - "apply_param" : callable
           - "parameters_initial_guess_procedure" : callable | None
           - "selection_criterion"                : callable | None
           - "info" : object | None (optimizer/selection report; filled by `select_params`)
@@ -118,13 +125,14 @@ class ModelContainer:
     Key Methods (overview)
     ----------------------
     Construction / config
-        set_mean_functions, set_covariance_functions
+        make_mean_functions, make_covariance_functions
         build_mean_function (override in subclass)
         build_covariance   (override in subclass)
 
     Parameter selection
-        set_parameters_initial_guess_procedures, set_selection_criteria
-        make_selection_criterion_with_gradient
+        make_parameters_initial_guess_procedures
+        make_selection_criteria
+        make_param_object_procedures
         select_params
 
     Inference
@@ -141,7 +149,7 @@ class ModelContainer:
         selection_criterion_stats
 
     Sampling
-        sample_parameters, sample_parameters_smc
+        sample_parameters
 
     Serialization
         get_state, set_state, save_state, load_state
@@ -375,12 +383,12 @@ class ModelContainer:
         Make one covariance function per output.
 
         This method sets covariance functions based on the parameters
-        provided in params. Each entry in params should specify a
+        provided in `covariance_specification`. Each entry should specify a
         covariance function and its associated parameters.
 
         Parameters
         ----------
-        covarariance_params : list of dict or dict
+        covariance_specification : list of dict or dict
             Parameters for defining covariance functions. Can be a
             single dictionary applied to all outputs or a list of
             dictionaries, one for each output. Each dictionary may
@@ -395,7 +403,7 @@ class ModelContainer:
         Raises
         ------
         ValueError
-            If params are not correctly specified or do not
+            If `covariance_specification` is not correctly specified or does not
             match output_dim.
 
         """
