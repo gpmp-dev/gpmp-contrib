@@ -16,7 +16,7 @@ License: GPLv3 (see LICENSE)
 import time
 import pickle
 import gpmp.num as gnp
-from gpmp.misc.smc import SMC, ParticlesSetConfig, SMCConfig
+from gpmp.mcmc.smc import SMC, ParticlesSetConfig, SMCConfig
 from gpmpcontrib import SequentialPrediction
 
 

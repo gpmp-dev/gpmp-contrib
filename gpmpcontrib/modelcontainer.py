@@ -638,45 +638,45 @@ class ModelContainer:
 
         return criteria
 
-    def make_selection_criterion_with_gradient(
-            self,
-            model,
-            xi_=None,
-            zi_=None,
-            dataloader=None,
-            batches_per_eval=0,
-            parameterized_mean=False
-    ):
-        """
-        Wrap the (per-output) selection criterion into a differentiable object
-        compatible with `gp.kernel.autoselect_parameters`.
-        """
-        selection_criterion = model["selection_criterion"]
-        meanparam_len = model["mean_paramlength"]
-        data_source = gp.kernel.parameter_selection.check_xi_zi_or_loader(xi_, zi_, dataloader)
+    # def make_selection_criterion_with_gradient(
+    #         self,
+    #         model,
+    #         xi_=None,
+    #         zi_=None,
+    #         dataloader=None,
+    #         batches_per_eval=0,
+    #         parameterized_mean=False
+    # ):
+    #     """
+    #     Wrap the (per-output) selection criterion into a differentiable object
+    #     compatible with `gp.kernel.autoselect_parameters`.
+    #     """
+    #     selection_criterion = model["selection_criterion"]
+    #     meanparam_len = model["mean_paramlength"]
+    #     data_source = gp.kernel.parameter_selection.check_xi_zi_or_loader(xi_, zi_, dataloader)
         
-        if meanparam_len > 0:
-            parameterized_mean = True
+    #     if meanparam_len > 0:
+    #         parameterized_mean = True
 
-        if parameterized_mean:
-            # make a selection criterion with mean parameter
-            def crit_(param, xi, zi):
-                meanparam = param[:meanparam_len]
-                covparam = param[meanparam_len:]
-                return selection_criterion(model["model"], meanparam, covparam, xi, zi)
-        else:
-            # make a selection criterion without mean parameter
-            def crit_(covparam, xi, zi):
-                return selection_criterion(model["model"], covparam, xi, zi)
+    #     if parameterized_mean:
+    #         # make a selection criterion with mean parameter
+    #         def crit_(param, xi, zi):
+    #             meanparam = param[:meanparam_len]
+    #             covparam = param[meanparam_len:]
+    #             return selection_criterion(model["model"], meanparam, covparam, xi, zi)
+    #     else:
+    #         # make a selection criterion without mean parameter
+    #         def crit_(covparam, xi, zi):
+    #             return selection_criterion(model["model"], covparam, xi, zi)
 
-        if data_source == "arrays":
-            crit = gnp.DifferentiableSelectionCriterion(crit_, xi_, zi_)
-        else:
-            crit = gnp.BatchDifferentiableSelectionCriterion(
-                crit_, dataloader, batches_per_eval=batches_per_eval
-            )
+    #     if data_source == "arrays":
+    #         crit = gnp.DifferentiableSelectionCriterion(crit_, xi_, zi_)
+    #     else:
+    #         crit = gnp.BatchDifferentiableSelectionCriterion(
+    #             crit_, dataloader, batches_per_eval=batches_per_eval
+    #         )
     
-        return crit.evaluate, crit.gradient, crit.evaluate_no_grad
+    #     return crit.evaluate, crit.gradient, crit.evaluate_no_grad
 
     def build_param_procedures(self, output_idx: int, **kwargs):
         """Return Param procedures"""
@@ -814,13 +814,28 @@ class ModelContainer:
                 base_bounds = ModelContainer._intersect_bounds(base_bounds, local_interval)
 
             # 4) Optimize
-            crit, dcrit, crit_nograd = self.make_selection_criterion_with_gradient(
-                model, xi_, zi_[:, i]
+            selection_criterion = model["selection_criterion"]
+            meanparam_len = model["mean_paramlength"]
+            crit, crit_pre_grad, crit_no_grad, crit_grad = (
+                gp.kernel.make_selection_criterion_with_gradient(
+                    model["model"],
+                    selection_criterion,
+                    xi=xi_,
+                    zi=zi_[:, i],
+                    dataloader=None,
+                    parameterized_mean=True if meanparam_len > 0 else False,
+                    meanparam_len=meanparam_len,
+                )
             )
+
+            # crit, dcrit, crit_nograd = self.make_selection_criterion_with_gradient(
+            #     model, xi_, zi_[:, i]
+            # )
+
             param, info = gp.kernel.autoselect_parameters(
                 param0_init,
-                crit,
-                dcrit,
+                crit_pre_grad,
+                crit_grad,
                 bounds=base_bounds,
                 silent=True,
                 info=True,
@@ -850,7 +865,7 @@ class ModelContainer:
             model["info"]["covparam"] = model["model"].covparam
             model["info"]["param"] = param
             model["info"]["selection_criterion"] = crit
-            model["info"]["selection_criterion_nograd"] = crit_nograd
+            model["info"]["selection_criterion_nograd"] = crit_no_grad
             model["info"]["time"] = time.time() - tic
 
     
@@ -1425,73 +1440,44 @@ class ModelContainer:
     # --------------------------------------------------------------------------
     # Parameter posterior sampling
     # --------------------------------------------------------------------------
-    def sample_parameters(self, model_indices=None, **kwargs):
-        """
-        Run MCMC over parameters using the stored selection criterion.
+    def sample_parameters(
+        self, method="nuts", model_indices=None, init_box=None, sampling_box=None, **kwargs
+    ):
+        """Sample GP parameters from the stored selection criterion.
 
         Parameters
         ----------
+        method : {"mh", "hmc", "nuts", "smc"}, default "nuts"
+            Sampling method.
+            - "mh": Metropolis-Hastings sampler
+            - "hmc"/"nuts": NUTS-based Hamiltonian sampling
+            - "smc": Sequential Monte Carlo sampler
         model_indices : list of int, optional
             Indices of models to sample. Defaults to all models.
+        init_box : list, optional
+            Initialization box.
+            - Required for method="smc" (particle initialization domain).
+            - For "mh"/"hmc"/"nuts", used only when random_init=True.
+        sampling_box : list, optional
+            Domain box used to truncate the target criterion during sampling
+            (outside points get log-prob = -inf). If None, sampling is unbounded.
         **kwargs
-            Extra arguments passed to sample_from_selection_criterion
-            (see
-            `gpmp.misc.param_posterior.sample_from_selection_criterion`).
+            Extra arguments passed to the selected gpmp sampler:
+            - gpmp.mcmc.param_posterior.sample_from_selection_criterion_mh
+            - gpmp.mcmc.param_posterior.sample_from_selection_criterion_nuts
+            - gpmp.mcmc.param_posterior.sample_from_selection_criterion_smc
 
         Returns
         -------
         dict
             Dictionary mapping model index to:
-              - 'samples': MCMC samples (np.ndarray).
-              - 'mh': MetropolisHastings instance.
+            - method="mh": {"samples": ..., "mh": ...}
+            - method="hmc"/"nuts": {"samples": ..., "nuts": ...}
+            - method="smc": {"particles": ..., "smc": ...}
         """
-        from gpmp.misc.param_posterior import sample_from_selection_criterion
-
-        if model_indices is None:
-            model_indices = list(range(self.output_dim))
-
-        results = {}
-        for idx in model_indices:
-            model_info = self.models[idx].get("info")
-            if model_info is None:
-                raise ValueError(
-                    f"Model {idx} missing 'info'. Run select_params() first."
-                )
-            samples, mh = sample_from_selection_criterion(model_info, **kwargs)
-            results[idx] = {"samples": samples, "mh": mh}
-        return results
-
-    def sample_parameters_smc(self, init_box, model_indices=None, **kwargs):
-        """Run SMC sampling for GP model parameters from the posterior distribution.
-
-        If model_indices is not provided, all models are processed.
-
-        Parameters
-        ----------
-        model_indices : list of int, optional
-            Indices of models to sample. Defaults to all models.
-        **kwargs
-            Extra arguments passed to sample_from_selection_criterion_smc.
-            Expected keywords include:
-              - n_particles: int, optional
-              - initial_temperature: float, optional
-              - final_temperature: float, optional
-              - min_ess_ratio: float, optional
-              - max_stages: int, optional
-              - debug: bool, optional
-              - plot: bool, optional
-            (See the documentation of
-            gpmp.misc.param_posterior.sample_from_selection_criterion_smc
-            for details.)
-
-        Returns
-        -------
-        dict
-            Dictionary mapping model index to:
-              - 'particles': Final particle positions (np.ndarray).
-              - 'smc': SMC instance containing additional logs and diagnostics.
-        """
-        from gpmp.misc.param_posterior import sample_from_selection_criterion_smc
+        method = str(method).lower()
+        if method not in {"mh", "hmc", "nuts", "smc"}:
+            raise ValueError("method must be one of: 'mh', 'hmc', 'nuts', 'smc'.")
 
         if model_indices is None:
             model_indices = list(range(self.output_dim))
@@ -1504,12 +1490,58 @@ class ModelContainer:
                     f"Model {idx} missing 'info'. Run select_params() first."
                 )
 
-            # NB: sample_from_selection_criterion_smc uses the negative log-posterior contained in
-            # info.selection_criterion_nograd and the domain box info.box to define a tempered logpdf.
-            particles, smc_instance = sample_from_selection_criterion_smc(
-                info=model_info, init_box=init_box, **kwargs
-            )
-            results[idx] = {"particles": particles, "smc": smc_instance}
+            if method == "mh":
+                from gpmp.mcmc.param_posterior import sample_from_selection_criterion_mh
+
+                samples, mh = sample_from_selection_criterion_mh(
+                    info=model_info,
+                    init_box=init_box,
+                    sampling_box=sampling_box,
+                    **kwargs,
+                )
+                results[idx] = {"samples": samples, "mh": mh}
+
+            elif method in {"hmc", "nuts"}:
+                from gpmp.mcmc.param_posterior import (
+                    sample_from_selection_criterion_nuts,
+                )
+
+                # Backward-compatible aliases for users migrating from MH-style kwargs.
+                nuts_kwargs = dict(kwargs)
+                if "n_steps_total" in nuts_kwargs and "num_samples" not in nuts_kwargs:
+                    nuts_kwargs["num_samples"] = nuts_kwargs.pop("n_steps_total")
+                if "burnin_period" in nuts_kwargs and "num_warmup" not in nuts_kwargs:
+                    nuts_kwargs["num_warmup"] = nuts_kwargs.pop("burnin_period")
+                if "show_progress" in nuts_kwargs and "progress" not in nuts_kwargs:
+                    nuts_kwargs["progress"] = nuts_kwargs.pop("show_progress")
+                if "silent" in nuts_kwargs:
+                    silent = bool(nuts_kwargs.pop("silent"))
+                    nuts_kwargs.setdefault("verbose", 0 if silent else 1)
+                    nuts_kwargs.setdefault("progress", not silent)
+                nuts_kwargs.pop("n_pool", None)
+
+                samples, nuts_info = sample_from_selection_criterion_nuts(
+                    info=model_info,
+                    init_box=init_box,
+                    sampling_box=sampling_box,
+                    **nuts_kwargs,
+                )
+                key = "hmc" if method == "hmc" else "nuts"
+                results[idx] = {"samples": samples, key: nuts_info}
+
+            else:
+                from gpmp.mcmc.param_posterior import sample_from_selection_criterion_smc
+
+                if init_box is None:
+                    raise ValueError("init_box must be provided when method='smc'.")
+                particles, smc_instance = sample_from_selection_criterion_smc(
+                    info=model_info,
+                    init_box=init_box,
+                    sampling_box=sampling_box,
+                    **kwargs,
+                )
+                results[idx] = {"particles": particles, "smc": smc_instance}
+
         return results
 
     # --------------------------------------------------------------------------

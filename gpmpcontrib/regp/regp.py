@@ -95,10 +95,10 @@ def make_regp_criterion_with_gradient(model, x0, z0, x1):
 
     Returns
     -------
-    crit_jit : function
-        Selection criterion function with gradient.
-    dcrit : function
-        Gradient of the selection criterion function.
+    crit_pre_grad : callable
+        Criterion wrapper to evaluate objective and cache graph before gradient.
+    dcrit : callable
+        Gradient function compatible with SciPy's jac callback.
     """
     x0 = gnp.asarray(x0)
     x1 = gnp.asarray(x1)
@@ -127,11 +127,13 @@ def make_regp_criterion_with_gradient(model, x0, z0, x1):
         l = selection_criterion(covparam, xi, zi)
         return l
 
-    crit_jit = gnp.jax.jit(crit_)
+    crit_diff = gnp.DifferentiableSelectionCriterion(
+        lambda p, _x, _z: crit_(p),
+        gnp.array([]),
+        gnp.array([]),
+    )
 
-    dcrit = gnp.jax.jit(gnp.grad(crit_jit))
-
-    return crit_jit, dcrit
+    return crit_diff.evaluate_pre_grad, crit_diff.gradient
 
 
 def remodel(
@@ -183,8 +185,9 @@ def remodel(
 
     tic = time.time()
 
-    xi_, zi_, _ = model.ensure_shapes_and_type(
-        xi=xi, zi=zi, convert=convert_in)
+    xi_, zi_, _ = gp.core.utils.ensure_shapes_and_type(
+        xi=xi, zi=zi, convert=convert_in
+    )
 
     # Initial guess for the covariance parameters if not provided
     if covparam0 is None:
