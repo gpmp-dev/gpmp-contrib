@@ -1,9 +1,64 @@
-"""Implement a sketch of the estimation of an excursion set on a fixed grid
+"""
+Example 30: excursion-set estimation on a fixed grid.
+
+This example demonstrates sequential estimation of a 1D excursion set on
+`[-2, 2]` using:
+
+- a Matérn GP surrogate with REMAP parameter selection, and
+- a fixed-grid excursion strategy (`ExcursionSetGridSearch`).
+
+Goal
+----
+Estimate the excursion set
+    Γ(u_target) = {x : f(x) > u_target}
+for `u_target = 1.02`, while sequentially adding evaluations that reduce
+excursion-classification uncertainty on the grid.
+
+Workflow
+--------
+At each iteration:
+1. Update the GP model from current observations.
+2. Predict posterior mean/variance on the fixed grid `xt`.
+3. Compute excursion-oriented quantities at threshold `u_target`:
+   - excursion probability `g(x) = P(ξ(x) > u_target)`,
+   - weighted misclassification criterion `excursion_wMSE(...)`.
+4. Select the next point by maximizing the criterion on `xt`.
+5. Evaluate the objective, update the model, and repeat.
+
+Selection criterion
+-------------------
+The acquisition used for sequential design is `excursion_wMSE`, which combines:
+- excursion misclassification probability (focus near uncertain boundary),
+- posterior variance (focus where uncertainty remains high).
+
+This prioritizes points that are most informative for reconstructing the
+excursion set rather than optimizing the function minimum.
+
+What is plotted
+---------------
+Three panels are shown at each iteration:
+1. Posterior GP (truth, observations, posterior mean/uncertainty) with
+   horizontal line at `u_target`.
+2. Excursion-set criterion profile (`excursion_wMSE`).
+3. Excursion probability profile `P(ξ(x) > u_target)`.
+
+Notes
+-----
+- Initial design size: 4 points.
+- Sequential additions: 18 new evaluations.
+- `run_diagnosis` is called after each update to inspect parameter-selection
+  behavior during the sequential process.
+
+Reference
+---------
+J. Bect, D. Ginsbourger, L. Li, V. Picheny, and E. Vazquez (2012).
+"Sequential design of computer experiments for the estimation of a probability
+of failure."
+Statistics and Computing, 22, 773-793.
 
 Author: Emmanuel Vazquez <emmanuel.vazquez@centralesupelec.fr>
 Copyright (c) 2022-2026, CentraleSupelec
 License: GPLv3 (see LICENSE)
-
 """
 
 import numpy as np

@@ -4,6 +4,44 @@
 # Copyright (c) 2023, CentraleSupelec
 # License: GPLv3 (see LICENSE)
 # --------------------------------------------------------------
+"""
+Relaxed Gaussian process (reGP) utilities for threshold-oriented modeling.
+
+This module implements the reGP workflow used in `examples/example20_regp.py`:
+start from a GP fit, relax observations in a target interval, and refit the
+covariance parameters jointly with relaxed values to improve behavior in a
+region of interest.
+
+Typical use
+-----------
+1. Define a relaxation interval `R` (for example `[[u, +inf]]`).
+2. Call `predict(...)` (or `remodel(...)`) to obtain relaxed observations and
+   posterior predictions.
+3. Optionally call `select_optimal_threshold_above_t0(...)` to choose a
+   threshold above `t0` with a tCRPS-based criterion.
+
+Defines
+-------
+get_membership_indices
+    Assign each observation to a relaxation interval index.
+split_data
+    Split observations into non-relaxed and relaxed subsets.
+make_regp_criterion_with_gradient
+    Build the reGP objective and gradient wrappers for optimization.
+remodel
+    Perform reGP parameter/value optimization (REML + relaxation).
+predict
+    Run reGP remodeling then compute posterior predictions.
+select_optimal_threshold_above_t0
+    Select a relaxation threshold above `t0` by minimizing a tCRPS criterion.
+
+Reference
+---------
+S. J. Petit, J. Bect, and E. Vazquez (2025).
+"Relaxed Gaussian Process Interpolation: a Goal-Oriented Approach to Bayesian Optimization."
+Journal of Machine Learning Research, 26(195):1-70.
+https://www.jmlr.org/papers/v26/22-0828.html
+"""
 from scipy.stats import norm
 import time
 import numpy as np

@@ -1,9 +1,55 @@
-"""Implement a sketch of the EI algorithm
+"""
+Example 10: Expected Improvement optimization on a fixed candidate grid.
+
+This example demonstrates a 1D Bayesian optimization loop on the `twobumps`
+function over `[-1, 1]`, using:
+
+- a Matérn GP surrogate with REML parameter selection, and
+- an EI strategy over a fixed search set (`ExpectedImprovementGridSearch`).
+
+Objective
+---------
+Show the baseline sequential EI workflow when the candidate set is fixed
+(regular grid), as opposed to adaptive particle-based search.
+
+Workflow
+--------
+At each iteration:
+1. Update the GP model from current observations.
+2. Predict posterior mean/variance on the fixed grid `xt`.
+3. Compute EI on `xt`.
+4. Select the grid point maximizing EI and evaluate the objective there.
+5. Update the model and repeat.
+
+Sign convention
+---------------
+EI is computed as:
+`expected_improvement(-z_best, -zpm, zpv)`.
+This sign flip follows the convention used in `gpmpcontrib.samplingcriteria`
+while targeting improvement relative to the current best observation.
+
+What is plotted
+---------------
+Three panels are shown at each iteration:
+1. Posterior GP (truth, observed points, posterior mean/uncertainty),
+2. EI profile on the fixed grid,
+3. Excursion probability profile relative to current best value.
+
+Notes
+-----
+- Initial design size: 3 points.
+- Sequential additions: 6 new evaluations.
+- `run_diagnosis` is called after each iteration to inspect model updates.
+
+Reference
+---------
+D. R. Jones, M. Schonlau, and W. J. Welch (1998).
+"Efficient Global Optimization of Expensive Black-Box Functions."
+Journal of Global Optimization, 13, 455-492.
 
 Author: Emmanuel Vazquez <emmanuel.vazquez@centralesupelec.fr>
 Copyright (c) 2022-2026, CentraleSupelec
 License: GPLv3 (see LICENSE)
-
 """
 
 import numpy as np
@@ -87,4 +133,3 @@ for i in range(n):
     plot(show=True)
     # print model diagnosis
     eialgo.model.run_diagnosis(eialgo.xi, eialgo.zi)
-

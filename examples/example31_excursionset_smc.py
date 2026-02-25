@@ -1,9 +1,88 @@
-"""Implement a sketch of the BSS algorithm
+"""
+Example 31: excursion-set estimation with Bayesian Subset Simulation (BSS).
+
+This example illustrates an interactive 1D excursion-set workflow on
+`[-2, 2]` using:
+
+- a Matérn GP surrogate with REML parameter selection, and
+- a BSS-style SMC strategy (`ExcursionSetBSS`) that adapts particles toward
+  exceedance regions.
+
+Goal
+----
+Estimate the excursion set
+    Γ(u_target) = {x : f(x) > u_target}
+for `u_target = 1.02`, while progressively adapting the particle cloud and
+selecting new evaluations where excursion classification is uncertain.
+
+BSS / SMC procedure used here
+-----------------------------
+The algorithm introduces an interpolation parameter `mu in [0, 1]` and an
+intermediate threshold
+    u(mu) = (1 - mu) * u_init + mu * u_target.
+
+SMC particles target a log-density proportional to
+    log P(ξ(x) > u(mu) | data)
+inside the input box (and `-inf` outside). Increasing `mu` makes the target
+event rarer and concentrates particles in more relevant regions.
+
+At each SMC stage, particles are:
+1. reweighted with the updated excursion-based target,
+2. resampled (residual scheme),
+3. moved by MH random-walk kernels.
+
+The helper `compute_next_logpdf_param(..., p0=...)` is used to choose the next
+`mu` level with controlled stage-to-stage overlap.
+
+Sequential design criterion
+---------------------------
+New evaluations are chosen by maximizing the excursion-oriented criterion
+`excursion_wMSE(u_current, zpm, zpv)`, i.e. a misclassification/variance-driven
+score that prioritizes points informative for excursion-set reconstruction.
+
+Reported diagnostics
+--------------------
+After updates, the script tracks:
+- `g(x) = P(ξ(x) > u_current | data)` (excursion probability),
+- `tau(x)` (misclassification probability),
+- `alpha = mean(g)` (estimated excursion volume),
+- `beta = mean(tau)` (expected misclassification volume).
+
+Interactive commands
+--------------------
+- `n [p0]`: update `mu` with the p0 rule (threshold progression only).
+- `s x`: set `mu` manually.
+- `m[n]`: move particles `n` times without changing `mu`.
+- `u[n]`: update `mu` then move particles `n` times.
+- `e[n]`: perform `n` new objective evaluations (with model update).
+- `r`: restart particles / threshold progression.
+- `p`: redraw plots.
+- `q`: quit.
+
+What is plotted
+---------------
+1. Posterior GP with observations and current threshold `u_current`.
+2. Excursion-set criterion profile (`excursion_wMSE`).
+3. Excursion probability profile and current SMC particle cloud.
+
+References
+----------
+P. Feliot, J. Bect, and E. Vazquez (2017).
+"A Bayesian approach to constrained single- and multi-objective optimization."
+Journal of Global Optimization.
+
+J. Bect, L. Li, and E. Vazquez (2017).
+"Bayesian subset simulation."
+SIAM/ASA Journal on Uncertainty Quantification, 5(1), 762-786.
+
+J. Bect, D. Ginsbourger, L. Li, V. Picheny, and E. Vazquez (2012).
+"Sequential design of computer experiments for the estimation of a probability
+of failure."
+Statistics and Computing, 22, 773-793.
 
 Author: Emmanuel Vazquez <emmanuel.vazquez@centralesupelec.fr>
 Copyright (c) 2022-2026, CentraleSupelec
 License: GPLv3 (see LICENSE)
-
 """
 
 import re
