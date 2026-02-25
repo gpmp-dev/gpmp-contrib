@@ -15,7 +15,7 @@ Each  example demonstrates  how to  initialize the  ComputerExperiment
 object, how to evaluate functions, and how to handle constraints.
 
 Author: Emmanuel Vazquez <emmanuel.vazquez@centralesupelec.fr>
-Copyright (c) 2022-2025, CentraleSupelec
+Copyright (c) 2022-2026, CentraleSupelec
 License: GPLv3 (see LICENSE)
 
 """

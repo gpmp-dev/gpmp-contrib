@@ -24,7 +24,7 @@ pip install -e .
 
 ## Copyright
 
- Copyright (C) 2022-2025 CentraleSupelec
+ Copyright (C) 2022-2026 CentraleSupelec
 
 ## License
 

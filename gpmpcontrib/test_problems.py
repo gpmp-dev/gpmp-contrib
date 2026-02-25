@@ -103,7 +103,7 @@ Contributions from: Subhasish Basak, 2023
                     Eniko Bartok, 2025
                     Boris Kratz, 2025
 
-Copyright (c) 2022-2025, CentraleSupelec
+Copyright (c) 2022-2026, CentraleSupelec
 License: GPLv3 (see LICENSE)
 """
 import numpy as np
