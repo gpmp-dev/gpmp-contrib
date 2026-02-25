@@ -1,7 +1,7 @@
 """Implement a sketch of the EI algorithm
 
 Author: Emmanuel Vazquez <emmanuel.vazquez@centralesupelec.fr>
-Copyright (c) 2022-2025, CentraleSupelec
+Copyright (c) 2022-2026, CentraleSupelec
 License: GPLv3 (see LICENSE)
 
 """
@@ -154,7 +154,7 @@ for i in range(n):
         __import__("pdb").post_mortem()
 
     # print model diagnosis
-    eialgo.model.run_diag(eialgo.xi, eialgo.zi)
+    eialgo.model.run_diagnosis(eialgo.xi, eialgo.zi)
 
     particles_x = eialgo.smc.particles.x
     particles_zt = problem(particles_x)

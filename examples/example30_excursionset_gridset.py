@@ -1,7 +1,7 @@
 """Implement a sketch of the estimation of an excursion set on a fixed grid
 
 Author: Emmanuel Vazquez <emmanuel.vazquez@centralesupelec.fr>
-Copyright (c) 2022-2025, CentraleSupelec
+Copyright (c) 2022-2026, CentraleSupelec
 License: GPLv3 (see LICENSE)
 
 """
@@ -99,4 +99,4 @@ for i in range(n):
     print(f"Iteration {i} / {n}")
     algo.step()
     plot(show=True)
-    algo.model.run_diag(algo.xi, algo.zi)
+    algo.model.run_diagnosis(algo.xi, algo.zi)

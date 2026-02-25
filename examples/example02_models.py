@@ -12,7 +12,7 @@ Imports:
 - test_functions for predefined test functions.
 
 Author: Emmanuel Vazquez <emmanuel.vazquez@centralesupelec.fr>
-Copyright (c) 2022-2025, CentraleSupelec
+Copyright (c) 2022-2026, CentraleSupelec
 License: GPLv3 (see LICENSE file)
 
 """
@@ -51,7 +51,7 @@ xi = xt[ind]
 zi = problem(xi)
 
 # Define the model, make predictions and draw conditional sample paths
-model_choice = 2
+model_choice = 1
 
 if model_choice == 1:
     model = gpc.Model_ConstantMean_Maternp_REML(
@@ -73,6 +73,7 @@ elif model_choice == 3:
     )
 
 model.select_params(xi, zi)
+model.run_diagnosis(xi, zi)
 zpm, zpv = model.predict(xi, zi, xt)
 
 zpsim = model.compute_conditional_simulations(xi, zi, xt, n_samplepaths=5)
@@ -122,7 +123,7 @@ model = gpc.Model_ConstantMean_Maternp_REMAP(
     ],  # alternative form: covariance_specification={"p": 1}
 )
 model.select_params(xi, zi)
-model.run_diag(xi, zi)
+model.run_diagnosis(xi, zi)
 
 zpm, zpv = model.predict(xi, zi, xt)
 model.run_perf(xi, zi)

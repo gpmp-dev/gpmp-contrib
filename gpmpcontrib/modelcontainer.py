@@ -9,7 +9,7 @@ supports parameter selection using user-provided methods (ML, REML...).
 It is used by `SequentialPrediction` and `SequentialStrategy`.
 
 Author: Emmanuel Vazquez <emmanuel.vazquez@centralesupelec.fr>
-Copyright: 2022-2025, CentraleSupelec
+Copyright: 2022-2026, CentraleSupelec
 License: GPLv3 (refer to LICENSE file)
 """
 
@@ -133,7 +133,7 @@ class ModelContainer:
         compute_conditional_simulations
 
     Diagnostics (wrappers)
-        run_diag          : per-output wrapper of `gp.modeldiagnosis.diag`
+        run_diagnosis     : per-output wrapper of `gp.modeldiagnosis.diag`
         run_perf          : per-output wrapper of `gp.modeldiagnosis.perf`
         plot_selection_criterion_crosssections
         plot_selection_criterion_profile_2d
@@ -1236,7 +1236,7 @@ class ModelContainer:
             take_col_fn = lambda arr, k: arr[:, k]
         return z_, take_col_fn
 
-    def run_diag(
+    def run_diagnosis(
         self, xi, zi, *, output_ind: int | None = None, convert_in: bool = True
     ):
         """
@@ -1256,7 +1256,13 @@ class ModelContainer:
                     f"Output {k}: no selection info. Run select_params() first."
                 )
             zi_k = zi_ if zi_.ndim == 1 else take_col_fn(zi_, k)
-            gp.modeldiagnosis.diag(self.models[k]["model"], info, xi_, zi_k)
+            gp.modeldiagnosis.diag(
+                self.models[k]["model"],
+                info,
+                xi_,
+                zi_k,
+                param_obj=self.models[k].get("param", None),
+            )
 
     def run_perf(
         self,

@@ -75,7 +75,7 @@ model = gpc.Model_ConstantMean_Maternp_REMAP_gaussian_logsigma2_and_logrho_prior
 
 tic = time.time()
 model.select_params(xi, zi)
-model.run_diag(xi, zi)
+model.run_diagnosis(xi, zi)
 
 # -- selection criterion cross sections
 ind = list(range(1, 1 + dim_eff))

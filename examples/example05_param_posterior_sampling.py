@@ -36,7 +36,7 @@ model = gpc.Model_ConstantMean_Maternp_REMAP_gaussian_logsigma2_and_logrho_prior
 )
 
 model.select_params(xi, zi)
-model.run_diag(xi, zi)
+model.run_diagnosis(xi, zi)
 
 gp.modeldiagnosis.plot_selection_criterion_2d(
     model=model[0].model,

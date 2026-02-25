@@ -12,7 +12,7 @@ Imports:
 - test_functions for predefined test functions.
 
 Author: Emmanuel Vazquez <emmanuel.vazquez@centralesupelec.fr>
-Copyright (c) 2022-2025, CentraleSupelec
+Copyright (c) 2022-2026, CentraleSupelec
 License: GPLv3 (see LICENSE file)
 
 """
@@ -82,7 +82,7 @@ show_truth_vs_prediction(zt, zpm)
 zloom, zloov, eloo = model.loo(xi, zi)
 show_loo_errors(zi, zloom, zloov)
 
-model.run_diag(xi, zi)
+model.run_diagnosis(xi, zi)
 print("----")
 model.run_perf(xi, zi, loo=True, xtzt=(xt, zt), zpmzpv=(zpm, zpv))
 
