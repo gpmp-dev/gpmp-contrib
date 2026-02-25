@@ -18,7 +18,7 @@ dependencies = [
     "numpy",
     "scipy>=1.12.0",
     "matplotlib",
-    "gpmp>=0.9.31"
+    "gpmp>=0.9.34"
 ]
 requires-python = ">=3.9"
 
