@@ -1,14 +1,48 @@
 """
-Plot and optimize the restricted negative log-likelihood
+Example 20: relaxed Gaussian process (reGP) for threshold-oriented modeling.
 
-Author: Emmanuel Vazquez <emmanuel.vazquez@centralesupelec.fr>
-Copyright (c) 2022-2023, CentraleSupelec
-License: GPLv3 (see LICENSE)
+This example demonstrates how to use reGP to improve predictive behavior in
+a range of interest when strict interpolation can be detrimental.
+
+Objective
+---------
+Compare three modeling configurations on the same 1D dataset:
+1. Standard GP fit with REML (baseline).
+2. reGP with a fixed relaxation interval above a threshold ``u``.
+3. reGP with an automatically selected threshold (above ``u``).
+
+Method overview
+---------------
+- Generate synthetic positive data from a smooth test function and add
+  heteroscedastic noise that increases for high responses.
+- Fit a Matérn GP by REML and compute posterior predictions.
+- Apply reGP with interval ``R = [[u, +inf]]`` so observations above ``u``
+  may be relaxed while preserving behavior in the region of interest.
+- Select an improved threshold with
+  ``regp.select_optimal_threshold_above_t0`` (tCRPS-based criterion), then
+  refit reGP and compare predictions.
+- Display diagnostics and LOO summaries for the relaxed fit.
+
+Visual output (Figure 1)
+------------------------
+- Red curve: baseline REML GP posterior.
+- Blue curve: reGP posterior with fixed threshold ``u``.
+- Green curve: reGP posterior with optimized threshold.
+- Blue horizontal line: threshold ``u``.
+- Green horizontal line: optimized threshold.
+
+Reference
+---------
+S. J. Petit, J. Bect, and E. Vazquez (2025).
+"Relaxed Gaussian Process Interpolation: a Goal-Oriented Approach to Bayesian Optimization."
+Journal of Machine Learning Research, 26(195):1-70.
+https://www.jmlr.org/papers/v26/22-0828.html
 """
 
 import gpmp.num as gnp
 import gpmp as gp
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
 import gpmpcontrib.regp as regp
 
 
@@ -120,6 +154,16 @@ zi_relaxed, (zpm, zpv), model, info_ret = regp.predict(model, xi, zi, xt, Rgopt)
 
 fig.axes[0].hlines(y=Rgopt[0], xmin=x_limits[0], xmax=x_limits[1], colors="g")
 visualize_results(xt, zt, xi, zi_relaxed, zpm, zpv, fig, rgb_hue=[128, 255, 128])
+
+# Legend for posterior GP curves and threshold lines
+legend_handles = [
+    Line2D([0], [0], color=(242 / 255, 64 / 255, 76 / 255), lw=2, label="REML"),
+    Line2D([0], [0], color=(128 / 255, 128 / 255, 255 / 255), lw=2, label=f"reGP (u={u})"),
+    Line2D([0], [0], color=(128 / 255, 255 / 255, 128 / 255), lw=2, label="reGP (optimal threshold)"),
+    Line2D([0], [0], color="b", lw=1.5, label="threshold u"),
+    Line2D([0], [0], color="g", lw=1.5, label="optimal threshold"),
+]
+fig.axes[0].legend(handles=legend_handles, loc="best")
 
 # if __name__ == '__main__':
 #     main()

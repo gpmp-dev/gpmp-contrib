@@ -87,3 +87,4 @@ for i in range(n):
     plot(show=True)
     # print model diagnosis
     eialgo.model.run_diag(eialgo.xi, eialgo.zi)
+
