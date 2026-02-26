@@ -81,8 +81,8 @@ class Model_ConstantMean_Maternp_REMAP_gaussian_logsigma2_and_logrho_prior(
         mean_specification,
         covariance_specification,
         gamma=1.5,
-        alpha=10.0,
-        rho_min_range_factor=20.0,
+        alpha=1.0,
+        rho_min_range_factor=1/20.0,
         logrho_min=None,
         logrho_0=None,
     ):
