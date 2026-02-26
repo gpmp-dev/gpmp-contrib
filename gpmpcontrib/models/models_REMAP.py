@@ -82,11 +82,13 @@ class Model_ConstantMean_Maternp_REMAP_gaussian_logsigma2_and_logrho_prior(
         covariance_specification,
         gamma=1.5,
         alpha=10.0,
+        rho_min_range_factor=20.0,
         logrho_min=None,
         logrho_0=None,
     ):
         self.gamma = float(gamma)
         self.alpha = float(alpha)
+        self.rho_min_range_factor = float(rho_min_range_factor)
         self.logrho_min = logrho_min
         self.logrho_0 = logrho_0
         super().__init__(
@@ -99,6 +101,9 @@ class Model_ConstantMean_Maternp_REMAP_gaussian_logsigma2_and_logrho_prior(
     def build_selection_criterion(self, output_idx: int, **build_params):
         gamma = float(build_params.get("gamma", self.gamma))
         alpha = float(build_params.get("alpha", self.alpha))
+        rho_min_range_factor = float(
+            build_params.get("rho_min_range_factor", self.rho_min_range_factor)
+        )
         logrho_min_user = build_params.get("logrho_min", self.logrho_min)
         logrho_0_user = build_params.get("logrho_0", self.logrho_0)
         cache = {"covparam0": None, "xi_id": None, "zi_id": None}
@@ -121,7 +126,9 @@ class Model_ConstantMean_Maternp_REMAP_gaussian_logsigma2_and_logrho_prior(
             if logrho_min_user is None:
                 if xi is None:
                     raise ValueError("xi must be provided when logrho_min is None.")
-                logrho_min = gp.kernel.parameter_selection._componentwise_logrho_min_from_xi(xi)
+                logrho_min = gp.kernel.compute_logrho_min_from_xi(
+                    xi, rho_min_range_factor=rho_min_range_factor
+                )
             else:
                 logrho_min = logrho_min_user
 
@@ -140,7 +147,7 @@ class Model_ConstantMean_Maternp_REMAP_gaussian_logsigma2_and_logrho_prior(
         return remap_criterion
 
 
-# Backward-compatible alias: default REMAP model uses gaussian logsigma2 + logrho prior.
+# Alias: default REMAP model uses gaussian logsigma2 + logrho prior.
 Model_ConstantMean_Maternp_REMAP = (
     Model_ConstantMean_Maternp_REMAP_gaussian_logsigma2_and_logrho_prior
 )
