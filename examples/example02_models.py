@@ -107,7 +107,7 @@ xt1v, xt2v = np.meshgrid(
 xt = np.hstack((xt1v.reshape(-1, 1), xt2v.reshape(-1, 1)))
 zt = problem.eval(xt)
 
-ni = 8
+ni = 10
 ind = np.random.choice(n_test_grid**2, ni, replace=False)
 xi = xt[ind]
 zi = zt[ind]
