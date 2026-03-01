@@ -23,7 +23,7 @@ Scalar-Valued Problems (q = 1):
     - ThreeHumpCamelBack    (d=2, q=1)
     - Wave                  (d=2, q=1)
   d = 3:
-    - Hartman3              (d=3, q=1)
+    - Hartmann3              (d=3, q=1)
     - Ishigami              (d=3, q=1) [a=5, b=0.1]
     - BraninPlus            (d=3, q=1)
     - BraninCos             (d=3, q=1)
@@ -44,7 +44,7 @@ Scalar-Valued Problems (q = 1):
     - Ackley6               (d=6, q=1)
   d = 8:
     - detpep8d              (d=8, q=1)
-    - Linkeletter           (d=8, q=1)
+    - Linkletter           (d=8, q=1)
     - Borehole              (d=8, q=1)
   d = 10:
     - Rastrigin10           (d=10, q=1)
@@ -108,7 +108,14 @@ License: GPLv3 (see LICENSE)
 """
 import numpy as np
 from gpmpcontrib.computerexperiment import ComputerExperiment
-from gpmp.misc.testfunctions import twobumps, borehole, detpep8d, hartmann4, braninhoo, hartmann4, wave
+from gpmp.misc.testfunctions import (
+    twobumps as _tf_twobumps,
+    borehole as _tf_borehole,
+    detpep8d as _tf_detpep8d,
+    hartmann4 as _tf_hartmann4,
+    braninhoo as _tf_braninhoo,
+    wave as _tf_wave,
+)
 
 _TEST = False
 
@@ -216,7 +223,7 @@ if _TEST:
 twobumps = ComputerExperiment(
     1,  # dim of search space
     [[-1], [1]],  # domain
-    single_function=twobumps,  # test function
+    single_function=_tf_twobumps,  # test function
 )
 
 # ===== Beale
@@ -285,7 +292,7 @@ branin = ComputerExperiment(
 branin100 = ComputerExperiment(
     2,  # dim
     [[-100]*2, [100]*2],  # domain
-    single_function=braninhoo,
+    single_function=_tf_braninhoo,
 )
 
 # ===== CamelBack =====
@@ -474,7 +481,7 @@ threehumpcamelback = ComputerExperiment(
 wave = ComputerExperiment(
     2,  # dim of search space
     [[-1.1]*2, [1.1]*2],  # domain
-    single_function=wave,
+    single_function=_tf_wave,
 )
 
 
@@ -482,8 +489,11 @@ wave = ComputerExperiment(
 hartmann4 = ComputerExperiment(
     4,  # dim of search space
     [[0] * 4, [1] * 4],  # search box
-    single_function=hartmann4,  # test function
+    single_function=_tf_hartmann4,  # test function
 )
+
+# Alias with single n spelling
+hartman4 = hartmann4
 
 
 # ===== G1
@@ -1159,7 +1169,7 @@ shekel5 = ComputerExperiment(
 # and https://www.sfu.ca/~ssurjano/hart6.html
 
 
-def _hartman3_objective(x):
+def _hartmann3_objective(x):
     alpha = np.array([1, 1.2, 3.0, 3.2])
     A = np.array([
         [3.0, 10, 30],
@@ -1185,20 +1195,23 @@ def _hartman3_objective(x):
     return sum1
 
 
-_hartman3_dict = {
+_hartmann3_dict = {
     "input_dim": 3,
     "input_box": [[0] * 3, [1] * 3],
-    "single_objective": _hartman3_objective
+    "single_objective": _hartmann3_objective
 }
 
-hartman3 = ComputerExperiment(
-    _hartman3_dict["input_dim"],
-    _hartman3_dict["input_box"],
-    single_objective=_hartman3_dict["single_objective"]
+hartmann3 = ComputerExperiment(
+    _hartmann3_dict["input_dim"],
+    _hartmann3_dict["input_box"],
+    single_objective=_hartmann3_dict["single_objective"]
 )
 
+# Alias with single n spelling
+hartman3 = hartmann3
 
-def _hartman6_objective(X):
+
+def _hartmann6_objective(X):
     alpha = np.array([1, 1.2, 3.0, 3.2])
     A = np.array([
         [10, 3, 17, 3.5, 1.7, 8],
@@ -1224,17 +1237,20 @@ def _hartman6_objective(X):
     return sum1
 
 
-_hartman6_dict = {
+_hartmann6_dict = {
     "input_dim": 6,
     "input_box": [[0] * 6, [1] * 6],
-    "single_objective": _hartman6_objective
+    "single_objective": _hartmann6_objective
 }
 
-hartman6 = ComputerExperiment(
-    _hartman6_dict["input_dim"],
-    _hartman6_dict["input_box"],
-    single_objective=_hartman6_dict["single_objective"]
+hartmann6 = ComputerExperiment(
+    _hartmann6_dict["input_dim"],
+    _hartmann6_dict["input_box"],
+    single_objective=_hartmann6_dict["single_objective"]
 )
+
+# Alias with single n spelling
+hartman6 = hartmann6
 
 
 # ===== PVD4 ======
@@ -1666,6 +1682,7 @@ sin2_experiment = ComputerExperiment(
     single_objective=_sin2_dict["single_objective"],
 )
 
+sin2 = sin2_experiment
 
 # ====== ACKLEY ======
 def create_ackley_problem(d):
@@ -1931,7 +1948,7 @@ zakharov10 = create_zakharov_problem(10)
 
 def _detpep8d_objective(x):
     # We assume gp.misc.testfunctions.detpep8d is defined for x in [0,1]^8
-    return gp.misc.testfunctions.detpep8d(x)
+    return _tf_detpep8d(x)
 
 
 _detpep8d_dict = {
@@ -2021,10 +2038,10 @@ ishigami = ComputerExperiment(
     single_objective=_ishigami_dict["single_objective"]
 )
 
-# ===== Linkeletter
+# ===== Linkletter
 
 
-def _linkeletter(x):
+def _linkletter(x):
     return (0.2 * x[:, 0] +
             0.2 / 2 * x[:, 1] +
             0.2 / 4 * x[:, 2] +
@@ -2035,16 +2052,16 @@ def _linkeletter(x):
             0.2 / 128 * x[:, 7])
 
 
-_linkeletter_dict = {
+_linkletter_dict = {
     "input_dim": 8,
     "input_box": [[0]*8, [1]*8],
-    "single_function": _linkeletter,
+    "single_function": _linkletter,
 }
 
-linkeletter = ComputerExperiment(
-    _linkeletter_dict["input_dim"],
-    _linkeletter_dict["input_box"],
-    single_function=_linkeletter_dict["single_function"]
+linkletter = ComputerExperiment(
+    _linkletter_dict["input_dim"],
+    _linkletter_dict["input_box"],
+    single_function=_linkletter_dict["single_function"]
 )
 
 # ===== Loeppky
@@ -2137,7 +2154,7 @@ levitan = ComputerExperiment(
 
 def _borehole(x):
     # We assume gp.misc.testfunctions.borehole accepts x in the original domain.
-    return gp.misc.testfunctions.borehole(x)
+    return _tf_borehole(x)
 
 
 _borehole_dict = {
