@@ -691,9 +691,10 @@ class ModelContainer:
         zi : array_like
             Observed values. Shape (n,) for single-output, or (n, output_dim).
         force_param_initial_guess : bool, default True
-            If True, compute an initial guess even when the model already
-            has parameters. If False and the model already has parameters,
-            those are reused as the starting point.
+            Controls initializer selection when ``param0`` is not provided.
+            If True, compute an initial guess even when the model already has
+            parameters. If False and the model already has parameters, those
+            are reused as the starting point.
         param0 : None | array_like | Param | list[ array_like | Param ]
             Optional initializer(s) for optimization. For multi-output:
               - provide a list where param0[i] is either a vector in the
@@ -703,6 +704,8 @@ class ModelContainer:
             parameters (length = mean_paramlength) followed by covariance
             parameters. If a Param is passed, the method uses the per-output
             adapter param_to_vectors to extract (mean, cov).
+            Precedence rule: when ``param0`` is provided, it is always used
+            as initializer and ``force_param_initial_guess`` is ignored.
         use_bounds_from_param_obj : bool, default True
             If True and a per-output Param object is available, bounds are
             taken from Param.bounds (normalized coordinates) unless overridden
@@ -724,6 +727,14 @@ class ModelContainer:
             length must match the parameter dimension. This interval is then
             intersected with whichever base bounds were chosen by precedence:
                 manual bounds > bounds_factory(...) > Param bounds > None
+
+        Notes
+        -----
+        Initializer precedence per output:
+        1. ``param0[i]`` when ``param0`` is provided.
+        2. Otherwise, if ``force_param_initial_guess=True`` or model covparam is
+           missing: ``parameters_initial_guess_procedure``.
+        3. Otherwise: current model parameters.
         """
         xi_ = gnp.asarray(xi)
         zi_ = gnp.asarray(zi)
