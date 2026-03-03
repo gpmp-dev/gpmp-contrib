@@ -98,7 +98,7 @@ class Model_ConstantMean_Maternp_ML(gpmpcontrib.modelcontainer.ModelContainer):
     def build_parameters_initial_guess_procedure(self, output_idx: int, **build_param):
         return gp.kernel.anisotropic_parameters_initial_guess_constant_mean
 
-    def build_selection_criterion(self, output_idx: int, **build_params):
+    def build_selection_criterion(self, output_idx: int, context=None, **build_params):
         def ml_criterion(model, meanparam, covparam, xi, zi):
             return model.negative_log_likelihood(meanparam, covparam, xi, zi)
 

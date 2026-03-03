@@ -93,6 +93,7 @@ for i in range(n):
 
     # Evaluate the new data point and update the model
     zi_new = problem(xi_new)
+    __import__("pdb").set_trace()
     sp.set_new_eval_with_model_selection(xi_new, zi_new)
     zpm, zpv = sp.predict(xt)
 

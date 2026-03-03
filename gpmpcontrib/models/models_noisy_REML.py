@@ -153,9 +153,8 @@ class Model_Noisy_ConstantMean_Maternp_REML(gpmpcontrib.modelcontainer.ModelCont
             model, xi, zi, output_dim=self.output_dim
         )
 
-    def build_selection_criterion(self, output_idx: int, **build_params):
+    def build_selection_criterion(self, output_idx: int, context=None, **build_params):
         def reml_criterion_noisy(model, covparam, xi, zi):
             return model.negative_log_restricted_likelihood(covparam, xi, zi)
 
         return reml_criterion_noisy
-

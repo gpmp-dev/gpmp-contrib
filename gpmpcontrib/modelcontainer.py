@@ -14,6 +14,7 @@ License: GPLv3 (refer to LICENSE file)
 """
 
 import time
+from dataclasses import dataclass
 import gpmp.num as gnp
 import gpmp as gp
 from gpmp.misc.param import Param
@@ -23,7 +24,8 @@ class AttrDict(dict):
     """Dict with attribute access to keys (d.k <-> d['k']).
 
     Missing keys raise AttributeError.
-    """    
+    """
+
     def __getattr__(self, key):
         try:
             return self[key]
@@ -42,6 +44,24 @@ class AttrDict(dict):
     def __repr__(self):
         # Return a representation that lists only the keys.
         return f"AttrDict({list(self.keys())})"
+
+
+@dataclass
+class SelectionCriterionBuildContext:
+    """Context passed when building a per-output selection criterion."""
+
+    model: object
+    xi: object = None
+    zi: object = None
+
+
+def _unbuilt_selection_criterion(*args, **kwargs):
+    raise RuntimeError(
+        "Selection criterion is not built yet. Run select_params(xi, zi) first."
+    )
+
+
+_unbuilt_selection_criterion._gpmp_unbuilt = True
 
 
 # ==============================================================================
@@ -93,7 +113,8 @@ class ModelContainer:
     selection_criteria : callable | list[callable] | None
         Selection criterion/criteria used during parameter estimation. Either a
         single callable applied to all outputs or a list (one per output). If
-        None, they are built via `build_selection_criterion(...)`. A criterion
+        None, they are built via `build_selection_criterion(...)` when needed
+        (lazy build, typically in `select_params(...)`). A criterion
         must match the expected model signature:
         - linear-predictor mean: `criterion(model, covparam, xi, zi)`
         - parameterized mean: `criterion(model, meanparam, covparam, xi, zi)`
@@ -119,8 +140,12 @@ class ModelContainer:
           - "get_param" : callable
           - "apply_param" : callable
           - "parameters_initial_guess_procedure" : callable | None
-          - "selection_criterion"                : callable | None
+          - "selection_criterion"                : callable
           - "info" : object | None (optimizer/selection report; filled by `select_params`)
+
+        Because each entry is an ``AttrDict``, both dict-style and attribute-style
+        access are supported, e.g. ``self.models[k]["get_param"]`` and
+        ``self.models[k].get_param()`` are equivalent.
 
     Key Methods (overview)
     ----------------------
@@ -180,6 +205,9 @@ class ModelContainer:
         """Create a multi-output GP container with per-output mean/covariance."""
         self.name = name
         self.output_dim = output_dim
+        self.rebuild_selection_criterion_on_select_params = False
+        self.selection_criterion_build_policy = "static"
+        self._selection_criteria_spec = selection_criteria
 
         self.parameterized_mean = parameterized_mean
         mean_type = "parameterized" if self.parameterized_mean else "linear_predictor"
@@ -217,23 +245,22 @@ class ModelContainer:
                         ),
                         "param": None,  # a Param instance from gpmp.misc.param
                         "parameters_initial_guess_procedure": None,
-                        "selection_criterion": None,
+                        "selection_criterion": _unbuilt_selection_criterion,
                         "info": None,
                     }
                 )
             )
 
-        # Install guess parameters procedures / selection criteria
+        # Install initial-guess procedures.
+        # Selection criteria are built lazily in select_params(...), where xi/zi are available.
         parameters_initial_guess_procedures = (
             self.make_parameters_initial_guess_procedures(initial_guess_procedures)
         )
-        selection_criteria = self.make_selection_criteria(selection_criteria)
 
         for i in range(self.output_dim):
             self.models[i]["parameters_initial_guess_procedure"] = (
                 parameters_initial_guess_procedures[i]
             )
-            self.models[i]["selection_criterion"] = selection_criteria[i]
 
         # Install get_param / apply_param on each models[i]
         param_procedures = self.make_param_object_procedures(
@@ -471,7 +498,9 @@ class ModelContainer:
     # --------------------------------------------------------------------------
     # Param / Selection-criterion plumbing (builders + wrappers)
     # --------------------------------------------------------------------------
-    def make_param_object_procedures(self, param_procedures=None, auxiliary_params=None):
+    def make_param_object_procedures(
+        self, param_procedures=None, auxiliary_params=None
+    ):
         """
         Return per-output Param adapter procedures.
 
@@ -588,7 +617,9 @@ class ModelContainer:
 
         return procedures
 
-    def make_selection_criteria(self, selection_criteria=None, auxiliary_params=None):
+    def make_selection_criteria(
+        self, selection_criteria=None, auxiliary_params=None, xi=None, zi=None
+    ):
         """
         Return selection criteria (one per output).
 
@@ -607,12 +638,44 @@ class ModelContainer:
             Per-output parameters passed to build_selection_criterion when
             selection_criteria is None. If a dict is provided, it is broadcast to
             all outputs. If a list is provided, its length must match output_dim.
+        xi : array_like, optional
+            Observation points, shape (n, d). Used only when
+            ``self.selection_criterion_build_policy == "needs_observations"``.
+            If an explicit ``selection_criteria`` callable/list is provided,
+            ``xi`` is ignored.
+        zi : array_like, optional
+            Observed values, shape (n,) or (n, output_dim). Used only when
+            ``self.selection_criterion_build_policy == "needs_observations"``.
+            If an explicit ``selection_criteria`` callable/list is provided,
+            ``zi`` is ignored.
 
         Returns
         -------
         list[callable]
             A list of selection criterion callables, one per output.
+
+        Notes
+        -----
+        Whether observations are required at criterion-build time is controlled by
+        ``selection_criterion_build_policy == "needs_observations"``.
         """
+        needs_observations = self.selection_criterion_build_policy == "needs_observations"
+        if selection_criteria is None and needs_observations:
+            if xi is None or zi is None:
+                raise ValueError(
+                    "xi and zi must be provided when "
+                    "selection criteria require observations."
+                )
+            xi_ = gnp.asarray(xi)
+            zi_ = gnp.asarray(zi)
+            if zi_.ndim == 1:
+                zi_ = zi_.reshape(-1, 1)
+            if int(zi_.shape[1]) != self.output_dim:
+                raise ValueError("zi second dimension must match output_dim.")
+        else:
+            xi_ = None
+            zi_ = None
+
         # Normalize auxiliary_params -> list of dicts
         if auxiliary_params is None:
             build_params = [{} for _ in range(self.output_dim)]
@@ -627,8 +690,18 @@ class ModelContainer:
 
         # Normalize selection_criteria -> list of callables
         if selection_criteria is None:
+            contexts = [
+                SelectionCriterionBuildContext(
+                    model=self.models[i]["model"],
+                    xi=xi_ if needs_observations else None,
+                    zi=zi_[:, i] if needs_observations else None,
+                )
+                for i in range(self.output_dim)
+            ]
             criteria = [
-                self.build_selection_criterion(i, **build_params[i])
+                self.build_selection_criterion(
+                    i, context=contexts[i], **build_params[i]
+                )
                 for i in range(self.output_dim)
             ]
         elif callable(selection_criteria):
@@ -646,6 +719,49 @@ class ModelContainer:
 
         return criteria
 
+    @staticmethod
+    def _is_unbuilt_selection_criterion(criterion):
+        return bool(getattr(criterion, "_gpmp_unbuilt", False))
+
+    def _ensure_selection_criteria(
+        self, *, xi=None, zi=None, rebuild=False, selection_criteria=None
+    ):
+        """Ensure per-output selection criteria are available.
+
+        Parameters
+        ----------
+        xi : array_like, optional
+            Observation points used when criteria must be built from
+            ``build_selection_criterion`` and the build policy requires data.
+        zi : array_like, optional
+            Observation values used when criteria must be built from
+            ``build_selection_criterion`` and the build policy requires data.
+        rebuild : bool, default False
+            If True, rebuild criteria (even if already built).
+        selection_criteria : callable | list[callable] | None, optional
+            Optional override for the criterion spec. If None, uses the
+            constructor-provided ``self._selection_criteria_spec``.
+        """
+        if selection_criteria is None:
+            selection_criteria = self._selection_criteria_spec
+
+        criteria_missing = any(
+            ModelContainer._is_unbuilt_selection_criterion(
+                model_entry.get("selection_criterion", None)
+            )
+            for model_entry in self.models
+        )
+        if not (rebuild or criteria_missing):
+            return
+
+        built = self.make_selection_criteria(
+            selection_criteria=selection_criteria,
+            xi=xi,
+            zi=zi,
+        )
+        for i in range(self.output_dim):
+            self.models[i]["selection_criterion"] = built[i]
+
     def build_param_procedures(self, output_idx: int, **kwargs):
         """Return Param procedures"""
         raise NotImplementedError
@@ -662,7 +778,7 @@ class ModelContainer:
         """
         raise NotImplementedError
 
-    def build_selection_criterion(self, output_idx: int, **build_params):
+    def build_selection_criterion(self, output_idx: int, context=None, **build_params):
         """Override in subclass to construct a selection criterion."""
         raise NotImplementedError
 
@@ -680,6 +796,9 @@ class ModelContainer:
         bounds=None,
         bounds_factory=None,
         bounds_delta=None,
+        method="SLSQP",
+        method_options=None,
+        rebuild_selection_criterion=None,
     ):
         """
         Parameter selection (per output).
@@ -727,6 +846,20 @@ class ModelContainer:
             length must match the parameter dimension. This interval is then
             intersected with whichever base bounds were chosen by precedence:
                 manual bounds > bounds_factory(...) > Param bounds > None
+        method : {"SLSQP", "L-BFGS-B"}, default "SLSQP"
+            Optimization method passed to ``gp.kernel.autoselect_parameters``.
+        method_options : dict or None, default None
+            Additional method-specific SciPy options. Keys are forwarded to
+            ``scipy.optimize.minimize(..., options=...)`` through
+            ``gp.kernel.autoselect_parameters``.
+        rebuild_selection_criterion : bool | None, default None
+            Whether to rebuild per-output selection criteria at call time.
+            If None, uses ``self.rebuild_selection_criterion_on_select_params``.
+            If True, criteria are rebuilt via ``build_selection_criterion`` before
+            optimization. If ``self.selection_criterion_build_policy ==
+            "needs_observations"``, ``xi`` and ``zi`` are forwarded to
+            ``make_selection_criteria``.
+            Criteria are also built automatically on first call when missing.
 
         Notes
         -----
@@ -741,32 +874,58 @@ class ModelContainer:
         if zi_.ndim == 1:
             zi_ = zi_.reshape(-1, 1)
 
+        if rebuild_selection_criterion is None:
+            rebuild_selection_criterion = (
+                self.rebuild_selection_criterion_on_select_params
+            )
+        self._ensure_selection_criteria(
+            xi=xi_,
+            zi=zi_,
+            rebuild=bool(rebuild_selection_criterion),
+        )
+
         # Normalize param0 container for multi-output
-        if param0 is not None and self.output_dim == 1 and not isinstance(param0, list):
-            param0 = [param0]
+        if param0 is not None:
+            if self.output_dim == 1:
+                if isinstance(param0, (list, tuple)):
+                    # Single-output: treat [scalar, ...] / (scalar, ...) as a parameter vector,
+                    # and [entry] as an explicit one-item container.
+                    if len(param0) == 1:
+                        try:
+                            is_scalar0 = gnp.asarray(param0[0]).ndim == 0
+                        except Exception:
+                            is_scalar0 = False
+                        param0 = [param0] if is_scalar0 else list(param0)
+                    else:
+                        param0 = [param0]
+                else:
+                    param0 = [param0]
+            elif not isinstance(param0, (list, tuple)):
+                raise TypeError(
+                    "For multi-output models, param0 must be a list/tuple with one entry per output."
+                )
+
+            if len(param0) != self.output_dim:
+                raise ValueError(
+                    f"param0 must have length {self.output_dim}, got {len(param0)}."
+                )
 
         for i in range(self.output_dim):
             tic = time.time()
             model = self.models[i]
             mpl = int(model["mean_paramlength"])
 
-            # 1) Initializer (meanparam0, covparam0)
-            if param0 is not None:
-                p0_i = param0[i]
-                meanparam0, covparam0 = self._param_to_vector_pair(p0_i, model, mpl)
-            else:
-                if model["model"].covparam is None or force_param_initial_guess:
-                    igp = model["parameters_initial_guess_procedure"]
-                    if mpl == 0:
-                        meanparam0 = gnp.array([])
-                        covparam0 = igp(model["model"], xi_, zi_[:, i])
-                    else:
-                        meanparam0, covparam0 = igp(model["model"], xi_, zi_[:, i])
-                else:
-                    meanparam0 = model["model"].meanparam
-                    covparam0 = model["model"].covparam
-
-            param0_init = gnp.concatenate((meanparam0, covparam0))
+            # 1) Initializer (meanparam0, covparam0, param0_init)
+            p0_i = None if param0 is None else param0[i]
+            meanparam0, covparam0, param0_init = (
+                ModelContainer._resolve_param0_init_for_output(
+                    model,
+                    xi_,
+                    zi_[:, i],
+                    force_param_initial_guess=force_param_initial_guess,
+                    param0_entry=p0_i,
+                )
+            )
             n_params = int(param0_init.shape[0])
 
             # 2) Base bounds by precedence: manual > factory > Param > None
@@ -789,8 +948,12 @@ class ModelContainer:
 
             # 3) Local +-delta interval around param0_init (intersect)
             if bounds_delta is not None:
-                local_interval = ModelContainer._interval_around(param0_init, bounds_delta)
-                base_bounds = ModelContainer._intersect_bounds(base_bounds, local_interval)
+                local_interval = ModelContainer._interval_around(
+                    param0_init, bounds_delta
+                )
+                base_bounds = ModelContainer._intersect_bounds(
+                    base_bounds, local_interval
+                )
 
             # 4) Optimize
             selection_criterion = model["selection_criterion"]
@@ -818,6 +981,8 @@ class ModelContainer:
                 bounds=base_bounds,
                 silent=True,
                 info=True,
+                method=method,
+                method_options=method_options,
             )
 
             # 5) Write back params
@@ -833,7 +998,9 @@ class ModelContainer:
                 )
 
             # Mirror final bounds into Param.bounds (normalized space)
-            ModelContainer._apply_bounds_to_param(model.get("param", None), base_bounds, mpl)
+            ModelContainer._apply_bounds_to_param(
+                model.get("param", None), base_bounds, mpl
+            )
 
             # 7) Record info
             model["info"] = info
@@ -1272,7 +1439,12 @@ class ModelContainer:
     # Parameter posterior sampling
     # --------------------------------------------------------------------------
     def sample_parameters(
-        self, method="nuts", model_indices=None, init_box=None, sampling_box=None, **kwargs
+        self,
+        method="nuts",
+        model_indices=None,
+        init_box=None,
+        sampling_box=None,
+        **kwargs,
     ):
         """Sample GP parameters from the stored selection criterion.
 
@@ -1302,7 +1474,7 @@ class ModelContainer:
         -------
         dict
             Dictionary mapping model index to:
-            - method="mh": {"samples": ..., "mh": ...}
+            - method="mh": {"samples": ..., "mh": ..., "criterion_values": ...}
             - method="hmc"/"nuts": {"samples": ..., "nuts": ...}
             - method="smc": {"particles": ..., "smc": ...}
         """
@@ -1330,7 +1502,15 @@ class ModelContainer:
                     sampling_box=sampling_box,
                     **kwargs,
                 )
-                results[idx] = {"samples": samples, "mh": mh}
+                log_target_values = gp.mcmc.get_log_target_values(
+                    mh, discard_burnin=False
+                )
+                criterion_values = -log_target_values[:, mh.burnin_period :]
+                results[idx] = {
+                    "samples": samples,
+                    "mh": mh,
+                    "criterion_values": criterion_values,
+                }
 
             elif method in {"hmc", "nuts"}:
                 from gpmp.mcmc.param_posterior import (
@@ -1361,7 +1541,9 @@ class ModelContainer:
                 results[idx] = {"samples": samples, key: nuts_info}
 
             else:
-                from gpmp.mcmc.param_posterior import sample_from_selection_criterion_smc
+                from gpmp.mcmc.param_posterior import (
+                    sample_from_selection_criterion_smc,
+                )
 
                 if init_box is None:
                     raise ValueError("init_box must be provided when method='smc'.")
@@ -1444,6 +1626,38 @@ class ModelContainer:
     def _split_mean_cov_from_vector(p, mpl):
         p = gnp.asarray(p).reshape(-1)
         return p[:mpl], p[mpl:]
+
+    @staticmethod
+    def _resolve_param0_init_for_output(
+        model_dict,
+        xi,
+        zi_col,
+        force_param_initial_guess,
+        param0_entry=None,
+    ):
+        """Resolve per-output initializer vectors used by ``select_params``."""
+        mpl = int(model_dict["mean_paramlength"])
+
+        if param0_entry is not None:
+            meanparam0, covparam0 = ModelContainer._param_to_vector_pair(
+                param0_entry, model_dict, mpl
+            )
+        else:
+            if model_dict["model"].covparam is None or force_param_initial_guess:
+                igp = model_dict["parameters_initial_guess_procedure"]
+                if mpl == 0:
+                    meanparam0 = gnp.array([])
+                    covparam0 = igp(model_dict["model"], xi, zi_col)
+                else:
+                    meanparam0, covparam0 = igp(model_dict["model"], xi, zi_col)
+            else:
+                meanparam0 = model_dict["model"].meanparam
+                covparam0 = model_dict["model"].covparam
+
+        meanparam0 = gnp.asarray(meanparam0).reshape(-1)
+        covparam0 = gnp.asarray(covparam0).reshape(-1)
+        param0_init = gnp.concatenate((meanparam0, covparam0))
+        return meanparam0, covparam0, param0_init
 
     @staticmethod
     def _param_to_vector_pair(p, model_dict, mpl):
@@ -1537,7 +1751,9 @@ class ModelContainer:
 
         if isinstance(bounds_arg, list):
             if output_dim is not None and len(bounds_arg) != int(output_dim):
-                raise ValueError("When bounds is a list, its length must equal output_dim.")
+                raise ValueError(
+                    "When bounds is a list, its length must equal output_dim."
+                )
             return ModelContainer._as_bounds_array(bounds_arg[i], n_params)
 
         return ModelContainer._as_bounds_array(bounds_arg, n_params)
