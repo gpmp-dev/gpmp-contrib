@@ -407,7 +407,7 @@ class Model_ConstantMean_Maternp_REMAP_logsigma2(Model_ConstantMean_Maternp_REML
         sigma2_coverage = prior.sigma2_coverage
 
         def remap_criterion(model, covparam, xi, zi):
-            return gp.kernel.neg_log_restricted_posterior_gaussian_logsigma2_prior(
+            return gp.kernel.neg_log_restricted_posterior_logsigma2_prior(
                 model,
                 covparam,
                 xi,
@@ -836,7 +836,7 @@ class Model_ConstantMean_Maternp_REMAP_logsigma2_and_logrho_prior(
         alpha = prior.alpha
 
         def remap_criterion(model, covparam, xi, zi):
-            return gp.kernel.neg_log_restricted_posterior_gaussian_logsigma2_and_logrho_prior(
+            return gp.kernel.neg_log_restricted_posterior_logsigma2_and_logrho_prior(
                 model,
                 covparam,
                 xi,
