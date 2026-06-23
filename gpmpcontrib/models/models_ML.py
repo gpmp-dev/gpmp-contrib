@@ -9,7 +9,7 @@
 import gpmp as gp
 import gpmp.num as gnp
 import gpmpcontrib.modelcontainer
-from gpmp.misc.param import Normalization, Param
+from gpmp.parameter import Normalization, Param
 
 
 class Model_ConstantMean_Maternp_ML(gpmpcontrib.modelcontainer.ModelContainer):

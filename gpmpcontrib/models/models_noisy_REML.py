@@ -11,7 +11,7 @@ from math import log
 import gpmp as gp
 import gpmp.num as gnp
 import gpmpcontrib.modelcontainer
-from gpmp.misc.param import Normalization, Param
+from gpmp.parameter import Normalization, Param
 
 
 def build_mown_kernel(output_idx: int, **params):

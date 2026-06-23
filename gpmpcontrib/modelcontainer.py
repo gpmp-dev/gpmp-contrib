@@ -17,7 +17,7 @@ import time
 from dataclasses import dataclass
 import gpmp.num as gnp
 import gpmp as gp
-from gpmp.misc.param import Param
+from gpmp.parameter import Param
 
 
 class AttrDict(dict):
@@ -134,7 +134,7 @@ class ModelContainer:
           - "mean_fname"  : str
           - "mean_paramlength" : int
           - "covariance_fname" : str
-          - "param" : gpmp.misc.param.Param | None
+          - "param" : gpmp.parameter.Param | None
           - "param_from_vectors" : callable
           - "param_to_vectors" : callable
           - "get_param" : callable
@@ -243,7 +243,7 @@ class ModelContainer:
                             "__name__",
                             type(model.covariance).__name__,
                         ),
-                        "param": None,  # a Param instance from gpmp.misc.param
+                        "param": None,  # a Param instance from gpmp.parameter
                         "parameters_initial_guess_procedure": None,
                         "selection_criterion": _unbuilt_selection_criterion,
                         "info": None,
