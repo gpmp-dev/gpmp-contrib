@@ -8,7 +8,7 @@ metadata declares:
 - ``numpy``.
 - ``scipy >= 1.12.0``.
 - ``matplotlib``.
-- ``gpmp >= 0.9.36``.
+- ``gpmp >= 0.9.37``.
 
 Install from a local checkout with:
 

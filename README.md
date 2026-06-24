@@ -46,7 +46,7 @@ problem, or reGP.
 ## Requirements
 
 - Python `>=3.9`
-- `gpmp >= 0.9.36`
+- `gpmp >= 0.9.37`
 - `numpy`
 - `scipy>=1.12.0`
 - `matplotlib`
@@ -125,7 +125,7 @@ If you use GPmp-contrib in your research, please cite it as follows:
   title        = {GPmp-contrib},
   year         = {2026},
   url          = {https://github.com/gpmp-dev/gpmp-contrib},
-  note         = {Version 0.9.36},
+  note         = {Version 0.9.37},
 }
 ```
 
