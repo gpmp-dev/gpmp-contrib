@@ -53,11 +53,25 @@ problem, or reGP.
 
 ## Installation
 
+Install the released package from PyPI:
+
+```bash
+pip install gpmp-contrib
+```
+
+This installs `gpmp` and the other runtime dependencies declared in
+`pyproject.toml`.
+
+For development, clone the repository and install it in editable mode:
+
 ```bash
 git clone https://github.com/gpmp-dev/gpmp-contrib.git
 cd gpmp-contrib
 pip install -e .
 ```
+
+When testing against a local `gpmp` checkout, install `gpmp` first, then install
+`gpmp-contrib` in editable mode.
 
 ## Minimal example
 
