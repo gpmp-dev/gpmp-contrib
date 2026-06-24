@@ -1479,8 +1479,10 @@ class ModelContainer:
             - method="smc": {"particles": ..., "smc": ...}
         """
         method = str(method).lower()
-        if method not in {"mh", "hmc", "nuts", "smc"}:
-            raise ValueError("method must be one of: 'mh', 'hmc', 'nuts', 'smc'.")
+        if method not in {"mh", "hmc", "nuts", "smc", "svgd"}:
+            raise ValueError(
+                "method must be one of: 'mh', 'hmc', 'nuts', 'smc', 'svgd'."
+            )
 
         if model_indices is None:
             model_indices = list(range(self.output_dim))
@@ -1540,7 +1542,7 @@ class ModelContainer:
                 key = "hmc" if method == "hmc" else "nuts"
                 results[idx] = {"samples": samples, key: nuts_info}
 
-            else:
+            elif method == "smc":
                 from gpmp.mcmc.param_posterior import (
                     sample_from_selection_criterion_smc,
                 )
@@ -1554,6 +1556,24 @@ class ModelContainer:
                     **kwargs,
                 )
                 results[idx] = {"particles": particles, "smc": smc_instance}
+
+            else:
+                from gpmp.mcmc.param_posterior import (
+                    sample_from_selection_criterion_svgd,
+                )
+
+                particles, svgd_info = sample_from_selection_criterion_svgd(
+                    info=model_info,
+                    init_box=init_box,
+                    sampling_box=sampling_box,
+                    **kwargs,
+                )
+                criterion_values = -gnp.asarray(svgd_info["log_prob_final"])
+                results[idx] = {
+                    "particles": particles,
+                    "svgd": svgd_info,
+                    "criterion_values": criterion_values,
+                }
 
         return results
 
