@@ -1,70 +1,69 @@
 # GPmp-contrib
 
-`gpmp-contrib` provides higher-level workflows, models, and sequential design
-algorithms built on top of `gpmp`.
+`gpmp-contrib` extends `gpmp` with computer-experiment objects, multi-output
+model containers, Matérn model classes, sequential design procedures, set
+estimation tools, plots, and relaxed Gaussian-process utilities.
 
-It is intended for practical Gaussian-process pipelines where you want to
-compose:
-- model containers and ready-to-use Matérn model classes,
-- sequential strategies for optimization / excursion / set inversion,
-- diagnostics and visualization helpers,
-- specialized procedures such as relaxed GP (reGP).
+Use `gpmp` directly for core GP models, covariance functions, numerical backend
+operations, and low-level parameter selection. Use `gpmp-contrib` when a script
+needs a `ComputerExperiment`, a `ModelContainer`, a sequential strategy, a test
+problem, or reGP.
 
-## Highlights
+## Main components
 
-- Model classes:
+- Model containers and Matérn classes:
   - `Model_ConstantMean_Maternp_ML`
   - `Model_ConstantMean_Maternp_REML`
   - `Model_ConstantMean_Maternp_REMAP`
+  - `Model_ConstantMean_Maternp_REMAP_logsigma2`
+  - `Model_ConstantMean_Maternp_REMAP_logsigma2_and_logrho_prior`
   - `Model_Noisy_ConstantMean_Maternp_REML`
+- Prior access on REMAP classes with priors:
+  - `get_prior(...)`
+  - `set_prior(...)`
 - Sequential strategies:
-  - grid-search based (`SequentialStrategyGridSearch`)
-  - SMC-adaptive (`SequentialStrategySMC`)
-  - BSS-style (`SequentialStrategyBSS`)
-- Optimization / design modules:
-  - expected improvement (`gpmpcontrib.optim.expectedimprovement`)
-  - excursion set estimation (`gpmpcontrib.optim.excursionset`)
-  - set inversion and Pareto utilities
-- reGP utilities:
-  - `gpmpcontrib.regp`
+  - fixed candidate sets with `SequentialStrategyGridSearch`
+  - SMC particle sets with `SequentialStrategySMC`
+  - BSS-style particle sets with `SequentialStrategyBSS`
+- Optimization and set-estimation modules:
+  - expected improvement in `gpmpcontrib.optim.expectedimprovement`
+  - excursion sets in `gpmpcontrib.optim.excursionset`
+  - set inversion and Pareto utilities in `gpmpcontrib.optim`
+- reGP utilities in `gpmpcontrib.regp`.
+- Parameter posterior sampling through `ModelContainer.sample_parameters(...)`.
 
-## Package Layout
+## Package layout
 
-- `gpmpcontrib/models/`: preconfigured Matérn model classes
-- `gpmpcontrib/modelcontainer.py`: multi-output container and wrappers
-- `gpmpcontrib/sequentialprediction.py`: prediction/update orchestration
-- `gpmpcontrib/sequentialstrategy.py`: sequential decision strategies
-- `gpmpcontrib/optim/`: EI, excursion, set inversion, Pareto tools
-- `gpmpcontrib/regp/`: relaxed GP utilities
-- `examples/`: runnable scripts
+- `gpmpcontrib/models/`: Matérn model container classes.
+- `gpmpcontrib/modelcontainer.py`: multi-output model container.
+- `gpmpcontrib/sequentialprediction.py`: observation storage and prediction updates.
+- `gpmpcontrib/sequentialstrategy.py`: sequential decision strategies.
+- `gpmpcontrib/optim/`: EI, excursion-set, set-inversion, and Pareto tools.
+- `gpmpcontrib/regp/`: relaxed Gaussian-process utilities.
+- `examples/`: scripts using the public objects.
+- `docs/`: Sphinx documentation.
 
 ## Requirements
 
 - Python `>=3.9`
-- `gpmp >= 0.9.34`
-- `numpy`, `scipy>=1.12.0`, `matplotlib`
+- `gpmp >= 0.9.35`
+- `numpy`
+- `scipy>=1.12.0`
+- `matplotlib`
 
 ## Installation
-
-Clone the repository:
 
 ```bash
 git clone https://github.com/gpmp-dev/gpmp-contrib.git
 cd gpmp-contrib
-```
-
-Install in dev mode:
-
-```bash
 pip install -e .
 ```
 
-## Quick Start
+## Minimal example
 
 ```python
 import gpmpcontrib as gpc
 
-# See examples/ for full workflows
 problem = gpc.ComputerExperiment(
     1,
     [[-1.0], [1.0]],
@@ -72,20 +71,33 @@ problem = gpc.ComputerExperiment(
 )
 ```
 
-## Examples
+The full documentation starts with `docs/source/getting_started.rst` and then
+continues through the user guide. The examples section documents model
+construction, noisy observations, expected improvement, excursion sets, set
+inversion, and reGP.
 
-The `examples/` directory includes:
-- model construction and prediction (`example01` to `example05`)
-- expected improvement optimization (`example10`, `example11`, `example12`)
-- relaxed GP workflow (`example20`)
-- excursion set estimation (`example30`, `example31`)
-- set inversion workflows (`example40`, `example41`)
+## Documentation
+
+Install the documentation dependency and build the HTML pages:
+
+```bash
+pip install -r docs/requirements.txt
+cd docs
+sphinx-build -M html source _build -E
+```
+
+Generate the static example figures with:
+
+```bash
+cd docs
+python make_example_results.py
+```
 
 ## Authors
 
 See `AUTHORS.md`.
 
-## How to Cite
+## How to cite
 
 If you use GPmp-contrib in your research, please cite it as follows:
 
@@ -95,11 +107,11 @@ If you use GPmp-contrib in your research, please cite it as follows:
   title        = {GPmp-contrib},
   year         = {2026},
   url          = {https://github.com/gpmp-dev/gpmp-contrib},
-  note         = {Version x.y},
+  note         = {Version 0.9.35},
 }
 ```
 
-*Please update the version number as appropriate.*
+Update the version number when citing another release.
 
 ## Copyright
 
@@ -107,15 +119,14 @@ Copyright (C) 2022-2026 CentraleSupelec
 
 ## License
 
-GPmp contrib is free software: you can redistribute it and/or modify it
-under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
+GPmp-contrib is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation, either version 3 of the License, or (at your option) any later
+version.
 
-GPmp contrib is distributed in the hope that it will be useful, but WITHOUT
-ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
-or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public
-License for more details.
+GPmp-contrib is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE. See the GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License
-along with gpmp. If not, see http://www.gnu.org/licenses/.
+You should have received a copy of the GNU General Public License along with
+GPmp-contrib. If not, see http://www.gnu.org/licenses/.
