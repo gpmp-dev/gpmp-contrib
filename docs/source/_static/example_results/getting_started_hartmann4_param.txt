@@ -1,0 +1,6 @@
+     Name:                     Path       Norm         Bounds     Value    Denorm
+z0_sigma2:       covparam->variance        log    (-inf, inf)     0.191     1.210
+ z0_rho_0:    covparam->lengthscale    log_inv    (-inf, inf)     0.705     0.494
+ z0_rho_1:    covparam->lengthscale    log_inv    (-inf, inf)     0.308     0.735
+ z0_rho_2:    covparam->lengthscale    log_inv    (-inf, inf)    -0.568     1.764
+ z0_rho_3:    covparam->lengthscale    log_inv    (-inf, inf)     0.874     0.417

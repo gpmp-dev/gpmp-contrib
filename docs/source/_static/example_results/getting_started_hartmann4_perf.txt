@@ -1,0 +1,22 @@
+~ Model [0]
+[Prediction performances]
+  LOO (n=40)
+                     value
+          std(z):    1.047
+             tss:   43.829
+           press:   11.259
+       press/tss:    0.257
+log10(press/tss):   -0.590
+            rmse:    0.531
+     rmse/std(z):    0.507
+              Q2:    0.743
+  Test (n=300)
+                   value
+        std(z):    0.989
+           tss:  293.704
+           rss:   41.061
+       rss/tss:    0.140
+log10(rss/tss):   -0.854
+          rmse:    0.370
+   rmse/std(z):    0.374
+            R2:    0.860

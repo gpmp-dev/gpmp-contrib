@@ -1,0 +1,18 @@
+LogSigma2AndLogRhoPrior
+----
+gamma=tensor(1.5000),
+sigma2_coverage=tensor(0.9500),
+alpha=tensor(1.),
+rho_min_range_factor=tensor(0.0500),
+logrho_min=tensor([-3.0201, -3.0513, -2.9973, -3.0150]),
+covparam0=tensor([0.4397, 0.4234, 0.4547, 0.4007, 0.4183]),
+logsigma2_0_prior=None,
+logrho_0_prior=None,
+log_sigma2_0=tensor(0.4397),
+logrho_0=tensor([-0.4234, -0.4547, -0.4007, -0.4183]),
+covparam0_param_object=     Name:                     Path       Norm         Bounds    Value    Denorm
+z0_sigma2:       covparam->variance        log    (-inf, inf)    0.440     1.552
+ z0_rho_0:    covparam->lengthscale    log_inv    (-inf, inf)    0.423     0.655
+ z0_rho_1:    covparam->lengthscale    log_inv    (-inf, inf)    0.455     0.635
+ z0_rho_2:    covparam->lengthscale    log_inv    (-inf, inf)    0.401     0.670
+ z0_rho_3:    covparam->lengthscale    log_inv    (-inf, inf)    0.418     0.658

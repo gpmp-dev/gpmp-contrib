@@ -1,0 +1,5 @@
+sphinx
+furo
+numpydoc
+sphinxcontrib-bibtex
+witchhazel

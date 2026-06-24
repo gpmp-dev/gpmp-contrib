@@ -1,0 +1,25 @@
+~ Model [0]
+[Model diagnosis]
+  * Parameter selection
+    cvg_reached: True
+    optimal_val: True
+        n_evals: 22
+           time: 0.2095
+    initial_val: 43.818328528617435
+      final_val: 37.7947
+  * Parameters
+         Name:                     Path       Norm             Bounds     Value    Denorm
+    z0_sigma2:       covparam->variance        log     [-9.56, 10.44]     0.191     1.210
+     z0_rho_0:    covparam->lengthscale    log_inv    [-9.577, 10.42]     0.705     0.494
+     z0_rho_1:    covparam->lengthscale    log_inv    [-9.545, 10.45]     0.308     0.735
+     z0_rho_2:    covparam->lengthscale    log_inv     [-9.599, 10.4]    -0.568     1.764
+     z0_rho_3:    covparam->lengthscale    log_inv    [-9.582, 10.42]     0.874     0.417
+  * Data
+    count: 40
+    -----
+              min      max    delta     mean      std delta_over_sigma
+     zi:   -2.678    1.292    3.970   0.0221    1.047            3.280
+   xi_0: 8.399e-3    0.984    0.976    0.493    0.283            1.974
+   xi_1:   0.0450    0.991    0.946    0.510    0.294            1.288
+   xi_2: 1.544e-3    1.000    0.998    0.515    0.300            0.566
+   xi_3:   0.0164    0.997    0.981    0.526    0.307            2.350
