@@ -44,7 +44,7 @@ Scalar-Valued Problems (q = 1):
     - Ackley6               (d=6, q=1)
   d = 8:
     - detpep8d              (d=8, q=1)
-    - Linkletter           (d=8, q=1)
+    - Linkletter            (d=8, q=1)
     - Borehole              (d=8, q=1)
   d = 10:
     - Rastrigin10           (d=10, q=1)

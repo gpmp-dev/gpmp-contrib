@@ -4,9 +4,9 @@
 # Copyright (c) 2022-2026, CentraleSupelec
 # License: GPLv3 (see LICENSE)
 # --------------------------------------------------------------
-"""REMAP Matern model classes.
+"""Matern classes using REMAP parameter selection.
 
-This module provides REMAP-oriented model subclasses built on top of
+This module provides classes using REMAP selection, built on top of
 ``Model_ConstantMean_Maternp_REML``.
 
 Public model classes
@@ -31,10 +31,10 @@ dictionary-like field access through ``__getitem__``.
 
 Prior resolution policy
 -----------------------
-For REMAP models with configurable priors, values are stored per output and
-resolved when selection criteria are (re)built from the current
+For classes with configurable REMAP priors, values are stored per output and
+resolved when selection criteria are built from the current
 ``(model, xi, zi)`` context. Explicit user anchors (for example
-``logsigma2_0_prior`` and ``logrho_0_prior``) take precedence; otherwise
+``logsigma2_0_prior`` and ``logrho_0_prior``) take precedence. Otherwise,
 anchors are inferred from ``covparam0_prior`` or from anisotropic initial
 guesses.
 
@@ -852,7 +852,7 @@ class Model_ConstantMean_Maternp_REMAP_logsigma2_and_logrho_prior(
         return remap_criterion
 
 
-# Alias: default REMAP model uses gaussian logsigma2 + logrho prior.
+# Alias: default REMAP selection uses gaussian logsigma2 + logrho prior.
 Model_ConstantMean_Maternp_REMAP = (
     Model_ConstantMean_Maternp_REMAP_logsigma2_and_logrho_prior
 )

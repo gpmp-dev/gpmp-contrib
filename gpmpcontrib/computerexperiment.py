@@ -34,11 +34,11 @@ class ComputerExperiment:
 
     You can supply either:
       - a combined function (or list of functions) via `single_function` / `function_list`,
-        whose outputs are tagged with types; or
+        whose outputs are tagged with types, or
       - separate objectives and constraints via `single_objective`/`objective_list`
         and `single_constraint`/`constraint_list`.
 
-    Input domain (`input_box`) is accepted as either shape (2, d) [lower; upper] or (d, 2)
+    Input domain (`input_box`) is accepted as either shape (2, d) [lower, upper] or (d, 2)
     [(l1, u1), ..., (ld, ud)]. Internally it is stored as (2, d).
 
     Parameters
@@ -52,11 +52,11 @@ class ComputerExperiment:
           - "function": callable(X) -> (n, p_i) or (n,)
           - "output_dim": int (default 1)
           - "type": list[str] of length output_dim with values in {"objective","constraint"}
-          - "bounds": list[Bounds] or Bounds for constraints (per output); None for objectives.
+          - "bounds": list[Bounds] or Bounds for constraints per output. Use None for objectives.
     single_objective, objective_list : FuncSpec or list[FuncSpec], optional
-        Objective function(s). Dict like above; "type" defaults to "objective".
+        Objective function(s). Dict like above. "type" defaults to "objective".
     single_constraint, constraint_list : FuncSpec or list[FuncSpec], optional
-        Constraint function(s). Dict like above; must provide bounds if not set via `constraint_bounds`.
+        Constraint function(s). Dict like above. Provide bounds if not set via `constraint_bounds`.
     constraint_bounds : list[Bounds], optional
         Global bounds to attach to constraint functions provided without "bounds".
         Length must match total number of constraint outputs.
@@ -548,7 +548,7 @@ class StochasticComputerExperiment(ComputerExperiment):
         Returns
         -------
         ndarray
-            (n, p) if batch_size == 1; else (n, p, batch_size).
+            (n, p) if batch_size == 1. Otherwise (n, p, batch_size).
         """
         if batch_size < 1:
             raise ValueError("batch_size must be >= 1")

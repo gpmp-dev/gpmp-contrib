@@ -66,7 +66,7 @@ class SequentialStrategy(SequentialPrediction):
             - "criterion_best": best criterion value per iteration,
             - "model_params": snapshots of model parameters.
     maximize_criterion : bool
-        If True, the criterion is maximized; if False, minimized.
+        If True, the criterion is maximized. If False, it is minimized.
     """
 
     def __init__(self, problem, model, options=None):

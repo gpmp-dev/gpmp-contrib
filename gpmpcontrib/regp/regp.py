@@ -7,10 +7,10 @@
 """
 Relaxed Gaussian process (reGP) utilities for threshold-oriented modeling.
 
-This module implements the reGP workflow used in `examples/example20_regp.py`:
-start from a GP fit, relax observations in a target interval, and refit the
-covariance parameters jointly with relaxed values to improve behavior in a
-region of interest.
+This module implements the reGP procedure used in `examples/example20_regp.py`:
+start from an initial GP model, relax observations in a target interval, and
+update the covariance parameters jointly with relaxed values to improve
+behavior in a region of interest.
 
 Typical use
 -----------
