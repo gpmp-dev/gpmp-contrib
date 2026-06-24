@@ -1,6 +1,5 @@
 import itertools
 import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
 import gpmp as gp
 
@@ -190,8 +189,15 @@ def parallel_coordinates_plot(
     Returns:
     - Plotly figure object (go.Figure)
     """
-    import plotly as px
-    import plotly.graph_objects as go
+    try:
+        import pandas as pd
+        import plotly as px
+        import plotly.graph_objects as go
+    except ImportError as exc:
+        raise ImportError(
+            "parallel_coordinates_plot requires optional dependencies "
+            "'pandas' and 'plotly'. Install them to use this function."
+        ) from exc
 
     # Ensure x and z are 2D arrays, p is 1D array (if provided)
     assert x.ndim == 2, "x must be a 2D numpy array"
