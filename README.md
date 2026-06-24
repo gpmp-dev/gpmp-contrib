@@ -78,7 +78,11 @@ inversion, and reGP.
 
 ## Documentation
 
-Install the documentation dependency and build the HTML pages:
+The documentation is available at
+<https://gpmp-dev.github.io/gpmp-contrib/>.
+
+To build it locally, install the documentation dependencies and build the HTML
+pages:
 
 ```bash
 pip install -r docs/requirements.txt
