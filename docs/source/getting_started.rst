@@ -1,16 +1,16 @@
 Getting started
 ===============
 
-The first example builds a ``gpmp-contrib`` model from observation points.  It
-uses the four-dimensional Hartmann function, as in the core ``gpmp`` tutorial.
-The first displayed output is a predicted-versus-reference check on test
-points.
+The Hartmann4 example builds a ``gpmp-contrib`` model from observation points.
+It uses the same four-dimensional Hartmann function as the core ``gpmp``
+tutorial.  The first displayed output is a predicted-versus-reference check on
+test points.
 
 The example runs these operations:
 
 1. choose a ``ComputerExperiment``.
 2. choose observation points and evaluate the experiment.
-3. create a Matérn model container.
+3. create a Matérn container.
 4. select covariance parameters.
 5. predict at test points.
 6. inspect diagnostics and stored model state.
@@ -114,10 +114,12 @@ The diagnosis output has one block per output:
 
 This block is produced by ``model.run_diagnosis(xi, zi)``.
 
-``cvg_reached`` is the SciPy optimizer success flag.  ``optimal_val`` means that
-the final criterion value is finite and usable.  The parameter table prints raw
-coordinates and denormalized values.  For Matérn lengthscales, the raw vector
-stores ``-log(rho)`` while the denormalized column reports ``rho``.
+``cvg_reached`` is the SciPy optimizer success flag.  ``optimal_val=True``
+means that SciPy's returned point was at least as good as every point recorded
+during optimization.  When it is false, GPmp returns the best recorded point
+instead.  The parameter table prints raw coordinates and denormalized values.
+For Matérn lengthscales, the raw vector stores ``-log(rho)`` while the
+denormalized column reports ``rho``.
 
 Prediction check
 ----------------
@@ -235,14 +237,14 @@ LOO removes one of only 40 observations at a time, so it can be more demanding
 than prediction on the sampled test set.  If the scores are low, inspect the
 design, covariance class, optimizer result, bounds, and parameterization.
 
-Where to go next
-----------------
+Linked topics
+-------------
 
-- Read :doc:`guide/models` for the relation between ``ComputerExperiment``,
+- :doc:`guide/models` covers the relation between ``ComputerExperiment``,
   ``ModelContainer``, and ``gpmp.core.Model``.
-- Read :doc:`guide/model_state` for raw vectors, ``Param`` objects, and
-  optimizer reports.
-- Read :doc:`guide/parameter_selection` for ML, REML, and REMAP criteria.
-- Read :doc:`guide/diagnostics` for diagnosis and LOO interpretation.
-- Read :doc:`examples/index` for complete scripts with expected results and
+- :doc:`guide/model_state` covers raw vectors, ``Param`` objects, and optimizer
+  reports.
+- :doc:`guide/parameter_selection` covers ML, REML, and REMAP criteria.
+- :doc:`guide/diagnostics` covers diagnosis and LOO interpretation.
+- :doc:`examples/index` contains complete scripts with expected results and
   plots.

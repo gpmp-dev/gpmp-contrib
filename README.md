@@ -14,10 +14,14 @@ problem, or reGP.
 - Model containers and Matérn classes:
   - `Model_ConstantMean_Maternp_ML`
   - `Model_ConstantMean_Maternp_REML`
+  - `Model_ConstantMean_Matern_REML`
   - `Model_ConstantMean_Maternp_REMAP`
   - `Model_ConstantMean_Maternp_REMAP_logsigma2`
   - `Model_ConstantMean_Maternp_REMAP_logsigma2_and_logrho_prior`
   - `Model_Noisy_ConstantMean_Maternp_REML`
+
+`Maternp` classes fix the regularity at `nu = p + 1/2`. The `Matern` class
+selects `nu` jointly with the variance and lengthscales.
 - Prior access on REMAP classes with priors:
   - `get_prior(...)`
   - `set_prior(...)`
@@ -46,7 +50,7 @@ problem, or reGP.
 ## Requirements
 
 - Python `>=3.9`
-- `gpmp >= 0.9.37`
+- `gpmp >= 0.9.38`
 - `numpy`
 - `scipy>=1.12.0`
 - `matplotlib`
@@ -113,7 +117,7 @@ python make_example_results.py
 
 ## Authors
 
-See `AUTHORS.md`.
+See [AUTHORS.md](AUTHORS.md).
 
 ## How to cite
 
@@ -125,7 +129,7 @@ If you use GPmp-contrib in your research, please cite it as follows:
   title        = {GPmp-contrib},
   year         = {2026},
   url          = {https://github.com/gpmp-dev/gpmp-contrib},
-  note         = {Version 0.9.37},
+  note         = {Version 0.9.38},
 }
 ```
 
@@ -140,11 +144,11 @@ Copyright (C) 2022-2026 CentraleSupelec
 GPmp-contrib is free software: you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free Software
 Foundation, either version 3 of the License, or (at your option) any later
-version.
+version. See [LICENSE.txt](LICENSE.txt).
 
 GPmp-contrib is distributed in the hope that it will be useful, but WITHOUT ANY
 WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
 PARTICULAR PURPOSE. See the GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License along with
-GPmp-contrib. If not, see http://www.gnu.org/licenses/.
+GPmp-contrib. If not, see https://www.gnu.org/licenses/.

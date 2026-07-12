@@ -1,0 +1,6 @@
+Fixed Matérn regularity: nu = 2.5
+Selected Matérn regularity: nu = 3.48996
+     Name:                     Path       Norm         Bounds     Value    Denorm
+z0_sigma2:       covparam->variance        log    (-inf, inf)     2.155     8.624
+    z0_nu:     covparam->regularity        log    (-inf, inf)     1.250     3.490
+ z0_rho_0:    covparam->lengthscale    log_inv    (-inf, inf)    0.0298     0.971

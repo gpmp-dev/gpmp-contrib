@@ -1,15 +1,15 @@
 Example 02: models, diagnostics, and prediction
 ===============================================
 
-Script: ``examples/example02_models.py``
+Complete script: `examples/example02_models.py <https://github.com/gpmp-dev/gpmp-contrib/blob/main/examples/example02_models.py>`_
 
 Purpose
 -------
 
-The script demonstrates the standard model procedure: build a Matérn model
-container, select covariance parameters, compute predictions, run diagnostics,
+The script builds a Matérn container,
+select covariance parameters, compute predictions, run diagnostics,
 and visualize the result.  It includes a one-output one-dimensional problem and
-a two-output two-dimensional problem.  Matérn covariance models and
+a two-output two-dimensional problem.  Matérn covariance functions and
 likelihood-based parameter selection are standard tools in GP interpolation
 :cite:p:`stein1999kriging,chiles1999geostatistics`.  Empirical comparisons of
 selection criteria are discussed by :cite:t:`petit2023parameter`.
@@ -21,7 +21,7 @@ What is computed
 - posterior means and variances on prediction points.
 - conditional sample paths for the one-dimensional case.
 - leave-one-out predictions and LOO error plots.
-- truth-versus-prediction plots for the two-output case.
+- reference-versus-prediction plots for the two-output case.
 
 Main objects
 ------------
@@ -48,7 +48,7 @@ the example.  Regenerate the static figure with
    points are observations, the red curve is the posterior mean, and the shaded
    band is a pointwise 95 percent interval.  The interval widens between
    observations and narrows at observed input locations.  The full script also
-   displays leave-one-out errors and truth-versus-prediction plots for the
+   displays leave-one-out errors and reference-versus-prediction plots for the
    two-output case.
 
 Source excerpt

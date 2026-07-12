@@ -18,13 +18,14 @@ Object map
 ``ModelContainer``
     Stores one independent ``gpmp.core.Model`` per output.  Each output entry
     stores the underlying model, selection criterion, raw parameter vectors,
-    ``Param`` object, optimizer report, and resolved prior object when the model
-    class uses REMAP priors.
+    ``Param`` object, optimizer report, and resolved prior object when the
+    container class uses REMAP priors.
 
 Provided Matérn container classes
-    Configure Matérn GP models on top of ``ModelContainer``.  They specify the
+    Configure Matérn GPs on top of ``ModelContainer``.  They specify the
     mean form, covariance function, initial-guess procedure, selection criterion,
-    and ``Param`` construction.
+    and ``Param`` construction.  Class names containing ``Maternp`` fix
+    :math:`\nu=p+1/2`; ``Matern`` denotes the class that selects :math:`\nu`.
 
 ``SequentialPrediction``
     Stores observations and a model container.  It updates model parameters,
@@ -72,21 +73,22 @@ stacked over prediction points and outputs.
 Relation to gpmp
 ----------------
 
-The GP model is the standard kriging model used in spatial statistics and
-computer experiments.  Background on covariance modeling and kriging is given by
-:cite:p:`stein1999kriging,chiles1999geostatistics`.  In ``gpmp-contrib``, the
-model formulas are not reimplemented.  Prediction, likelihood evaluation, REML,
-REMAP, and posterior parameter sampling are delegated to ``gpmp``.
+The GP construction is the kriging construction used in spatial statistics and
+computer experiments.  Background on covariance functions and kriging is given by
+:cite:p:`stein1999kriging,chiles1999geostatistics,rasmussen2006gaussian`.  In
+``gpmp-contrib``, the model formulas are not reimplemented.  Prediction,
+likelihood evaluation, REML, REMAP, and posterior parameter sampling are
+delegated to ``gpmp``.
 
 ``gpmp-contrib`` decides how the model is assembled and how state is stored:
 which covariance class is used, which parameter-selection criterion is called,
 how optimizer starts are chosen, and how user-readable parameter objects are
 created.
 
-When to use gpmp-contrib
-------------------------
+Package boundary
+----------------
 
-Use ``gpmp-contrib`` when the task involves a computer experiment, a
-multi-output model container, a sequential design, a provided benchmark problem,
-or the reGP procedure.  Use ``gpmp`` directly when implementing a new covariance
-function, selection criterion, MCMC kernel, backend operation, or diagnostic.
+``gpmp-contrib`` contains computer experiments, multi-output model containers,
+sequential designs, benchmark problems, and the reGP procedure.  New covariance
+functions, selection criteria, MCMC kernels, backend operations, and diagnostics
+belong in ``gpmp``.

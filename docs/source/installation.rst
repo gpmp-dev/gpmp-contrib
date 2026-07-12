@@ -8,21 +8,27 @@ metadata declares:
 - ``numpy``.
 - ``scipy >= 1.12.0``.
 - ``matplotlib``.
-- ``gpmp >= 0.9.37``.
+- ``gpmp >= 0.9.38``.
 
-Install from a local checkout with:
+Install the released package from PyPI with:
 
 .. code-block:: bash
 
+   python -m pip install gpmp-contrib
+
+For development, clone the repository and install it in editable mode:
+
+.. code-block:: bash
+
+   git clone https://github.com/gpmp-dev/gpmp-contrib.git
+   cd gpmp-contrib
    python -m pip install -e .
 
-The examples and documentation assume that ``gpmp`` is importable in the same
-environment.  ``gpmp`` selects a numerical backend at import time.  Arrays
-returned by ``gpmp-contrib`` are backend objects: NumPy arrays with the NumPy
-backend and PyTorch tensors with the PyTorch backend.  In ordinary
-``ModelContainer`` usage, inputs are converted by the called method and
-prediction outputs are NumPy arrays by default.  Use ``gpmp.num`` when writing
-backend-independent code around ``gpmp.core`` or ``gpmp.kernel`` calls.
+When testing a development checkout against a local ``gpmp`` checkout, install
+``gpmp`` first in the same environment.  ``gpmp`` selects the numerical backend
+at import time.  ``ModelContainer`` methods accept backend objects and return
+NumPy prediction arrays by default.  The detailed conversion rules are given in
+:doc:`api/backend_objects`.
 
 Minimal import check
 --------------------

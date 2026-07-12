@@ -7,7 +7,7 @@ SciPy, and stores the result for each output.
 
 Parameter selection chooses covariance parameters inside the selected GP family.
 For the provided ML class, it also chooses the constant mean parameter.
-Background on covariance modeling and kriging is given by
+Background on covariance functions and kriging is given by
 :cite:t:`stein1999kriging` and
 :cite:t:`chiles1999geostatistics`.  Empirical comparisons of GP parameter
 selection are discussed by :cite:t:`petit2023parameter`.
@@ -15,7 +15,7 @@ selection are discussed by :cite:t:`petit2023parameter`.
 Covariance parameter vector
 ---------------------------
 
-For the Matérn classes, the covariance parameter vector has length
+For the fixed-regularity Matérn classes, the covariance parameter vector has length
 ``1 + input_dim``:
 
 .. code-block:: text
@@ -37,6 +37,18 @@ The physical parameters are recovered by
 Optimizer starts, bounds, and reported raw values are expressed in the
 ``covparam`` coordinates.
 
+For ``Model_ConstantMean_Matern_REML``, the regularity is selected and the
+vector has length ``2 + input_dim``:
+
+.. code-block:: text
+
+   covparam = [log(sigma2), log(nu), -log(rho_0), ..., -log(rho_{d-1})]
+
+The logarithmic coordinate enforces :math:`\nu>0`.  The initial-guess procedure
+is ``gp.kernel.anisotropic_parameters_initial_guess_matern``.  It initializes
+the variance, regularity, and componentwise lengthscales before REML
+optimization.
+
 Which criterion is used
 -----------------------
 
@@ -48,6 +60,10 @@ Which criterion is used
     Uses restricted likelihood.  The mean basis is constant or linear.  Mean
     coefficients are profiled out by the restricted likelihood, and the
     criterion is optimized over covariance parameters.
+
+``Model_ConstantMean_Matern_REML``
+    Uses the same restricted likelihood and also selects :math:`\nu`.  The
+    optimized covariance vector is ``[log(sigma2), log(nu), -log(rho_0), ...]``.
 
 ``Model_ConstantMean_Maternp_REMAP``
     Uses restricted likelihood plus prior terms.  The default REMAP class uses a

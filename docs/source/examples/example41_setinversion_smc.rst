@@ -1,7 +1,7 @@
 Example 41: set inversion with BSS-style particles
 ==================================================
 
-Script: ``examples/example41_setinversion_smc.py``
+Complete script: `examples/example41_setinversion_smc.py <https://github.com/gpmp-dev/gpmp-contrib/blob/main/examples/example41_setinversion_smc.py>`_
 
 Purpose
 -------

@@ -1,7 +1,7 @@
 Example 11: expected improvement with SMC search
 ================================================
 
-Script: ``examples/example11_optim_EI_smc.py``
+Complete script: `examples/example11_optim_EI_smc.py <https://github.com/gpmp-dev/gpmp-contrib/blob/main/examples/example11_optim_EI_smc.py>`_
 
 Purpose
 -------
@@ -20,7 +20,7 @@ What is computed
 - posterior mean and variance at the current particle positions.
 - EI values on the particle set.
 - a target log-density proportional to
-  ``log P(-Y(x) > -min(zi) | observations)`` inside the input box.
+  ``log P(-Z(x) > -min(zi) | observations)`` inside the input box.
 - SMC particle updates using reweighting, resampling, and Markov moves.
 - one new objective evaluation per sequential step.
 

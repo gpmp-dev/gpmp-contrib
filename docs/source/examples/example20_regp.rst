@@ -1,12 +1,12 @@
 Example 20: relaxed Gaussian process
 ====================================
 
-Script: ``examples/example20_regp.py``
+Complete script: `examples/example20_regp.py <https://github.com/gpmp-dev/gpmp-contrib/blob/main/examples/example20_regp.py>`_
 
 Purpose
 -------
 
-The script demonstrates relaxed Gaussian-process (reGP) remodeling for a
+The script demonstrates the relaxed Gaussian-process (reGP) procedure for a
 threshold-oriented target.  Selected observations are allowed to move inside a
 relaxation interval, and the relaxed values are optimized together with
 covariance parameters before prediction.  See :cite:t:`petit2025regp` for the
@@ -25,9 +25,9 @@ What is computed
 Main objects
 ------------
 
-- ``gpmpcontrib.regp.regp.predict``
+- ``gpmpcontrib.regp.predict``
 - ``gpmpcontrib.regp.regp.remodel``
-- ``gpmpcontrib.regp.regp.select_optimal_threshold_above_t0``
+- ``gpmpcontrib.regp.select_optimal_threshold_above_t0``
 
 Outputs
 -------

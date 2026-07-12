@@ -79,11 +79,13 @@ Core object
       Compute leave-one-out predictions for all outputs.  Returns
       ``(zloo, sigma2loo, eloo)``, each with shape ``(n, output_dim)``.
 
-   .. py:method:: run_diagnosis(xi, zi)
+   .. py:method:: run_diagnosis(xi, zi, *, output_ind=None, convert_in=True)
       :no-index:
 
       Print per-output parameter-selection status, parameter values, and data
-      summaries through ``gpmp.modeldiagnosis``.  Raises ``ValueError`` if
+      summaries through ``gpmp.modeldiagnosis``.  ``output_ind=None`` reports
+      all outputs.  An integer reports one output.  ``convert_in=True`` converts
+      observations with ``gpmp.num.asarray``.  Raises ``ValueError`` if
       ``select_params`` has not populated ``model[k]["info"]``.
 
    .. py:method:: run_perf(xi, zi, *, output_ind=None, loo=True, loo_res=None, xtzt=None, zpmzpv=None, convert_in=True)

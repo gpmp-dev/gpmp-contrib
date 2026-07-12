@@ -6,18 +6,17 @@ containers, Matérn container classes, sequential strategies, optimization
 criteria, excursion/set-inversion tools, and relaxed Gaussian-process
 utilities.
 
+The provided ``Maternp`` classes fix the Matérn regularity at
+:math:`\nu=p+1/2`.  ``Model_ConstantMean_Matern_REML`` selects :math:`\nu`
+with the variance and lengthscales.
+
 Use ``gpmp`` directly when you need models, kernels, numerical backends, or
 parameter-selection functions.  Use ``gpmp-contrib`` when you want computer
-experiments, model containers, or sequential-design classes that coordinate
-these objects.
+experiments, model containers, or sequential-design classes built from these
+objects.
 
-For standard ``ModelContainer`` calls, model methods convert inputs by default
-and prediction calls return NumPy arrays with ``convert_out=True``.  Explicit
-backend conversion is needed when code passes arrays between ``gpmp`` internals,
-posterior samplers, or external NumPy-only libraries.
-
-Main documentation sections
----------------------------
+Documentation contents
+----------------------
 
 Installation
     Package dependencies, backend notes, and documentation build commands.
@@ -40,29 +39,30 @@ API reference
 References
     Literature cited by the guide and examples.
 
-Main procedures
----------------
+Technical entry points
+----------------------
 
-First example
-    See :doc:`getting_started`.  It builds the Hartmann4 example used in the
-    core ``gpmp`` tutorial, selects Matérn covariance parameters, predicts at
-    test points, and shows the expected diagnostic output.
+Hartmann4 example
+    :doc:`getting_started` builds the Hartmann4 example used in the core
+    ``gpmp`` tutorial, selects Matérn covariance parameters, predicts at test
+    points, and shows the expected diagnostic output.
 
 Model construction
-    Read :doc:`guide/models`, :doc:`guide/model_state`, and
-    :doc:`guide/parameter_selection` to choose a likelihood,
-    restricted-likelihood, or REMAP parameter-selection rule and to understand
-    stored parameter values.
+    :doc:`guide/models`, :doc:`guide/model_state`, and
+    :doc:`guide/parameter_selection` describe model containers,
+    fixed or selected Matérn regularity, parameter-selection rules, stored
+    covariance vectors, and readable ``Param`` objects.
 
 Priors in REMAP selection
-    Read :doc:`guide/priors` when REMAP prior anchors or hyperparameters must
-    be inspected or set by hand.
+    :doc:`guide/priors` documents ``set_prior``, ``get_prior``, prior anchors,
+    and REMAP hyperparameters.
 
 Sequential design
-    Read :doc:`guide/sequential`, then compare the fixed-grid and SMC examples.
+    :doc:`guide/sequential` describes expected improvement, excursion sets,
+    set inversion, SMC particles, and BSS particles.
 
 API details
-    Use :doc:`api/index` for signatures, shapes, return values, stored side
+    :doc:`api/index` gives signatures, shapes, return values, stored side
     effects, and failure conditions.
 
 .. toctree::

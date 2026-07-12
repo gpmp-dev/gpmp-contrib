@@ -53,7 +53,8 @@ The entries have distinct roles:
 Raw covariance parameters
 -------------------------
 
-For the provided Matérn container classes, the covariance vector is
+For the provided fixed-regularity Matérn container classes, the covariance
+vector is
 
 .. code-block:: text
 
@@ -62,6 +63,16 @@ For the provided Matérn container classes, the covariance vector is
 The first entry is the logarithm of the process variance.  The remaining entries
 use the inverse log-lengthscale convention.  In this convention, larger values
 correspond to shorter lengthscales.
+
+For ``Model_ConstantMean_Matern_REML``, :math:`\nu` is selected and the vector
+is
+
+.. code-block:: text
+
+   covparam = [log(sigma2), log(nu), -log(rho_0), ..., -log(rho_{d-1})]
+
+The second coordinate stores ``log(nu)``.  The vector therefore has
+``input_dim + 2`` entries.
 
 The raw vector is what ``gpmp.kernel`` receives.  Use it when calling
 ``gpmp.core`` or ``gpmp.kernel`` functions, or when writing a new selection
@@ -87,7 +98,8 @@ The displayed text is produced by ``print(model[0].get_param())`` after
 
 For Matérn covariance parameters, ``rho`` entries are displayed as lengthscales
 even though the raw vector stores ``-log(rho)``.  The ``Denorm`` column is the
-physical value.
+physical value.  For a selected-regularity model, the ``nu`` entry has path
+``["covparam", "regularity"]`` and ``Denorm`` reports :math:`\nu`.
 
 Use the object when you need named access:
 
@@ -97,6 +109,7 @@ Use the object when you need named access:
    rho_entries = param.get_by_path(
        ["covparam", "lengthscale"], prefix_match=True
    )
+   lognu = param.get_by_path(["covparam", "regularity"])
 
 Use ``param`` as an optimizer start when the start should retain names and
 bounds:

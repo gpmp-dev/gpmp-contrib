@@ -78,7 +78,7 @@ The entry is described in :doc:`model_state`.  Raw vectors are stored in
 ``entry["model"]``.  Readable parameter information is stored in
 ``entry.get_param()``.
 
-Matérn model used by the provided classes
+GP defined by the provided Matérn classes
 -----------------------------------------
 
 For each output, the provided Matérn classes define a scalar-valued GP
@@ -96,7 +96,8 @@ where :math:`Z_0` is a centered GP with Matérn covariance
   linear-predictor mean with constant or linear basis functions.  The criterion
   is optimized over covariance parameters.
 
-The covariance parameter vector is
+For ``Maternp`` classes, the regularity is fixed at :math:`\nu=p+1/2`.  The
+covariance parameter vector is
 
 .. code-block:: text
 
@@ -112,6 +113,33 @@ Thus
 
 The raw lengthscale coordinates are ``-log(rho_j)``.  Larger raw values mean
 shorter physical lengthscales.
+
+The ``Matern`` class selects :math:`\nu` and uses
+
+.. code-block:: text
+
+   covparam = [log(sigma2), log(nu), -log(rho_0), ..., -log(rho_{d-1})]
+
+For the anisotropic distance
+
+.. math::
+
+   r(x,x') = \left(\sum_{j=0}^{d-1}
+   \frac{(x_j-x'_j)^2}{\rho_j^2}\right)^{1/2},
+
+the Matérn covariance is
+
+.. math::
+
+   K_\theta(x,x') = \sigma^2
+   \frac{2^{1-\nu}}{\Gamma(\nu)}
+   \left(\sqrt{2\nu}\,r(x,x')\right)^\nu
+   K_\nu\left(\sqrt{2\nu}\,r(x,x')\right),
+
+where :math:`K_\nu` is the modified Bessel function of the second kind.
+Optimizing ``log(nu)`` enforces :math:`\nu>0`.  GPmp evaluates this covariance
+and its derivatives; gpmp-contrib only configures the model and readable
+parameter object.
 
 Posterior prediction
 --------------------
@@ -148,8 +176,8 @@ The Hartmann4 examples in this guide use:
    mean_specification = {"type": "constant"}
    covariance_specification = {"p": 2}
 
-``p`` is the Matérn smoothness parameter used by ``gpmp.kernel``.  The exact
-set of accepted specifications depends on the selected container class.
+``p`` fixes :math:`\nu=p+1/2` in a ``Maternp`` class.  The free-regularity
+``Matern`` class does not require ``p``.
 
 Provided Matérn container classes
 ---------------------------------
@@ -161,6 +189,10 @@ Provided Matérn container classes
 ``Model_ConstantMean_Maternp_REML``
     Linear-predictor mean.  Covariance parameters are selected by restricted
     likelihood.
+
+``Model_ConstantMean_Matern_REML``
+    Linear-predictor mean with :math:`\nu` selected by restricted likelihood.
+    Its covariance vector has ``input_dim + 2`` entries.
 
 ``Model_ConstantMean_Maternp_REMAP``
     Current default REMAP class.  It aliases
@@ -194,8 +226,9 @@ The provided Matérn classes share the same core constructor arguments:
     ``{"type": "constant"}`` is used.
 
 ``covariance_specification``
-    Dictionary describing the Matérn covariance.  The key ``"p"`` selects the
-    Matérn smoothness parameter passed to ``gpmp.kernel``.
+    Dictionary describing the Matérn covariance.  For ``Maternp`` classes,
+    ``{"p": int}`` fixes :math:`\nu=p+1/2`.  It is optional and normally empty
+    for ``Model_ConstantMean_Matern_REML``.
 
 REMAP constructors also accept optional prior hyperparameters.  The same values
 can be set later with ``set_prior`` before ``select_params``.  See
@@ -220,10 +253,32 @@ After this call, ``model[0]["model"].covparam`` contains the selected raw
 covariance vector, ``model[0].get_param()`` gives the readable parameter object,
 and ``model[0]["info"]`` stores the optimizer report.
 
-Where to continue
------------------
+Selected regularity
+-------------------
 
-- Use :doc:`parameter_selection` to understand optimizer starts, bounds, and
+For the free-regularity class, read :math:`\nu` through the ``Param`` object:
+
+.. code-block:: python
+
+   import gpmp.num as gnp
+
+   model = gpc.Model_ConstantMean_Matern_REML(
+       "matern",
+       output_dim=1,
+       mean_specification={"type": "constant"},
+   )
+   model.select_params(xi, zi)
+
+   param = model[0].get_param()
+   lognu = param.get_by_path(["covparam", "regularity"])
+   nu = gnp.exp(gnp.asarray(lognu).reshape(-1)[0])
+
+The executable comparison is :doc:`../examples/example06_matern`.
+
+Related model topics
+--------------------
+
+- :doc:`parameter_selection` documents optimizer starts, bounds, and
   ML/REML/REMAP criteria.
-- Use :doc:`model_state` to inspect stored vectors and parameter objects.
-- Use :doc:`diagnostics` to interpret the printed summaries.
+- :doc:`model_state` documents stored vectors and parameter objects.
+- :doc:`diagnostics` documents the printed summaries.

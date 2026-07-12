@@ -1,7 +1,7 @@
 Example 10: expected improvement on a fixed grid
 ================================================
 
-Script: ``examples/example10_optim_EI_gridsearch.py``
+Complete script: `examples/example10_optim_EI_gridsearch.py <https://github.com/gpmp-dev/gpmp-contrib/blob/main/examples/example10_optim_EI_gridsearch.py>`_
 
 Purpose
 -------

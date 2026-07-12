@@ -1,7 +1,7 @@
 Example 01: computer experiments
 ================================
 
-Script: ``examples/example01_computer_experiment.py``
+Complete script: `examples/example01_computer_experiment.py <https://github.com/gpmp-dev/gpmp-contrib/blob/main/examples/example01_computer_experiment.py>`_
 
 Purpose
 -------

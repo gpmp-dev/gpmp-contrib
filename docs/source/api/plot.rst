@@ -2,7 +2,7 @@ Plotting functions
 ==================
 
 Plotting functions provide visualizations for one-dimensional GP models,
-truth-vs-prediction diagnostics, LOO errors, matrix plots, and parallel
+reference-versus-prediction diagnostics, LOO errors, matrix plots, and parallel
 coordinates.
 
 All Matplotlib functions create or update figures and call ``show``.  They are

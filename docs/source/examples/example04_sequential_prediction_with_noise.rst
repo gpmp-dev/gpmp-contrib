@@ -1,16 +1,16 @@
 Example 04: noisy sequential prediction
 =======================================
 
-Script: ``examples/example04_sequential_prediction_with_noise.py``
+Complete script: `examples/example04_sequential_prediction_with_noise.py <https://github.com/gpmp-dev/gpmp-contrib/blob/main/examples/example04_sequential_prediction_with_noise.py>`_
 
 Purpose
 -------
 
-The script shows how to use ``SequentialPrediction`` with noisy scalar
-observations.  The model class is ``Model_Noisy_ConstantMean_Maternp_REML``.
+The script uses ``SequentialPrediction`` with noisy scalar observations.  The
+model class is ``Model_Noisy_ConstantMean_Maternp_REML``.
 The physical input is augmented with one observation-noise variance column, so
-observations and prediction points carry different noise values.  This is the
-standard noisy-observation form of GP prediction, with the noise variance added
+observations and prediction points carry different noise values.  The noise
+variance is added
 to the observation covariance :cite:p:`stein1999kriging,chiles1999geostatistics`.
 
 What is computed

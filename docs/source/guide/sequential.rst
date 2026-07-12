@@ -178,8 +178,10 @@ SMC and BSS particles
 
 SMC/BSS strategies maintain a particle population.  Each update reweights
 particles with the change in target density, resamples when needed, and moves
-particles with a Markov kernel.  The particle cloud is a numerical search
-object.  It is not a posterior sample of GP covariance parameters.
+particles with a Markov kernel.  Sequential Monte Carlo samplers are described
+by :cite:t:`delmoral2006smc`; the BSS construction used here follows
+:cite:t:`bect2016bss`.  The particle cloud is a numerical search object.  It is
+not a posterior sample of GP covariance parameters.
 
 For an event :math:`A_\lambda` controlled by a threshold, a box, or an
 interpolation parameter, the particle target is proportional to an event

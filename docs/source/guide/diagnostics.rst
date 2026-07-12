@@ -33,7 +33,9 @@ The first part reports the optimizer status:
     SciPy optimizer success flag.
 
 ``optimal_val``
-    Whether the final criterion value is finite and usable.
+    Whether SciPy's returned point was at least as good as every point recorded
+    during optimization.  When false, GPmp replaced it with the best recorded
+    point.
 
 ``n_evals``
     Number of criterion evaluations.
@@ -130,8 +132,8 @@ Posterior parameter sampling
 ----------------------------
 
 ``sample_parameters`` forwards to posterior-sampling functions in
-``gpmp.mcmc.param_posterior``.  The common methods are ``"mh"``, ``"nuts"``,
-and ``"smc"``:
+``gpmp.mcmc.param_posterior``.  The common methods are ``"mh"``, ``"hmc"``,
+``"nuts"``, and ``"smc"``:
 
 .. code-block:: python
 

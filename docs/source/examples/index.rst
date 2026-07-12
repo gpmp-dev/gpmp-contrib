@@ -9,16 +9,17 @@ Example sequence
 ----------------
 
 1. ``example01`` defines computer experiments and constraints.
-2. ``example02`` constructs Matérn models, selects parameters, predicts, and
+2. ``example02`` uses Matérn containers, selects parameters, predicts, and
    diagnoses the result.
 3. ``example04`` handles noisy observations by passing observation-noise
    variances through the input matrix.
-4. ``example10`` runs expected improvement on a fixed grid.
-5. ``example11`` replaces the fixed grid by an SMC particle set.
-6. ``example20`` applies relaxed GP remodeling for a threshold-oriented target.
-7. ``example30`` and ``example31`` estimate excursion sets with fixed-grid and
+4. ``example06`` compares fixed and selected Matérn regularity.
+5. ``example10`` runs expected improvement on a fixed grid.
+6. ``example11`` replaces the fixed grid by an SMC particle set.
+7. ``example20`` applies the reGP procedure to a threshold-oriented target.
+8. ``example30`` and ``example31`` estimate excursion sets with fixed-grid and
    BSS-style search procedures.
-8. ``example40`` and ``example41`` estimate inverse images of output boxes.
+9. ``example40`` and ``example41`` estimate inverse images of output boxes.
 
 .. toctree::
    :maxdepth: 1
@@ -26,6 +27,7 @@ Example sequence
    example01_computer_experiment
    example02_models
    example04_sequential_prediction_with_noise
+   example06_matern
    example10_optim_EI_gridsearch
    example11_optim_EI_smc
    example20_regp

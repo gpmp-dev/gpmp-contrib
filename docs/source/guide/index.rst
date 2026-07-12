@@ -1,15 +1,12 @@
 User guide
 ==========
 
-The guide starts after the Hartmann4 run in :doc:`../getting_started`.  It
-explains how ``gpmp-contrib`` stores models, parameters, diagnostics, priors,
-and sequential-procedure state.
+The guide documents how ``gpmp-contrib`` stores models, parameters,
+diagnostics, priors, and sequential-procedure state.  The runnable Hartmann4
+sequence is in :doc:`../getting_started`.
 
-Main path
----------
-
-Start with these pages if the goal is to build and inspect a Gaussian-process
-model from observations:
+Model construction and inspection
+---------------------------------
 
 1. :doc:`concepts` gives the package map and states which objects belong to
    ``gpmp`` and which objects are added by ``gpmp-contrib``.
@@ -22,23 +19,22 @@ model from observations:
 5. :doc:`diagnostics` explains the printed diagnosis and prediction-performance
    summaries.
 
-Specialized procedures
+Procedure-specific topics
+-------------------------
+
+- :doc:`priors` covers REMAP models with explicit prior anchors or
+  hyperparameters.
+- :doc:`sequential` covers expected improvement, excursion sets, set inversion,
+  SMC particles, and BSS particles.
+- :doc:`regp` covers the relaxed Gaussian-process procedure.
+
+Examples and API links
 ----------------------
 
-Read these pages when the model is already clear and the task needs one of
-these procedures:
-
-- :doc:`priors` for REMAP models with explicit prior anchors or hyperparameters.
-- :doc:`sequential` for expected improvement, excursion sets, set inversion,
-  SMC particles, and BSS particles.
-- :doc:`regp` for relaxed Gaussian-process modeling.
-
-Relation to examples
---------------------
-
-The guide describes objects and stored state.  The example pages show complete
-scripts, plots, and representative results.  After reading a guide page, use
-:doc:`../examples/index` to find the closest executable script.
+The guide describes objects and stored state.  :doc:`../examples/index` gives
+complete scripts, plots, and representative results.  :doc:`../api/index`
+gives signatures, shapes, return values, stored side effects, and failure
+conditions.
 
 .. toctree::
    :maxdepth: 2

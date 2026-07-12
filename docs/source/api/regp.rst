@@ -1,10 +1,9 @@
 Relaxed Gaussian processes
 ==========================
 
-The ``regp`` module implements relaxed Gaussian-process utilities for
-threshold-oriented modeling.  It is typically used when observations in a target
-region are relaxed and jointly optimized with covariance parameters before
-prediction.
+The ``gpmpcontrib.regp`` package exports ``predict`` and
+``select_optimal_threshold_above_t0``.  Lower-level functions, including
+``remodel``, are defined in ``gpmpcontrib.regp.regp``.
 
 Function contracts
 ------------------
@@ -34,7 +33,7 @@ Function contracts
    caches the gradient graph.  The second callable returns the gradient for the
    same parameter vector.
 
-.. py:function:: remodel(model, xi, zi, R, covparam0=None, info=False, verbosity=0, convert_in=True, convert_out=True)
+.. py:function:: gpmpcontrib.regp.regp.remodel(model, xi, zi, R, covparam0=None, info=False, verbosity=0, convert_in=True, convert_out=True)
    :no-index:
 
    Optimize covariance parameters and relaxed observation values.  ``xi`` has
@@ -45,20 +44,19 @@ Function contracts
 
    The supplied ``model`` is modified in place through its ``covparam`` field.
 
-.. py:function:: predict(model, xi, zi, xt, R, covparam0=None, info=False, verbosity=0)
+.. py:function:: gpmpcontrib.regp.predict(model, xi, zi, xt, R, covparam0=None, info=False, verbosity=0)
    :no-index:
 
    Run ``remodel`` and predict at ``xt``.  Returns
    ``(zi_relaxed, (zpm, zpv), model, info_ret)``.  ``info_ret`` is ``None``
    when ``info=False``.
 
-.. py:function:: select_optimal_threshold_above_t0(model, xi, zi, t0, G=20)
+.. py:function:: gpmpcontrib.regp.select_optimal_threshold_above_t0(model, xi, zi, t0, G=20)
    :no-index:
 
    Evaluate ``G`` thresholds above ``t0`` and return the interval
    ``[[threshold, inf]]`` with the smallest tCRPS criterion.
 
-.. automodule:: gpmpcontrib.regp.regp
-   :members:
-   :undoc-members:
-   :show-inheritance:
+The membership, split, criterion, and ``remodel`` functions are lower-level
+helpers.  Import them from ``gpmpcontrib.regp.regp`` when direct access is
+needed.

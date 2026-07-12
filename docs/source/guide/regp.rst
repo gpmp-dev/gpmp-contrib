@@ -1,7 +1,7 @@
 Relaxed Gaussian processes
 ==========================
 
-The ``gpmpcontrib.regp`` module implements relaxed Gaussian-process modeling.
+The ``gpmpcontrib.regp`` module implements the relaxed Gaussian-process procedure.
 The procedure starts from a GP model and observations ``(xi, zi)``.  Values whose
 outputs fall in a relaxation interval are allowed to move inside that interval
 during parameter selection.
@@ -71,16 +71,16 @@ Main functions
     Splits observations into fixed values and relaxed values according to
     membership indices.
 
-``remodel(model, xi, zi, R, covparam0=None, info=False, verbosity=0)``
+``gpmpcontrib.regp.regp.remodel(model, xi, zi, R, covparam0=None, info=False, verbosity=0)``
     Selects covariance parameters and relaxed output values.  Returns the
     updated model, relaxed observations, and indices of relaxed values.  When
     ``info=True``, it also returns the optimizer report.
 
-``predict(model, xi, zi, xt, R, covparam0=None, info=False, verbosity=0)``
+``gpmpcontrib.regp.predict(model, xi, zi, xt, R, covparam0=None, info=False, verbosity=0)``
     Runs ``remodel`` and returns relaxed observations, posterior predictions at
     ``xt``, the updated model, and optional optimizer information.
 
-``select_optimal_threshold_above_t0(model, xi, zi, t0, G=20)``
+``gpmpcontrib.regp.select_optimal_threshold_above_t0(model, xi, zi, t0, G=20)``
     Searches thresholds above ``t0`` and returns a relaxation interval selected
     by a tCRPS-based criterion.
 
@@ -89,7 +89,7 @@ Threshold selection
 
 For intervals of the form :math:`R_u=[u,+\infty)`, threshold selection evaluates
 a finite set of candidate thresholds above :math:`t_0`.  For each candidate,
-reGP remodeling gives relaxed values and leave-one-out Gaussian predictions
+the reGP procedure gives relaxed values and leave-one-out Gaussian predictions
 with means :math:`m_{-i}` and standard deviations :math:`s_{-i}`.  The selected
 threshold minimizes the average threshold-weighted CRPS on the region
 :math:`(-\infty,t_0]`:

@@ -1,7 +1,7 @@
 Example 31: excursion set with BSS-style SMC search
 ===================================================
 
-Script: ``examples/example31_excursionset_smc.py``
+Complete script: `examples/example31_excursionset_smc.py <https://github.com/gpmp-dev/gpmp-contrib/blob/main/examples/example31_excursionset_smc.py>`_
 
 Purpose
 -------
@@ -18,7 +18,7 @@ What is computed
 - posterior mean and variance at particle positions.
 - the threshold ``u(mu) = (1 - mu) * u_init + mu * u_target``.
 - a target log-density proportional to
-  ``log P(Y(x) > u(mu) | observations)`` inside the input box.
+  ``log P(Z(x) > u(mu) | observations)`` inside the input box.
 - SMC reweighting, resampling, and Markov moves of the particle population.
 - excursion probabilities and excursion-set criteria at the current threshold.
 

@@ -1,15 +1,16 @@
-"""Demonstration script for gpmpcontrib.tModel
+"""Build gpmp-contrib Matérn models and inspect their predictions.
 
-This script illustrates the use of the Model class in gpmp-contrib for
-the approximation of a test function using Gaussian Process
-modeling. The process involves setting up the problem, creating an
-initial dataset, and making predictions using gpmp and gpmpcontrib
-libraries.
+The examples below use the provided ``Model_ConstantMean_Maternp_*`` classes.
+The class name states the model construction and the parameter-selection
+criterion used by ``select_params``:
 
-Imports:
-- numpy for numerical computations.
-- gpmp and gpmpcontrib for Gaussian Process modeling and sequential prediction.
-- test_functions for predefined test functions.
+- ``ConstantMean``: one constant trend basis.
+- ``Maternp``: fixed-regularity Matérn covariance from ``gpmp.kernel``.
+- ``REML``, ``REMAP`` or ``ML``: criterion used for parameter selection.
+
+For these fixed-regularity Matérn classes, covariance parameters follow the
+``sigma2_rho`` convention:
+``[log(sigma2), -log(rho_0), ..., -log(rho_{d-1})]``.
 
 Author: Emmanuel Vazquez <emmanuel.vazquez@centralesupelec.fr>
 Copyright (c) 2022-2026, CentraleSupelec
@@ -50,7 +51,8 @@ ni = len(ind)
 xi = xt[ind]
 zi = problem(xi)
 
-# Define the model, make predictions and draw conditional sample paths
+# Define the model, select parameters, predict, and draw conditional sample paths.
+# Change model_choice to compare REML, REMAP, and ML.
 model_choice = 1
 
 if model_choice == 1:
@@ -72,6 +74,7 @@ elif model_choice == 3:
         "1d_noisefree", problem.output_dim, covariance_specification={"p": 4}
     )
 
+# model.select_params uses the criterion named by the model class.
 model.select_params(xi, zi)
 model.run_diagnosis(xi, zi)
 zpm, zpv = model.predict(xi, zi, xt)
@@ -112,7 +115,9 @@ ind = np.random.choice(n_test_grid**2, ni, replace=False)
 xi = xt[ind]
 zi = zt[ind]
 
-# Define the model and make predictions
+# Define a two-output REMAP model and make predictions.
+# The REMAP class uses restricted likelihood plus prior terms for the
+# covariance parameters of each output.
 model = gpc.Model_ConstantMean_Maternp_REMAP(
     "2d_noisefree",
     problem.output_dim,

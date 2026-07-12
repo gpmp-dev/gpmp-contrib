@@ -357,6 +357,72 @@ def example04_noisy_sequential():
     )
 
 
+def example06_matern():
+    _seed(106)
+    xi = gnp.linspace(0.0, 1.0, 16).reshape(-1, 1)
+    zi = gnp.sin(2.0 * gnp.pi * xi[:, 0]) + 0.3 * gnp.abs(xi[:, 0] - 0.45)
+    xt = gnp.linspace(0.0, 1.0, 400).reshape(-1, 1)
+    zt = gnp.sin(2.0 * gnp.pi * xt[:, 0]) + 0.3 * gnp.abs(xt[:, 0] - 0.45)
+    p = 2
+
+    maternp_model = gpc.Model_ConstantMean_Maternp_REML(
+        "fixed_regularity",
+        1,
+        mean_specification={"type": "constant"},
+        covariance_specification={"p": p},
+    )
+    matern_model = gpc.Model_ConstantMean_Matern_REML(
+        "selected_regularity",
+        1,
+        mean_specification={"type": "constant"},
+    )
+    _quiet_call(maternp_model.select_params, xi, zi)
+    _quiet_call(matern_model.select_params, xi, zi)
+    zpm_fixed, zpv_fixed = maternp_model.predict(xi, zi, xt)
+    zpm_free, zpv_free = matern_model.predict(xi, zi, xt)
+    xt_plot = _to_np(xt)
+    zt_plot = _to_np(zt)
+    xi_plot = _to_np(xi)
+    zi_plot = _to_np(zi)
+
+    param = matern_model[0].get_param()
+    lognu = param.get_by_path(["covparam", "regularity"])
+    nu = gnp.to_scalar(gnp.exp(gnp.asarray(lognu).reshape(-1)[0]))
+
+    with redirect_stdout(io.StringIO()) as buf:
+        print(f"Fixed Matérn regularity: nu = {p + 0.5:g}")
+        print(f"Selected Matérn regularity: nu = {nu:.6g}")
+        print(param)
+    _write_text("example06_matern_output.txt", buf.getvalue())
+
+    fig = gp.plot.Figure(
+        nrows=2,
+        ncols=1,
+        isinteractive=False,
+        figsize=(6.5, 7.0),
+    )
+    for subplot, zpm, zpv, title in (
+        (1, zpm_fixed, zpv_fixed, f"Fixed regularity: nu = {p + 0.5:g}"),
+        (2, zpm_free, zpv_free, f"Selected regularity: nu = {nu:.3f}"),
+    ):
+        fig.subplot(subplot)
+        fig.plot(
+            xt_plot,
+            zt_plot,
+            "k",
+            linewidth=1.0,
+            label="reference function",
+        )
+        fig.plotdata(xi_plot, zi_plot, label="observations")
+        fig.plotgp(xt_plot, zpm[:, 0], zpv[:, 0], colorscheme="simple")
+        fig.title(title)
+        fig.ylabel("$z$")
+        fig.grid()
+        fig.legend(fontsize=8)
+    fig.xlabel("$x$")
+    _save_gpfig(fig, "example06_matern.png")
+
+
 def example10_ei_grid():
     _seed(110)
     problem = _twobumps_problem()
@@ -473,7 +539,7 @@ def example20_regp():
     xt, zt, xi, zi = _regp_data()
     model = gp.core.Model(_regp_constant_mean, _regp_kernel, None, None)
     model, _info = _quiet_call(
-        gp.kernel.select_parameters_with_reml, model, xi, zi, info=True
+        gp.kernel.select_parameters_sigma2_rho_with_reml, model, xi, zi, info=True
     )
     zpm0, _zpv0 = model.predict(xi, zi, xt)
 
@@ -717,6 +783,7 @@ def main():
     guide_hartmann4_remap_prior()
     example02_gp_prediction()
     example04_noisy_sequential()
+    example06_matern()
     example10_ei_grid()
     example11_ei_smc()
     example20_regp()

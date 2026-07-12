@@ -1,7 +1,7 @@
 Example 30: excursion set on a fixed grid
 =========================================
 
-Script: ``examples/example30_excursionset_gridset.py``
+Complete script: `examples/example30_excursionset_gridset.py <https://github.com/gpmp-dev/gpmp-contrib/blob/main/examples/example30_excursionset_gridset.py>`_
 
 Purpose
 -------
@@ -21,7 +21,7 @@ What is computed
 ----------------
 
 - posterior mean and variance on the fixed grid.
-- excursion probabilities ``P(Y(x) > u_target | observations)``.
+- excursion probabilities ``P(Z(x) > u_target | observations)``.
 - excursion misclassification quantities.
 - ``excursion_wMSE`` values used for selecting the next grid point.
 - expected excursion volume and expected misclassification summaries through the

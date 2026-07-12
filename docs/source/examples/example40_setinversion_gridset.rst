@@ -1,7 +1,7 @@
 Example 40: set inversion on a fixed grid
 =========================================
 
-Script: ``examples/example40_setinversion_gridset.py``
+Complete script: `examples/example40_setinversion_gridset.py <https://github.com/gpmp-dev/gpmp-contrib/blob/main/examples/example40_setinversion_gridset.py>`_
 
 Purpose
 -------
@@ -22,7 +22,7 @@ What is computed
 ----------------
 
 - posterior mean and variance on the fixed grid.
-- box-membership probabilities ``P(Y(x) in B | observations)``.
+- box-membership probabilities ``P(Z(x) in B | observations)``.
 - ``box_wMSE`` values used for selecting the next grid point.
 - one new evaluation per sequential step.
 
