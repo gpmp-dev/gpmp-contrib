@@ -9,7 +9,11 @@
 import gpmp as gp
 import gpmp.num as gnp
 import gpmpcontrib.modelcontainer
-from gpmp.parameter import Normalization, Param
+from gpmp.parameter import (
+    Normalization,
+    Param,
+    param_from_covparam_sigma2_nu_rho,
+)
 
 
 class Model_ConstantMean_Maternp_REML(gpmpcontrib.modelcontainer.ModelContainer):
@@ -104,6 +108,85 @@ class Model_ConstantMean_Maternp_REML(gpmpcontrib.modelcontainer.ModelContainer)
 
     def build_parameters_initial_guess_procedure(self, output_idx: int, **build_param):
         return gp.kernel.anisotropic_parameters_initial_guess
+
+    def build_selection_criterion(self, output_idx: int, context=None, **build_params):
+        def reml_criterion(model, covparam, xi, zi):
+            return model.negative_log_restricted_likelihood(covparam, xi, zi)
+
+        return reml_criterion
+
+
+class Model_ConstantMean_Matern_REML(gpmpcontrib.modelcontainer.ModelContainer):
+    """GP model with free Matérn regularity selected by REML.
+
+    Covariance parameters follow
+    ``[log(sigma2), log(nu), -log(rho_0), ..., -log(rho_{d-1})]``.
+    """
+
+    def __init__(
+        self,
+        name,
+        output_dim,
+        mean_specification,
+        covariance_specification=None,
+    ):
+        if covariance_specification is None:
+            covariance_specification = {}
+        super().__init__(
+            name,
+            output_dim,
+            parameterized_mean=False,
+            mean_specification=mean_specification,
+            covariance_specification=covariance_specification,
+        )
+
+    def build_mean_function(self, output_idx: int, mean_build_param: dict):
+        if "type" not in mean_build_param:
+            raise ValueError("Mean 'type' should be specified in 'mean_build_param'")
+
+        if mean_build_param["type"] == "constant":
+            return (gpmpcontrib.modelcontainer.mean_linpred_constant, 0)
+        if mean_build_param["type"] == "linear":
+            return (gpmpcontrib.modelcontainer.mean_linpred_linear, 0)
+        raise NotImplementedError(
+            f"Mean type {mean_build_param['type']} not implemented"
+        )
+
+    def build_covariance(self, output_idx: int, covariance_build_param: dict):
+        if covariance_build_param:
+            raise ValueError(
+                "Model_ConstantMean_Matern_REML does not require covariance "
+                "specification parameters."
+            )
+        return gp.kernel.matern_covariance
+
+    def build_param_procedures(self, output_idx: int, **kwargs):
+        logsigma2_bounds = kwargs.get("logsigma2_bounds", None)
+        lognu_bounds = kwargs.get("lognu_bounds", None)
+        loginvrho_bounds = kwargs.get("loginvrho_bounds", None)
+        name_prefix = kwargs.get("name_prefix", "")
+
+        def param_from_vectors(meanparam, covparam):
+            return param_from_covparam_sigma2_nu_rho(
+                covparam,
+                logsigma2_bounds=logsigma2_bounds,
+                lognu_bounds=lognu_bounds,
+                loginvrho_bounds=loginvrho_bounds,
+                name_prefix=name_prefix,
+            )
+
+        def vectors_from_param(param):
+            covparam = gnp.asarray(
+                param.get_by_path(["covparam"], prefix_match=True)
+            ).reshape(-1)
+            return gnp.asarray([]), covparam
+
+        return param_from_vectors, vectors_from_param
+
+    def build_parameters_initial_guess_procedure(
+        self, output_idx: int, **build_param
+    ):
+        return gp.kernel.anisotropic_parameters_initial_guess_matern
 
     def build_selection_criterion(self, output_idx: int, context=None, **build_params):
         def reml_criterion(model, covparam, xi, zi):

@@ -1,5 +1,6 @@
 from .computerexperiment import ComputerExperiment
 from . import test_problems
+from .models import Model_ConstantMean_Matern_REML
 from .models import Model_ConstantMean_Maternp_REML
 from .models import Model_ConstantMean_Maternp_REMAP
 from .models import Model_ConstantMean_Maternp_REMAP_logsigma2

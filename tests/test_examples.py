@@ -31,6 +31,7 @@ LIGHT_EXAMPLES = [
     "example02_models",
     "example03_sequential_prediction",
     "example04_sequential_prediction_with_noise",
+    "example06_matern",
     "example10_optim_EI_gridsearch",
 ]
 
