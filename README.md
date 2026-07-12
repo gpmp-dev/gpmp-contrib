@@ -1,72 +1,109 @@
-# GPmp-contrib
+<div align="left">
+  <img src="https://raw.githubusercontent.com/gpmp-dev/gpmp-contrib/main/docs/source/_static/logo.png" width="120" alt="GPmp-contrib logo"/>
+</div>
 
-`gpmp-contrib` extends `gpmp` with computer-experiment objects, multi-output
-model containers, Matérn model classes, sequential design procedures, set
-estimation tools, plots, and relaxed Gaussian-process utilities.
+# GPmp-contrib: computer experiments and sequential design
 
-Use `gpmp` directly for core GP models, covariance functions, numerical backend
-operations, and low-level parameter selection. Use `gpmp-contrib` when a script
-needs a `ComputerExperiment`, a `ModelContainer`, a sequential strategy, a test
-problem, or reGP.
+[![Python](https://img.shields.io/pypi/pyversions/gpmp-contrib.svg)](https://pypi.org/project/gpmp-contrib/)
+[![PyPI](https://img.shields.io/pypi/v/gpmp-contrib.svg)](https://pypi.org/project/gpmp-contrib/)
+[![License](https://img.shields.io/badge/license-GPLv3-blue.svg)](LICENSE.txt)
+[![Documentation](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://gpmp-dev.github.io/gpmp-contrib/)
+[![Docs build](https://github.com/gpmp-dev/gpmp-contrib/actions/workflows/docs.yml/badge.svg)](https://github.com/gpmp-dev/gpmp-contrib/actions/workflows/docs.yml)
 
-## Main components
+[Website and documentation](https://gpmp-dev.github.io/gpmp-contrib/)
+| [Examples](https://gpmp-dev.github.io/gpmp-contrib/examples/index.html)
+| [API reference](https://gpmp-dev.github.io/gpmp-contrib/api/index.html)
+| [PyPI](https://pypi.org/project/gpmp-contrib/)
+| [GPmp](https://github.com/gpmp-dev/gpmp)
 
-- Model containers and Matérn classes:
-  - `Model_ConstantMean_Maternp_ML`
-  - `Model_ConstantMean_Maternp_REML`
-  - `Model_ConstantMean_Matern_REML`
-  - `Model_ConstantMean_Maternp_REMAP`
-  - `Model_ConstantMean_Maternp_REMAP_logsigma2`
-  - `Model_ConstantMean_Maternp_REMAP_logsigma2_and_logrho_prior`
-  - `Model_Noisy_ConstantMean_Maternp_REML`
+GPmp-contrib provides computer-experiment objects, multi-output model
+containers, Matérn model classes, sequential-design procedures, set-estimation
+methods, plots, and relaxed Gaussian-process utilities. It builds these objects
+on the models, kernels, parameter-selection functions, diagnostics, and
+numerical backends provided by [GPmp](https://github.com/gpmp-dev/gpmp).
 
-`Maternp` classes fix the regularity at `nu = p + 1/2`. The `Matern` class
-selects `nu` jointly with the variance and lengthscales.
-- Prior access on REMAP classes with priors:
-  - `get_prior(...)`
-  - `set_prior(...)`
-- Sequential strategies:
-  - fixed candidate sets with `SequentialStrategyGridSearch`
-  - SMC particle sets with `SequentialStrategySMC`
-  - BSS-style particle sets with `SequentialStrategyBSS`
-- Optimization and set-estimation modules:
-  - expected improvement in `gpmpcontrib.optim.expectedimprovement`
-  - excursion sets in `gpmpcontrib.optim.excursionset`
-  - set inversion and Pareto utilities in `gpmpcontrib.optim`
-- reGP utilities in `gpmpcontrib.regp`.
-- Parameter posterior sampling through `ModelContainer.sample_parameters(...)`.
+## When to use GPmp-contrib
 
-## Package layout
+Use `gpmp-contrib` when you need a `ComputerExperiment`, a `ModelContainer`,
+provided Matérn model classes, sequential strategies, Bayesian optimization,
+excursion-set estimation, set inversion, or reGP.
 
-- `gpmpcontrib/models/`: Matérn model container classes.
-- `gpmpcontrib/modelcontainer.py`: multi-output model container.
-- `gpmpcontrib/sequentialprediction.py`: observation storage and prediction updates.
-- `gpmpcontrib/sequentialstrategy.py`: sequential decision strategies.
-- `gpmpcontrib/optim/`: EI, excursion-set, set-inversion, and Pareto tools.
-- `gpmpcontrib/regp/`: relaxed Gaussian-process utilities.
-- `examples/`: scripts using the public objects.
-- `docs/`: Sphinx documentation.
+Use `gpmp` directly when you need the numerical GP model, covariance functions,
+parameter-selection functions, diagnostics, posterior samplers, or plotting
+helpers without computer-experiment or sequential-design objects.
 
-## Requirements
+## Core features
 
-- Python `>=3.9`
-- `gpmp >= 0.9.38`
-- `numpy`
-- `scipy>=1.12.0`
-- `matplotlib`
+- **Computer experiments:** input boxes, normalized inputs, objectives,
+  constraints, and multi-output evaluations.
+- **Model containers:** one `gpmp.core.Model` per output, with parameter
+  selection, prediction, diagnosis, and readable parameter objects.
+- **Matérn model classes:** fixed half-integer regularity (`Maternp`) or jointly
+  selected regularity `nu > 0` (`Matern`). The available classes cover ML,
+  REML, REMAP, and noisy observations.
+- **REMAP priors:** inspect and modify resolved prior parameters with
+  `get_prior(...)` and `set_prior(...)`.
+- **Sequential strategies:** fixed candidate grids, SMC particle sets, and
+  BSS-style particle sets.
+- **Optimization and set estimation:** expected improvement, excursion sets,
+  set inversion, and Pareto utilities.
+- **Relaxed Gaussian processes:** reGP procedures for threshold-oriented
+  prediction problems.
+- **Posterior parameter sampling:** access GPmp's MH, HMC, NUTS, and SMC
+  samplers through `ModelContainer.sample_parameters(...)`.
 
-## Installation
+## Numerical backends
 
-Install the released package from PyPI:
+GPmp-contrib uses the numerical backend selected by GPmp:
+
+- **NumPy:** often fast for small-to-medium exact GP computations.
+- **PyTorch:** provides automatic differentiation and is useful when gradient
+  information is needed, especially in higher-dimensional parameter settings.
+
+Set the backend before importing either package:
+
+```bash
+export GPMP_BACKEND=torch
+export GPMP_DTYPE=float64
+```
+
+Model and kernel computations use `gpmp.num` backend objects. High-level
+`ModelContainer` methods convert inputs and outputs where documented in the
+[API reference](https://gpmp-dev.github.io/gpmp-contrib/api/index.html).
+
+## Package split
+
+```text
+gpmp
+  core GP model
+  covariance functions
+  parameter objects and selection
+  diagnostics
+  posterior samplers
+  plotting helpers
+
+gpmp-contrib
+  computer experiments
+  model containers and provided Matérn classes
+  sequential strategies
+  Bayesian optimization
+  excursion-set estimation
+  set inversion
+  reGP utilities
+```
+
+## Install
 
 ```bash
 pip install gpmp-contrib
+python -c "print(__import__('gpmpcontrib').__version__)"
 ```
 
-This installs `gpmp` and the other runtime dependencies declared in
-`pyproject.toml`.
+The verification command prints the installed GPmp-contrib version. The
+installation also installs `gpmp` and the other runtime dependencies declared
+in `pyproject.toml`.
 
-For development, clone the repository and install it in editable mode:
+For local development:
 
 ```bash
 git clone https://github.com/gpmp-dev/gpmp-contrib.git
@@ -74,54 +111,48 @@ cd gpmp-contrib
 pip install -e .
 ```
 
-When testing against a local `gpmp` checkout, install `gpmp` first, then install
-`gpmp-contrib` in editable mode.
+Use `pip install -e ".[docs]"` for documentation tools. When testing against a
+local GPmp checkout, install that checkout first and then install gpmp-contrib
+in editable mode.
 
-## Minimal example
-
-```python
-import gpmpcontrib as gpc
-
-problem = gpc.ComputerExperiment(
-    1,
-    [[-1.0], [1.0]],
-    single_function=lambda x: x**2,
-)
-```
-
-The full documentation starts with `docs/source/getting_started.rst` and then
-continues through the user guide. The examples section documents model
-construction, noisy observations, expected improvement, excursion sets, set
-inversion, and reGP.
+GPmp-contrib requires Python 3.9 or later, GPmp 0.9.38 or later, NumPy, SciPy,
+and Matplotlib. PyTorch is optional and is installed separately when automatic
+differentiation is needed.
 
 ## Documentation
 
 The documentation is available at
-<https://gpmp-dev.github.io/gpmp-contrib/>.
+<https://gpmp-dev.github.io/gpmp-contrib/>. It includes a complete Hartmann4
+example, model construction and state, parameter selection, diagnostics,
+sequential design, excursion sets, set inversion, reGP, and the public API.
 
-To build it locally, install the documentation dependencies and build the HTML
-pages:
-
-```bash
-pip install -r docs/requirements.txt
-cd docs
-sphinx-build -M html source _build -E
-```
-
-Generate the static example figures with:
+To build it locally:
 
 ```bash
-cd docs
-python make_example_results.py
+pip install -e ".[docs]"
+python docs/make_example_results.py
+sphinx-build -M html docs/source docs/_build -E
 ```
 
-## Authors
+## Public API
 
-See [AUTHORS.md](AUTHORS.md).
+The intended public API is organized around:
+
+- `gpmpcontrib.ComputerExperiment`
+- `gpmpcontrib.modelcontainer`
+- the model classes exported by `gpmpcontrib`
+- `gpmpcontrib.SequentialPrediction`
+- `gpmpcontrib.SequentialStrategyGridSearch`
+- `gpmpcontrib.SequentialStrategySMC`
+- `gpmpcontrib.SequentialStrategyBSS`
+- `gpmpcontrib.samplingcriteria`
+- `gpmpcontrib.optim`
+- `gpmpcontrib.regp`
+- `gpmpcontrib.test_problems`
 
 ## How to cite
 
-If you use GPmp-contrib in your research, please cite it as follows:
+If you use GPmp-contrib in research, please cite:
 
 ```bibtex
 @software{gpmpcontrib2026,
@@ -135,20 +166,46 @@ If you use GPmp-contrib in your research, please cite it as follows:
 
 Update the version number when citing another release.
 
-## Copyright
+## Minimal example
 
-Copyright (C) 2022-2026 CentraleSupelec
+The basic sequence is: choose a computer experiment, build a model container,
+select covariance parameters, predict, and inspect the result.
+
+```python
+import gpmp as gp
+import gpmp.num as gnp
+import gpmpcontrib as gpc
+
+gnp.set_seed(1234)
+
+problem = gpc.test_problems.hartmann4
+xi = gp.misc.designs.ldrandunif(problem.input_dim, 40, problem.input_box)
+zi = problem(xi)
+xt = gp.misc.designs.ldrandunif(problem.input_dim, 300, problem.input_box)
+
+model = gpc.Model_ConstantMean_Maternp_REML(
+    "hartmann4",
+    output_dim=problem.output_dim,
+    mean_specification={"type": "constant"},
+    covariance_specification={"p": 3},
+)
+
+model.select_params(xi, zi)
+zpm, zpv = model.predict(xi, zi, xt)
+model.run_diagnosis(xi, zi)
+```
+
+The final call prints parameter-selection, parameter, and observation
+summaries. See the
+[getting-started example](https://gpmp-dev.github.io/gpmp-contrib/getting_started.html)
+for prediction checks, performance measures, stored model state, and the
+corresponding figure.
+
+## Authors
+
+See [AUTHORS.md](AUTHORS.md) for details.
 
 ## License
 
-GPmp-contrib is free software: you can redistribute it and/or modify it under
-the terms of the GNU General Public License as published by the Free Software
-Foundation, either version 3 of the License, or (at your option) any later
-version. See [LICENSE.txt](LICENSE.txt).
-
-GPmp-contrib is distributed in the hope that it will be useful, but WITHOUT ANY
-WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
-PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License along with
-GPmp-contrib. If not, see https://www.gnu.org/licenses/.
+GPmp-contrib is free software released under the GNU General Public License
+v3.0 or later. See [LICENSE](LICENSE.txt) for details.
