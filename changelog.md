@@ -1,3 +1,10 @@
+- 0.9.38 GPmp API alignment and Matérn regularity selection
+  * modelcontainer.py: align diagnosis with the GPmp 0.9.38 API
+  * models/models_REML.py: add Model_ConstantMean_Matern_REML
+  * examples/tests: cover selected Matérn regularity with NumPy and Torch
+  * docs: document model construction, parameter selection, examples, and APIs
+  * packaging: require gpmp >= 0.9.38
+
 - 0.9.37 release fixes after first PyPI publication
   * README.md: document pip install route
   * plot/visualization.py: defer optional pandas/plotly imports
