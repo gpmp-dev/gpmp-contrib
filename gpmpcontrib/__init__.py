@@ -1,3 +1,6 @@
+import importlib.metadata
+from pathlib import Path
+
 from .computerexperiment import ComputerExperiment
 from . import test_problems
 from .models import Model_ConstantMean_Matern_REML
@@ -17,3 +20,19 @@ from .sequentialstrategy import (
 from . import samplingcriteria
 from . import optim
 from . import regp
+
+
+def _read_version():
+    version_file = Path(__file__).resolve().parent.parent / "VERSION"
+    try:
+        version = version_file.read_text(encoding="utf-8").strip()
+        return version if version else "0.0.0"
+    except OSError:
+        pass
+    try:
+        return importlib.metadata.version("gpmp-contrib")
+    except importlib.metadata.PackageNotFoundError:
+        return "0.0.0"
+
+
+__version__ = _read_version()
