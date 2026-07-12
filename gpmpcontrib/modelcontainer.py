@@ -1250,6 +1250,7 @@ class ModelContainer:
             zi_k = zi_ if zi_.ndim == 1 else take_col_fn(zi_, k)
             gp.modeldiagnosis.diag(
                 self.models[k]["model"],
+                None,
                 info,
                 xi_,
                 zi_k,

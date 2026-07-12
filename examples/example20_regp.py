@@ -123,8 +123,10 @@ covparam0 = None
 model = gp.core.Model(constant_mean, kernel, meanparam, covparam0)
 
 # Automatic selection of parameters using REML
-model, info = gp.kernel.select_parameters_with_reml(model, xi, zi, info=True)
-gp.modeldiagnosis.diag(model, info, xi, zi)
+model, info = gp.kernel.select_parameters_sigma2_rho_with_reml(model, xi, zi, info=True)
+gp.modeldiagnosis.diag(
+    model, "linear_mean_maternp_anisotropic", info, xi, zi
+)
 
 # GP prediction
 zpm, zpv = model.predict(xi, zi, xt)
@@ -137,7 +139,9 @@ R = gnp.numpy.array([[u, gnp.numpy.inf]])
 
 zi_relaxed, (zpm, zpv), model, info_ret = regp.predict(model, xi, zi, xt, R)
 
-gp.modeldiagnosis.diag(model, info, xi, zi_relaxed)
+gp.modeldiagnosis.diag(
+    model, "linear_mean_maternp_anisotropic", info, xi, zi_relaxed
+)
 
 x_limits = fig.axes[0].get_xlim()
 plt.hlines(y=u, xmin=x_limits[0], xmax=x_limits[1], colors="b")
